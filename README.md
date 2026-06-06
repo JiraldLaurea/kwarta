@@ -75,6 +75,27 @@ For production, add your deployed callback URL:
 https://your-domain.com/auth/callback
 ```
 
+## Deploying To Vercel
+
+Vercel should use the default Next.js settings:
+
+```text
+Node.js Version: 20.x
+Build Command: npm run build
+Install Command: npm install
+Output Directory: .next
+```
+
+Add the same environment variables from `.env.example` in Vercel Project Settings. Use Supabase's pooled Postgres connection string for `DATABASE_URL` and the direct connection string for `DIRECT_URL`.
+
+Before the first production deploy, sync the database schema:
+
+```bash
+npm run prisma:push
+```
+
+See `docs/deployment-vercel.md` for the full checklist.
+
 ## Scripts
 
 ```bash
@@ -94,3 +115,4 @@ Use `.env.example` as the template. Do not commit `.env.local` or any file conta
 
 - `docs/DESIGN.md`
 - `docs/kwarta-tech-stack.md`
+- `docs/deployment-vercel.md`
