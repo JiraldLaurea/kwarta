@@ -116,6 +116,27 @@ function getFirstCategoryId(categories: Category[], type: TransactionType) {
     );
 }
 
+function sanitizeDecimalInput(value: string) {
+    const numeric = value.replace(/[^\d.]/g, "");
+    const [whole, ...decimalParts] = numeric.split(".");
+
+    if (decimalParts.length === 0) {
+        return whole;
+    }
+
+    return `${whole}.${decimalParts.join("")}`;
+}
+
+function handleDecimalInput(event: React.FormEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    input.value = sanitizeDecimalInput(input.value);
+}
+
+function parseDecimalInput(value: unknown) {
+    const sanitized = sanitizeDecimalInput(String(value ?? ""));
+    return sanitized === "" ? 0 : Number(sanitized);
+}
+
 type StoredWorkspace = {
     budgets: Budget[];
     categories: Category[];
@@ -755,8 +776,8 @@ function MobileTabBar({
                     return (
                         <button
                             className={cn(
-                                "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-muted-foreground transition-colors hover:bg-neutral-100",
-                                active && "bg-primary text-primary-foreground hover:bg-primary",
+                                "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-muted-foreground transition-colors",
+                                active && "bg-primary text-primary-foreground",
                             )}
                             key={item.view}
                             type="button"
@@ -771,9 +792,9 @@ function MobileTabBar({
                 })}
                 <button
                     className={cn(
-                        "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-muted-foreground transition-colors hover:bg-neutral-100",
+                        "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-muted-foreground transition-colors",
                         moreOpen &&
-                            "bg-primary text-primary-foreground hover:bg-primary",
+                            "bg-primary text-primary-foreground",
                     )}
                     type="button"
                     onClick={onMore}
@@ -984,56 +1005,11 @@ function DashboardView({
 
     return (
         <div className="grid gap-4 md:gap-5 lg:grid-cols-[1.4fr_0.6fr]">
-            <Card>
-                <CardHeader>
-                    <div>
-                        <CardTitle>Cashflow</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                            Income and expenses by transaction date
-                        </p>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    {cashflowData.length > 0 ? (
-                        <div className="h-56 md:h-72">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={cashflowData}>
-                                    <CartesianGrid
-                                        stroke="#E5E7EB"
-                                        vertical={false}
-                                    />
-                                    <XAxis
-                                        dataKey="date"
-                                        tickLine={false}
-                                        axisLine={false}
-                                    />
-                                    <YAxis tickLine={false} axisLine={false} />
-                                    <Tooltip
-                                        content={<CashflowTooltip />}
-                                        cursor={{ fill: "#E5E5E5" }}
-                                        wrapperStyle={{ outline: "none" }}
-                                    />
-                                    <Bar
-                                        dataKey="income"
-                                        fill="#171717"
-                                        radius={[4, 4, 0, 0]}
-                                    />
-                                    <Bar
-                                        dataKey="expense"
-                                        fill="#2563EB"
-                                        radius={[4, 4, 0, 0]}
-                                    />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    ) : (
-                        <EmptyState
-                            title="No cashflow yet"
-                            description="Add your first transaction to populate this chart."
-                        />
-                    )}
-                </CardContent>
-            </Card>
+            <BudgetProgressList
+                budgets={budgets}
+                categories={categories}
+                transactions={expenses}
+            />
 
             <Card>
                 <CardHeader>
@@ -1074,6 +1050,7 @@ function DashboardView({
                         </div>
                     ) : (
                         <EmptyState
+                            className="flex h-56 flex-col items-center justify-center md:h-72"
                             title="No spending yet"
                             description="Expense transactions will appear here by category."
                         />
@@ -1081,16 +1058,72 @@ function DashboardView({
                 </CardContent>
             </Card>
 
-            <BudgetProgressList
-                budgets={budgets}
-                categories={categories}
-                transactions={expenses}
-            />
+            <CashflowCard cashflowData={cashflowData} />
             <RecentTransactions
                 categories={categories}
                 transactions={transactions.slice(0, 6)}
             />
         </div>
+    );
+}
+
+function CashflowCard({
+    cashflowData,
+}: {
+    cashflowData: Array<{ date: string; income: number; expense: number }>;
+}) {
+    return (
+        <Card>
+            <CardHeader>
+                <div>
+                    <CardTitle>Cashflow</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                        Income and expenses by transaction date
+                    </p>
+                </div>
+            </CardHeader>
+            <CardContent>
+                {cashflowData.length > 0 ? (
+                    <div className="h-56 md:h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={cashflowData}>
+                                <CartesianGrid
+                                    stroke="#E5E7EB"
+                                    vertical={false}
+                                />
+                                <XAxis
+                                    dataKey="date"
+                                    tickLine={false}
+                                    axisLine={false}
+                                />
+                                <YAxis tickLine={false} axisLine={false} />
+                                <Tooltip
+                                    content={<CashflowTooltip />}
+                                    cursor={{ fill: "#E5E5E5" }}
+                                    wrapperStyle={{ outline: "none" }}
+                                />
+                                <Bar
+                                    dataKey="income"
+                                    fill="#171717"
+                                    radius={[4, 4, 0, 0]}
+                                />
+                                <Bar
+                                    dataKey="expense"
+                                    fill="#2563EB"
+                                    radius={[4, 4, 0, 0]}
+                                />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                ) : (
+                    <EmptyState
+                        className="flex h-56 flex-col items-center justify-center md:h-72"
+                        title="No cashflow yet"
+                        description="Add your first transaction to populate this chart."
+                    />
+                )}
+            </CardContent>
+        </Card>
     );
 }
 
@@ -1254,7 +1287,7 @@ function TransactionForm({
                 <CardContent
                     className={cn("space-y-4", isEditing && "px-6 pb-6 pt-0")}
                 >
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid grid-cols-2 gap-3">
                         <FieldError
                             message={form.formState.errors.type?.message}
                         >
@@ -1288,10 +1321,13 @@ function TransactionForm({
                             <Label htmlFor="amount">Amount</Label>
                             <Input
                                 id="amount"
-                                min="0"
-                                step="0.01"
-                                type="number"
-                                {...form.register("amount")}
+                                inputMode="decimal"
+                                onInput={handleDecimalInput}
+                                pattern="[0-9]*[.]?[0-9]*"
+                                type="text"
+                                {...form.register("amount", {
+                                    setValueAs: parseDecimalInput,
+                                })}
                             />
                         </FieldError>
                     </div>
@@ -1503,10 +1539,13 @@ function BudgetForm({
                         <Label htmlFor="limit">Limit</Label>
                         <Input
                             id="limit"
-                            min="0"
-                            step="0.01"
-                            type="number"
-                            {...form.register("limit")}
+                            inputMode="decimal"
+                            onInput={handleDecimalInput}
+                            pattern="[0-9]*[.]?[0-9]*"
+                            type="text"
+                            {...form.register("limit", {
+                                setValueAs: parseDecimalInput,
+                            })}
                         />
                     </FieldError>
                     <FieldError message={form.formState.errors.month?.message}>
@@ -1770,6 +1809,7 @@ function BudgetProgressList({
             <CardContent className="space-y-4">
                 {budgets.length === 0 && (
                     <EmptyState
+                        className="flex h-56 flex-col items-center justify-center md:h-72"
                         title="No budgets yet"
                         description="Create a monthly budget after adding expense categories."
                     />
@@ -2826,14 +2866,21 @@ function GoogleLogo({ className }: { className?: string }) {
 }
 
 function EmptyState({
+    className,
     description,
     title,
 }: {
+    className?: string;
     description: string;
     title: string;
 }) {
     return (
-        <div className="rounded-md border border-dashed bg-white px-4 py-10 text-center">
+        <div
+            className={cn(
+                "w-full rounded-md border border-dashed bg-white px-4 py-10 text-center",
+                className,
+            )}
+        >
             <p className="text-sm font-medium leading-5">{title}</p>
             <p className="mt-1 text-sm leading-5 text-muted-foreground">
                 {description}
