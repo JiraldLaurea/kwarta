@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-    BarChart3,
     Calendar,
     Check,
     ChevronDown,
@@ -11,10 +10,8 @@ import {
     CircleDollarSign,
     Edit3,
     LogOut,
-    LoaderCircle,
     Menu,
     Minus,
-    PieChart,
     Plus,
     Trash2,
     UserCircle,
@@ -306,6 +303,7 @@ export function KwartaApp() {
     const incomeCategories = categories.filter(
         (category) => normalizeTransactionType(category.type) === "income",
     );
+    const accountName = getAccountName(user);
 
     const spendingByCategory = useMemo(() => {
         return expenseCategories
@@ -429,45 +427,45 @@ export function KwartaApp() {
                                     setAccountMenuOpen((open) => !open)
                                 }
                             >
-                                <UserCircle className="h-4 w-4" aria-hidden />
-                                Account
+                                <ProfileImage user={user} size="xs" />
+                                <span className="max-w-28 truncate">
+                                    {accountName}
+                                </span>
                                 <ChevronDown
                                     className="h-3.5 w-3.5"
                                     aria-hidden
                                 />
                             </Button>
                             {accountMenuOpen && (
-                                <div className="absolute right-0 z-20 mt-2 w-72 rounded-lg border border-border bg-white p-2 shadow-sm">
-                                    <div className="flex cursor-default items-center gap-3 rounded-md bg-neutral-50 px-3 py-3">
-                                        <ProfileImage user={user} />
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-medium leading-5">
-                                                Account
-                                            </p>
-                                            <p className="mt-1 truncate text-sm leading-5 text-muted-foreground">
-                                                {user?.email ??
-                                                    "Account session"}
-                                            </p>
-                                        </div>
+                                <div className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+                                    <div className="px-4 py-4">
+                                        <p className="max-w-full truncate text-base font-medium leading-6">
+                                            {accountName}
+                                        </p>
+                                        <p className="max-w-full truncate text-sm leading-5 text-muted-foreground">
+                                            {user?.email ?? "Account session"}
+                                        </p>
                                     </div>
-                                    <div className="my-2 h-px bg-border" />
-                                    <Button
-                                        className="h-11 w-full cursor-pointer justify-start rounded-md px-3 hover:bg-neutral-100"
-                                        type="button"
-                                        variant="ghost"
-                                        onClick={async () => {
-                                            await supabase?.auth.signOut();
-                                            setAccountMenuOpen(false);
-                                            setUser(null);
-                                            setIsAuthed(false);
-                                        }}
-                                    >
-                                        <LogOut
-                                            className="h-4 w-4"
-                                            aria-hidden
-                                        />
-                                        Sign out
-                                    </Button>
+                                    <div className="h-px bg-border" />
+                                    <div className="px-2 py-2">
+                                        <Button
+                                            className="h-11 w-full cursor-pointer justify-between rounded-md px-3 text-sm font-normal hover:bg-neutral-100"
+                                            type="button"
+                                            variant="ghost"
+                                            onClick={async () => {
+                                                await supabase?.auth.signOut();
+                                                setAccountMenuOpen(false);
+                                                setUser(null);
+                                                setIsAuthed(false);
+                                            }}
+                                        >
+                                            <span>Log Out</span>
+                                            <LogOut
+                                                className="h-4 w-4"
+                                                aria-hidden
+                                            />
+                                        </Button>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -486,7 +484,14 @@ export function KwartaApp() {
                 </div>
 
                 {mobileNavOpen && (
-                    <div className="border-t bg-white px-4 py-3 md:hidden">
+                    <>
+                    <button
+                        aria-label="Close navigation"
+                        className="fixed inset-x-0 bottom-0 top-16 z-10 cursor-default bg-white/45 backdrop-blur-sm md:hidden"
+                        type="button"
+                        onClick={() => setMobileNavOpen(false)}
+                    />
+                    <div className="absolute left-0 right-0 top-full z-20 border-t bg-white px-4 py-3 shadow-[0_14px_40px_rgba(0,0,0,0.08)] md:hidden">
                         <div className="flex flex-col gap-2">
                             <NavItems
                                 activeView={view}
@@ -496,35 +501,39 @@ export function KwartaApp() {
                                     setMobileNavOpen(false);
                                 }}
                             />
-                            <div className="mt-2 rounded border bg-neutral-50 p-3">
-                                <div className="mb-3 flex items-center gap-2">
-                                    <ProfileImage user={user} size="sm" />
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-medium leading-5">
-                                            Account
-                                        </p>
-                                        <p className="truncate text-sm leading-5 text-muted-foreground">
-                                            {user?.email ?? "Account session"}
-                                        </p>
-                                    </div>
+                            <div className="mt-2 overflow-hidden rounded-xl border bg-white">
+                                <div className="px-3 py-3">
+                                    <p className="truncate text-sm font-medium leading-5">
+                                        {accountName}
+                                    </p>
+                                    <p className="truncate text-xs leading-4 text-muted-foreground">
+                                        {user?.email ?? "Account session"}
+                                    </p>
                                 </div>
-                                <Button
-                                    className="h-11 w-full cursor-pointer justify-start rounded-md px-3 hover:bg-neutral-100"
-                                    type="button"
-                                    variant="ghost"
-                                    onClick={async () => {
-                                        await supabase?.auth.signOut();
-                                        setMobileNavOpen(false);
-                                        setUser(null);
-                                        setIsAuthed(false);
-                                    }}
-                                >
-                                    <LogOut className="h-4 w-4" aria-hidden />
-                                    Sign out
-                                </Button>
+                                <div className="h-px bg-border" />
+                                <div className="px-2 py-2">
+                                    <Button
+                                        className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-xs font-normal hover:bg-neutral-100"
+                                        type="button"
+                                        variant="ghost"
+                                        onClick={async () => {
+                                            await supabase?.auth.signOut();
+                                            setMobileNavOpen(false);
+                                            setUser(null);
+                                            setIsAuthed(false);
+                                        }}
+                                    >
+                                        <span>Log Out</span>
+                                        <LogOut
+                                            className="h-3.5 w-3.5"
+                                            aria-hidden
+                                        />
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    </>
                 )}
             </header>
 
@@ -708,8 +717,8 @@ function AuthLoadingScreen() {
                 </div>
                 <h1 className="text-xl font-medium leading-7">Kwarta</h1>
                 <p className="mt-2 inline-flex items-center justify-center gap-2 text-sm leading-5 text-muted-foreground">
-                    <LoaderCircle
-                        className="h-4 w-4 animate-spin text-foreground"
+                    <span
+                        className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-neutral-200 border-t-foreground"
                         aria-hidden
                     />
                     Loading your account...
@@ -774,9 +783,9 @@ function AuthScreen({
 
     return (
         <main className="min-h-screen bg-neutral-50">
-            <div className="mx-auto grid min-h-screen w-full max-w-6xl items-center gap-10 px-5 py-10 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center gap-3 px-5 py-8 sm:gap-10 sm:py-10 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
                 <section>
-                    <div className="mb-8 flex items-center gap-1">
+                    <div className="mb-0 flex items-center gap-1 sm:mb-8">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
                             <Wallet className="h-5 w-5" aria-hidden />
                         </div>
@@ -784,11 +793,11 @@ function AuthScreen({
                             Kwarta
                         </span>
                     </div>
-                    <h1 className="max-w-2xl text-4xl font-semibold leading-tight tracking-normal text-foreground md:text-5xl">
+                    <h1 className="hidden max-w-2xl text-4xl font-semibold leading-tight tracking-normal text-foreground sm:block md:text-5xl">
                         A precise budget tracker for clearer everyday money
                         decisions.
                     </h1>
-                    <p className="mt-5 max-w-xl text-base leading-7 text-muted-foreground">
+                    <p className="mt-5 hidden max-w-xl text-base leading-7 text-muted-foreground sm:block">
                         Manage income, expenses, categories, and monthly limits
                         in a focused product workspace designed for repeat use.
                     </p>
@@ -796,24 +805,34 @@ function AuthScreen({
 
                 <Card className="bg-white">
                     <CardHeader>
-                        <CardTitle>
-                            {mode === "login" ? "Login" : "Register"}
+                        <CardTitle className="text-3xl font-semibold leading-9">
+                            {mode === "login" ? "Sign in" : "Create account"}
                         </CardTitle>
-                        <p className="text-sm leading-5 text-muted-foreground">
-                            Use Google with Supabase, or continue with the local
-                            demo form.
+                        <p className="text-base leading-6 text-muted-foreground">
+                            {mode === "login"
+                                ? "Welcome back! Let's sign in to your account."
+                                : "Create an account to start tracking your money."}
                         </p>
                     </CardHeader>
                     <CardContent>
                         <Button
-                            className="mb-4 w-full"
+                            className="mt-4 w-full"
                             type="button"
                             variant="secondary"
                             onClick={onGoogleLogin}
                         >
                             <GoogleLogo className="h-5 w-5" />
-                            Continue with Google
+                            {mode === "login"
+                                ? "Sign in with Google"
+                                : "Sign up with Google"}
                         </Button>
+                        <div className="my-4 flex items-center gap-3">
+                            <div className="flex-1 border-t border-border" />
+                            <span className="text-sm leading-5 text-muted-foreground">
+                                or
+                            </span>
+                            <div className="flex-1 border-t border-border" />
+                        </div>
                         {error && (
                             <p className="mb-4 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm leading-5 text-destructive">
                                 {error}
@@ -846,14 +865,13 @@ function AuthScreen({
                                 />
                             </FieldError>
                             <Button className="w-full" type="submit">
-                                <Check className="h-4 w-4" aria-hidden />
-                                {mode === "login" ? "Login" : "Create account"}
+                                {mode === "login" ? "Sign in" : "Create account"}
                             </Button>
                         </form>
                         <div className="mt-4 flex items-center justify-between border-t pt-4 text-sm">
                             <span className="text-muted-foreground">
                                 {mode === "login"
-                                    ? "Need an account?"
+                                    ? "Don't have an account?"
                                     : "Already registered?"}
                             </span>
                             <Button
@@ -866,7 +884,7 @@ function AuthScreen({
                                     )
                                 }
                             >
-                                {mode === "login" ? "Register" : "Login"}
+                                {mode === "login" ? "Sign up" : "Sign in"}
                             </Button>
                         </div>
                     </CardContent>
@@ -896,17 +914,13 @@ function DashboardView({
     return (
         <div className="grid gap-4 md:gap-5 lg:grid-cols-[1.4fr_0.6fr]">
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardHeader>
                     <div>
                         <CardTitle>Cashflow</CardTitle>
                         <p className="text-sm text-muted-foreground">
                             Income and expenses by transaction date
                         </p>
                     </div>
-                    <BarChart3
-                        className="h-5 w-5 text-muted-foreground"
-                        aria-hidden
-                    />
                 </CardHeader>
                 <CardContent>
                     {cashflowData.length > 0 ? (
@@ -924,10 +938,9 @@ function DashboardView({
                                     />
                                     <YAxis tickLine={false} axisLine={false} />
                                     <Tooltip
-                                        cursor={{ fill: "transparent" }}
-                                        formatter={(value) =>
-                                            formatCurrency(Number(value))
-                                        }
+                                        content={<CashflowTooltip />}
+                                        cursor={{ fill: "#E5E5E5" }}
+                                        wrapperStyle={{ outline: "none" }}
                                     />
                                     <Bar
                                         dataKey="income"
@@ -952,17 +965,13 @@ function DashboardView({
             </Card>
 
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardHeader>
                     <div>
                         <CardTitle>Spending</CardTitle>
                         <p className="text-sm text-muted-foreground">
                             Expense mix by category
                         </p>
                     </div>
-                    <PieChart
-                        className="h-5 w-5 text-muted-foreground"
-                        aria-hidden
-                    />
                 </CardHeader>
                 <CardContent>
                     {spendingByCategory.length > 0 ? (
@@ -1010,6 +1019,25 @@ function DashboardView({
                 categories={categories}
                 transactions={transactions.slice(0, 6)}
             />
+        </div>
+    );
+}
+
+function CashflowTooltip({
+    active,
+    label,
+}: {
+    active?: boolean;
+    label?: string | number;
+}) {
+    if (!active || !label) {
+        return null;
+    }
+
+    return (
+        <div className="pointer-events-none relative rounded-md border border-border bg-white px-3 py-2 text-sm leading-5 text-foreground shadow-[0_14px_34px_rgba(0,0,0,0.12)]">
+            <span className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 border-l border-t border-border bg-white" />
+            {label}
         </div>
     );
 }
@@ -1147,7 +1175,9 @@ function TransactionForm({
                             isEditing && "text-base leading-6",
                         )}
                     >
-                        Track income and expenses as they happen.
+                        {editing
+                            ? "Update this transaction's amount, source, category, and date."
+                            : "Record a new income or expense with its source, category, and date."}
                     </p>
                 </CardHeader>
                 <CardContent
@@ -1217,7 +1247,7 @@ function TransactionForm({
                     <FieldError
                         message={form.formState.errors.merchant?.message}
                     >
-                        <Label htmlFor="merchant">Merchant or source</Label>
+                        <Label htmlFor="merchant">Source</Label>
                         <Input id="merchant" {...form.register("merchant")} />
                     </FieldError>
                     <FieldError message={form.formState.errors.date?.message}>
@@ -1821,8 +1851,8 @@ function RecentTransactions({
                                         className={cn(
                                             "shrink-0 font-medium",
                                             transaction.type === "income"
-                                                ? "text-foreground"
-                                                : "text-[#0B57D0]",
+                                                ? "text-[#15803D]"
+                                                : "text-[#DC2626]",
                                         )}
                                     >
                                         {transaction.type === "income"
@@ -1879,7 +1909,7 @@ function TransactionTable({
                                         key={transaction.id}
                                         className="rounded-md border bg-white p-3"
                                     >
-                                        <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-center justify-between gap-3">
                                             <div className="flex min-w-0 items-center gap-3">
                                                 <TransactionIcon
                                                     type={transaction.type}
@@ -1894,7 +1924,15 @@ function TransactionTable({
                                                     </p>
                                                 </div>
                                             </div>
-                                            <p className="shrink-0 text-sm font-medium leading-5">
+                                            <p
+                                                className={cn(
+                                                    "shrink-0 self-center text-sm font-medium leading-5",
+                                                    transaction.type ===
+                                                        "income"
+                                                        ? "text-[#15803D]"
+                                                        : "text-[#DC2626]",
+                                                )}
+                                            >
                                                 {transaction.type === "income"
                                                     ? "+"
                                                     : "-"}
@@ -2003,7 +2041,15 @@ function TransactionTable({
                                                         transaction.date,
                                                     )}
                                                 </td>
-                                                <td className="py-3 text-right font-medium">
+                                                <td
+                                                    className={cn(
+                                                        "py-3 text-right font-medium",
+                                                        transaction.type ===
+                                                            "income"
+                                                            ? "text-[#15803D]"
+                                                            : "text-[#DC2626]",
+                                                    )}
+                                                >
                                                     {transaction.type ===
                                                     "income"
                                                         ? "+"
@@ -2193,9 +2239,9 @@ function DatePickerInput({
             <button
                 id={id}
                 className={cn(
-                    "flex h-10 w-full cursor-pointer items-center gap-3 rounded-md border border-input bg-white px-3 py-2 text-left text-sm text-foreground transition-[border-color,box-shadow] duration-150 ease-out focus-visible:border-[#8A8A8A] focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgba(23,23,23,0.18)]",
+                    "flex h-10 w-full cursor-pointer items-center gap-3 rounded-md border border-input bg-white px-3 py-2 text-left text-base text-foreground transition-[border-color,box-shadow] duration-150 ease-out focus-visible:border-[#2563EB] focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgba(37,99,235,0.18)] sm:text-sm",
                     isOpen &&
-                        "border-[#8A8A8A] shadow-[0_0_0_3px_rgba(23,23,23,0.18)]",
+                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
                 )}
                 type="button"
                 onClick={() => {
@@ -2354,9 +2400,9 @@ function MonthPickerInput({
             <button
                 id={id}
                 className={cn(
-                    "flex h-10 w-full cursor-pointer items-center gap-3 rounded-md border border-input bg-white px-3 py-2 text-left text-sm text-foreground transition-[border-color,box-shadow] duration-150 ease-out focus-visible:border-[#8A8A8A] focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgba(23,23,23,0.18)]",
+                    "flex h-10 w-full cursor-pointer items-center gap-3 rounded-md border border-input bg-white px-3 py-2 text-left text-base text-foreground transition-[border-color,box-shadow] duration-150 ease-out focus-visible:border-[#2563EB] focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgba(37,99,235,0.18)] sm:text-sm",
                     isOpen &&
-                        "border-[#8A8A8A] shadow-[0_0_0_3px_rgba(23,23,23,0.18)]",
+                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
                 )}
                 type="button"
                 onClick={() => {
@@ -2547,16 +2593,17 @@ function EditModal({
     }, [onClose]);
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 px-4 py-6"
-            role="presentation"
-            onMouseDown={onClose}
-        >
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+            <button
+                aria-label="Close modal"
+                className="absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm"
+                type="button"
+                onClick={onClose}
+            />
             <div
-                className="w-full max-w-[540px] rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
+                className="relative w-full max-w-[540px] rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
                 role="dialog"
                 aria-modal="true"
-                onMouseDown={(event) => event.stopPropagation()}
             >
                 {children}
             </div>
@@ -2598,8 +2645,8 @@ function TransactionIcon({ type }: { type: TransactionType }) {
             className={cn(
                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
                 type === "income"
-                    ? "bg-neutral-100 text-foreground"
-                    : "bg-[#E8F0FE] text-[#0B57D0]",
+                    ? "bg-[#DCFCE7] text-[#15803D]"
+                    : "bg-[#FEE2E2] text-[#DC2626]",
             )}
         >
             {type === "income" ? (
@@ -2615,14 +2662,23 @@ function ProfileImage({
     size = "md",
     user,
 }: {
-    size?: "sm" | "md";
+    size?: "xs" | "sm" | "md" | "lg";
     user: User | null;
 }) {
     const avatarUrl =
         typeof user?.user_metadata.avatar_url === "string"
             ? user.user_metadata.avatar_url
             : null;
-    const sizeClass = size === "sm" ? "h-8 w-8" : "h-10 w-10";
+    const sizeClass =
+        size === "xs"
+            ? "h-5 w-5"
+            : size === "sm"
+              ? "h-8 w-8"
+              : size === "lg"
+                ? "h-12 w-12"
+                : "h-10 w-10";
+    const pixelSize =
+        size === "xs" ? 20 : size === "sm" ? 32 : size === "lg" ? 48 : 40;
 
     if (avatarUrl) {
         return (
@@ -2632,9 +2688,9 @@ function ProfileImage({
                     sizeClass,
                     "shrink-0 rounded-full border border-border object-cover",
                 )}
-                height={size === "sm" ? 32 : 40}
+                height={pixelSize}
                 src={avatarUrl}
-                width={size === "sm" ? 32 : 40}
+                width={pixelSize}
             />
         );
     }
@@ -2643,12 +2699,31 @@ function ProfileImage({
         <span
             className={cn(
                 sizeClass,
-                "flex shrink-0 items-center justify-center rounded-full bg-neutral-100 text-foreground",
+                "flex shrink-0 items-center justify-center rounded-full border border-border bg-neutral-100 font-medium text-muted-foreground",
             )}
         >
-            <UserCircle className="h-5 w-5" aria-hidden />
+            {getAccountInitial(user)}
         </span>
     );
+}
+
+function getAccountName(user: User | null) {
+    const metadataName =
+        typeof user?.user_metadata.full_name === "string"
+            ? user.user_metadata.full_name
+            : typeof user?.user_metadata.name === "string"
+              ? user.user_metadata.name
+              : null;
+
+    if (metadataName?.trim()) {
+        return metadataName.trim();
+    }
+
+    return user?.email?.split("@")[0] ?? "Account";
+}
+
+function getAccountInitial(user: User | null) {
+    return getAccountName(user).charAt(0).toUpperCase();
 }
 
 function GoogleLogo({ className }: { className?: string }) {
