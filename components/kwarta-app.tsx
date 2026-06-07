@@ -9,17 +9,11 @@ import {
     ChevronRight,
     CircleDollarSign,
     Edit3,
-    LayoutDashboard,
     LogOut,
     Minus,
-    MoreHorizontal,
-    PiggyBank,
     Plus,
-    ReceiptText,
-    Tags,
     Trash2,
     Wallet,
-    type LucideIcon,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
@@ -756,34 +750,33 @@ function MobileTabBar({
     onSelect: (view: View) => void;
 }) {
     const items: Array<{
-        icon: LucideIcon;
+        icon: MobileTabIconName;
         label: string;
         view: View;
     }> = [
-        { icon: LayoutDashboard, label: "Dashboard", view: "dashboard" },
-        { icon: ReceiptText, label: "Transactions", view: "transactions" },
-        { icon: PiggyBank, label: "Budgets", view: "budgets" },
-        { icon: Tags, label: "Categories", view: "categories" },
+        { icon: "dashboard", label: "Dashboard", view: "dashboard" },
+        { icon: "transactions", label: "Transactions", view: "transactions" },
+        { icon: "budgets", label: "Budgets", view: "budgets" },
+        { icon: "categories", label: "Categories", view: "categories" },
     ];
 
     return (
         <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-white/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] backdrop-blur-md md:hidden">
             <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
                 {items.map((item) => {
-                    const Icon = item.icon;
                     const active = activeView === item.view && !moreOpen;
 
                     return (
                         <button
                             className={cn(
-                                "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-muted-foreground transition-colors",
-                                active && "bg-primary text-primary-foreground",
+                                "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-[#9CA3AF] transition-colors",
+                                active && "text-primary",
                             )}
                             key={item.view}
                             type="button"
                             onClick={() => onSelect(item.view)}
                         >
-                            <Icon className="h-4 w-4" aria-hidden />
+                            <MobileTabIcon active={active} name={item.icon} />
                             <span className="max-w-full truncate">
                                 {item.label}
                             </span>
@@ -792,18 +785,142 @@ function MobileTabBar({
                 })}
                 <button
                     className={cn(
-                        "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-muted-foreground transition-colors",
-                        moreOpen &&
-                            "bg-primary text-primary-foreground",
+                        "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-[#9CA3AF] transition-colors",
+                        moreOpen && "text-primary",
                     )}
                     type="button"
                     onClick={onMore}
                 >
-                    <MoreHorizontal className="h-4 w-4" aria-hidden />
+                    <MobileTabIcon active={moreOpen} name="more" />
                     <span>More</span>
                 </button>
             </div>
         </nav>
+    );
+}
+
+type MobileTabIconName =
+    | "dashboard"
+    | "transactions"
+    | "budgets"
+    | "categories"
+    | "more";
+
+function MobileTabIcon({
+    active,
+    name,
+}: {
+    active: boolean;
+    name: MobileTabIconName;
+}) {
+    const commonProps = {
+        "aria-hidden": true,
+        className: "h-5 w-5",
+        fill: "none",
+        viewBox: "0 0 24 24",
+        xmlns: "http://www.w3.org/2000/svg",
+    };
+    const strokeProps = {
+        stroke: "currentColor",
+        strokeLinecap: "round" as const,
+        strokeLinejoin: "round" as const,
+        strokeWidth: 1.9,
+    };
+
+    if (name === "dashboard") {
+        return (
+            <svg {...commonProps}>
+                {active ? (
+                    <>
+                        <rect height="7" rx="1.5" fill="currentColor" width="7" x="4" y="4" />
+                        <rect height="7" rx="1.5" fill="currentColor" width="7" x="13" y="4" />
+                        <rect height="7" rx="1.5" fill="currentColor" width="7" x="4" y="13" />
+                        <rect height="7" rx="1.5" fill="currentColor" width="7" x="13" y="13" />
+                    </>
+                ) : (
+                    <>
+                        <rect height="7" rx="1.5" {...strokeProps} width="7" x="4" y="4" />
+                        <rect height="7" rx="1.5" {...strokeProps} width="7" x="13" y="4" />
+                        <rect height="7" rx="1.5" {...strokeProps} width="7" x="4" y="13" />
+                        <rect height="7" rx="1.5" {...strokeProps} width="7" x="13" y="13" />
+                    </>
+                )}
+            </svg>
+        );
+    }
+
+    if (name === "transactions") {
+        return (
+            <svg {...commonProps}>
+                {active ? (
+                    <>
+                        <path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V20l-3-1.75L12 20l-3-1.75L6 20V4.75Z" fill="currentColor" />
+                        <path d="M9 8h6M9 12h6M9 16h3.5" stroke="#FFFFFF" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+                    </>
+                ) : (
+                    <>
+                        <path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V20l-3-1.75L12 20l-3-1.75L6 20V4.75Z" {...strokeProps} />
+                        <path d="M9 8h6M9 12h6M9 16h3.5" {...strokeProps} />
+                    </>
+                )}
+            </svg>
+        );
+    }
+
+    if (name === "budgets") {
+        return (
+            <svg {...commonProps}>
+                {active ? (
+                    <>
+                        <path d="M4 7.25A2.25 2.25 0 0 1 6.25 5h10.5A2.25 2.25 0 0 1 19 7.25V8H6.25A2.25 2.25 0 0 1 4 5.75v0" fill="currentColor" />
+                        <path d="M4 8h15.25A1.75 1.75 0 0 1 21 9.75v7.5A2.75 2.75 0 0 1 18.25 20H5.75A2.75 2.75 0 0 1 3 17.25v-10" fill="currentColor" />
+                        <circle cx="17.5" cy="14.5" fill="#FFFFFF" r="1.5" />
+                    </>
+                ) : (
+                    <>
+                        <path d="M4 7.25A2.25 2.25 0 0 1 6.25 5h10.5A2.25 2.25 0 0 1 19 7.25V8H6.25A2.25 2.25 0 0 1 4 5.75v0" {...strokeProps} />
+                        <path d="M4 8h15.25A1.75 1.75 0 0 1 21 9.75v7.5A2.75 2.75 0 0 1 18.25 20H5.75A2.75 2.75 0 0 1 3 17.25v-10" {...strokeProps} />
+                        <circle cx="17.5" cy="14.5" r="1.5" {...strokeProps} />
+                    </>
+                )}
+            </svg>
+        );
+    }
+
+    if (name === "categories") {
+        return (
+            <svg {...commonProps}>
+                {active ? (
+                    <>
+                        <path d="M4.25 5.75A1.75 1.75 0 0 1 6 4h5.1c.46 0 .9.18 1.24.51l7.15 7.15a1.75 1.75 0 0 1 0 2.48l-5.35 5.35a1.75 1.75 0 0 1-2.48 0L4.51 12.34A1.75 1.75 0 0 1 4 11.1V6Z" fill="currentColor" />
+                        <circle cx="8.25" cy="8.25" fill="#FFFFFF" r="1.25" />
+                    </>
+                ) : (
+                    <>
+                        <path d="M4.25 5.75A1.75 1.75 0 0 1 6 4h5.1c.46 0 .9.18 1.24.51l7.15 7.15a1.75 1.75 0 0 1 0 2.48l-5.35 5.35a1.75 1.75 0 0 1-2.48 0L4.51 12.34A1.75 1.75 0 0 1 4 11.1V6Z" {...strokeProps} />
+                        <circle cx="8.25" cy="8.25" r="1.25" {...strokeProps} />
+                    </>
+                )}
+            </svg>
+        );
+    }
+
+    return (
+        <svg {...commonProps}>
+            {active ? (
+                <>
+                    <circle cx="7" cy="12" fill="currentColor" r="1.75" />
+                    <circle cx="12" cy="12" fill="currentColor" r="1.75" />
+                    <circle cx="17" cy="12" fill="currentColor" r="1.75" />
+                </>
+            ) : (
+                <>
+                    <circle cx="7" cy="12" r="1.75" {...strokeProps} />
+                    <circle cx="12" cy="12" r="1.75" {...strokeProps} />
+                    <circle cx="17" cy="12" r="1.75" {...strokeProps} />
+                </>
+            )}
+        </svg>
     );
 }
 
@@ -1073,7 +1190,7 @@ function CashflowCard({
     cashflowData: Array<{ date: string; income: number; expense: number }>;
 }) {
     return (
-        <Card>
+        <Card className="flex h-full flex-col">
             <CardHeader>
                 <div>
                     <CardTitle>Cashflow</CardTitle>
@@ -1925,9 +2042,10 @@ function RecentTransactions({
                     Latest income and expense entries.
                 </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className={cn(transactions.length === 0 && "flex flex-1")}>
                 {transactions.length === 0 ? (
                     <EmptyState
+                        className="flex min-h-48 flex-1 flex-col items-center justify-center"
                         title="No activity yet"
                         description="New transactions will appear here."
                     />
@@ -1993,16 +2111,17 @@ function TransactionTable({
     transactions: Transaction[];
 }) {
     return (
-        <Card>
+        <Card className="flex h-full flex-col">
             <CardHeader>
                 <CardTitle>Transactions</CardTitle>
                 <p className="text-sm text-muted-foreground">
                     Edit or remove posted money movement.
                 </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className={cn(transactions.length === 0 && "flex flex-1")}>
                 {transactions.length === 0 ? (
                     <EmptyState
+                        className="flex min-h-64 flex-1 flex-col items-center justify-center md:min-h-80"
                         title="No transactions yet"
                         description="Use the form to add income or expenses."
                     />
