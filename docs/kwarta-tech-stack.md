@@ -27,6 +27,12 @@ Kwarta is a personal finance and budget tracking web application focused on help
 - Vercel
 - Supabase
 
+### PWA / Mobile Install
+- Web App Manifest
+- Service Worker
+- iOS Apple Web App metadata
+- Apple touch icon and maskable app icons
+
 ## MVP Features
 
 ### Authentication
@@ -50,6 +56,12 @@ Kwarta is a personal finance and budget tracking web application focused on help
 - Total expenses
 - Current balance
 - Spending charts
+
+### Mobile App Experience
+- Add to Home Screen support on iPhone
+- Standalone display mode
+- App icon and theme color
+- Basic offline shell caching
 
 ### Budgets
 - Monthly budget limits
