@@ -9,13 +9,17 @@ import {
     ChevronRight,
     CircleDollarSign,
     Edit3,
+    LayoutDashboard,
     LogOut,
-    Menu,
     Minus,
+    MoreHorizontal,
+    PiggyBank,
     Plus,
+    ReceiptText,
+    Tags,
     Trash2,
-    UserCircle,
     Wallet,
+    type LucideIcon,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
@@ -126,7 +130,7 @@ export function KwartaApp() {
     const [authMode, setAuthMode] = useState<AuthMode>("login");
     const [user, setUser] = useState<User | null>(null);
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-    const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
     const [view, setView] = useState<View>("dashboard");
     const [categories, setCategories] = useState<Category[]>(seedCategories);
     const [transactions, setTransactions] =
@@ -405,7 +409,7 @@ export function KwartaApp() {
                         type="button"
                         onClick={() => {
                             setView("dashboard");
-                            setMobileNavOpen(false);
+                            setMobileMoreOpen(false);
                         }}
                     >
                         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
@@ -471,73 +475,10 @@ export function KwartaApp() {
                         </div>
                     </nav>
 
-                    <Button
-                        className="md:hidden"
-                        type="button"
-                        variant="secondary"
-                        size="icon"
-                        onClick={() => setMobileNavOpen((open) => !open)}
-                    >
-                        <Menu className="h-4 w-4" aria-hidden />
-                        <span className="sr-only">Open navigation</span>
-                    </Button>
                 </div>
-
-                {mobileNavOpen && (
-                    <>
-                    <button
-                        aria-label="Close navigation"
-                        className="fixed inset-x-0 bottom-0 top-16 z-10 cursor-default bg-white/45 backdrop-blur-sm md:hidden"
-                        type="button"
-                        onClick={() => setMobileNavOpen(false)}
-                    />
-                    <div className="absolute left-0 right-0 top-full z-20 border-t bg-white px-4 py-3 shadow-[0_14px_40px_rgba(0,0,0,0.08)] md:hidden">
-                        <div className="flex flex-col gap-2">
-                            <NavItems
-                                activeView={view}
-                                mobile
-                                onSelect={(nextView) => {
-                                    setView(nextView);
-                                    setMobileNavOpen(false);
-                                }}
-                            />
-                            <div className="mt-2 overflow-hidden rounded-xl border bg-white">
-                                <div className="px-3 py-3">
-                                    <p className="truncate text-sm font-medium leading-5">
-                                        {accountName}
-                                    </p>
-                                    <p className="truncate text-xs leading-4 text-muted-foreground">
-                                        {user?.email ?? "Account session"}
-                                    </p>
-                                </div>
-                                <div className="h-px bg-border" />
-                                <div className="px-2 py-2">
-                                    <Button
-                                        className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-xs font-normal hover:bg-neutral-100"
-                                        type="button"
-                                        variant="ghost"
-                                        onClick={async () => {
-                                            await supabase?.auth.signOut();
-                                            setMobileNavOpen(false);
-                                            setUser(null);
-                                            setIsAuthed(false);
-                                        }}
-                                    >
-                                        <span>Log Out</span>
-                                        <LogOut
-                                            className="h-3.5 w-3.5"
-                                            aria-hidden
-                                        />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    </>
-                )}
             </header>
 
-            <div className="mx-auto w-full max-w-7xl px-4 py-5 md:px-5 md:py-7">
+            <div className="mx-auto w-full max-w-7xl px-4 pb-28 pt-5 md:px-5 md:py-7">
                 {view === "dashboard" && (
                     <div className="space-y-4">
                         <section>
@@ -704,6 +645,28 @@ export function KwartaApp() {
                     />
                 )}
             </div>
+            {mobileMoreOpen && (
+                <MobileMoreSheet
+                    accountName={accountName}
+                    email={user?.email ?? "Account session"}
+                    onClose={() => setMobileMoreOpen(false)}
+                    onSignOut={async () => {
+                        await supabase?.auth.signOut();
+                        setMobileMoreOpen(false);
+                        setUser(null);
+                        setIsAuthed(false);
+                    }}
+                />
+            )}
+            <MobileTabBar
+                activeView={view}
+                moreOpen={mobileMoreOpen}
+                onMore={() => setMobileMoreOpen((open) => !open)}
+                onSelect={(nextView) => {
+                    setView(nextView);
+                    setMobileMoreOpen(false);
+                }}
+            />
         </main>
     );
 }
@@ -756,6 +719,114 @@ function NavItems({
                     {item[0].toUpperCase() + item.slice(1)}
                 </Button>
             ))}
+        </>
+    );
+}
+
+function MobileTabBar({
+    activeView,
+    moreOpen,
+    onMore,
+    onSelect,
+}: {
+    activeView: View;
+    moreOpen: boolean;
+    onMore: () => void;
+    onSelect: (view: View) => void;
+}) {
+    const items: Array<{
+        icon: LucideIcon;
+        label: string;
+        view: View;
+    }> = [
+        { icon: LayoutDashboard, label: "Dashboard", view: "dashboard" },
+        { icon: ReceiptText, label: "Transactions", view: "transactions" },
+        { icon: PiggyBank, label: "Budgets", view: "budgets" },
+        { icon: Tags, label: "Categories", view: "categories" },
+    ];
+
+    return (
+        <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-white/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] backdrop-blur-md md:hidden">
+            <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
+                {items.map((item) => {
+                    const Icon = item.icon;
+                    const active = activeView === item.view && !moreOpen;
+
+                    return (
+                        <button
+                            className={cn(
+                                "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-muted-foreground transition-colors hover:bg-neutral-100",
+                                active && "bg-primary text-primary-foreground hover:bg-primary",
+                            )}
+                            key={item.view}
+                            type="button"
+                            onClick={() => onSelect(item.view)}
+                        >
+                            <Icon className="h-4 w-4" aria-hidden />
+                            <span className="max-w-full truncate">
+                                {item.label}
+                            </span>
+                        </button>
+                    );
+                })}
+                <button
+                    className={cn(
+                        "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-muted-foreground transition-colors hover:bg-neutral-100",
+                        moreOpen &&
+                            "bg-primary text-primary-foreground hover:bg-primary",
+                    )}
+                    type="button"
+                    onClick={onMore}
+                >
+                    <MoreHorizontal className="h-4 w-4" aria-hidden />
+                    <span>More</span>
+                </button>
+            </div>
+        </nav>
+    );
+}
+
+function MobileMoreSheet({
+    accountName,
+    email,
+    onClose,
+    onSignOut,
+}: {
+    accountName: string;
+    email: string;
+    onClose: () => void;
+    onSignOut: () => void;
+}) {
+    return (
+        <>
+            <button
+                aria-label="Close more menu"
+                className="fixed inset-x-0 bottom-0 top-0 z-40 cursor-default bg-white/45 backdrop-blur-sm md:hidden"
+                type="button"
+                onClick={onClose}
+            />
+            <section className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 mx-auto max-w-lg overflow-hidden rounded-xl border border-border bg-white shadow-[0_18px_60px_rgba(0,0,0,0.14)] md:hidden">
+                <div className="px-4 py-4">
+                    <p className="truncate text-sm font-medium leading-5">
+                        {accountName}
+                    </p>
+                    <p className="truncate text-xs leading-4 text-muted-foreground">
+                        {email}
+                    </p>
+                </div>
+                <div className="h-px bg-border" />
+                <div className="px-2 py-2">
+                    <Button
+                        className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-xs font-normal hover:bg-neutral-100"
+                        type="button"
+                        variant="ghost"
+                        onClick={onSignOut}
+                    >
+                        <span>Log Out</span>
+                        <LogOut className="h-3.5 w-3.5" aria-hidden />
+                    </Button>
+                </div>
+            </section>
         </>
     );
 }
