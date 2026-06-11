@@ -1,5 +1,5 @@
-const CACHE_NAME = "kwarta-v1";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/icon.svg"];
+const CACHE_NAME = "kwarta-v2";
+const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

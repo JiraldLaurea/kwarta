@@ -10,12 +10,12 @@ import {
     CircleDollarSign,
     Download,
     Edit3,
+    Ellipsis,
     LogOut,
     Minus,
     Plus,
     Trash2,
     Upload,
-    Wallet,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
@@ -83,6 +83,14 @@ function normalizeTransactionType(value: string) {
     return value.trim().toLowerCase() as TransactionType;
 }
 
+function slugifyCategoryValue(value: string) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+}
+
 function withMissingDefaultCategories(categories: Category[], userId: string) {
     const existingKeys = new Set(
         categories.map(
@@ -145,7 +153,25 @@ const transactionBackupRecordSchema = transactionSchema.extend({
     note: z.string().optional(),
 });
 
-const budgetBackupRecordSchema = budgetSchema.extend({
+const budgetBackupRecordSchema = z
+    .object({
+        id: z.string().optional(),
+        category: z.string().optional(),
+        categoryId: z.string().optional(),
+        categoryName: z.string().optional(),
+        categoryType: z.string().optional(),
+        name: z.string().optional(),
+        limit: z.unknown().optional(),
+        amount: z.unknown().optional(),
+        budget: z.unknown().optional(),
+        value: z.unknown().optional(),
+        date: z.string().optional(),
+        month: z.string().optional(),
+        period: z.string().optional(),
+    })
+    .passthrough();
+
+const backupCategoryRecordSchema = categorySchema.extend({
     id: z.string().min(1),
 });
 
@@ -154,6 +180,7 @@ const transactionBackupSchema = z.union([
     z.object({
         type: z.string().optional(),
         exportedAt: z.string().optional(),
+        categories: z.array(backupCategoryRecordSchema).optional(),
         transactions: z.array(transactionBackupRecordSchema),
     }),
 ]);
@@ -163,11 +190,71 @@ const budgetBackupSchema = z.union([
     z.object({
         type: z.string().optional(),
         exportedAt: z.string().optional(),
+        categories: z.array(backupCategoryRecordSchema).optional(),
         budgets: z.array(budgetBackupRecordSchema),
     }),
 ]);
 
-function parseTransactionBackupPayload(payload: unknown): Transaction[] {
+function findMatchingCategoryId(
+    categoryId: string,
+    categoryType: TransactionType,
+    categories: Category[],
+    backupCategories: Category[] = [],
+) {
+    const availableCategories = categories.filter(
+        (category) => normalizeTransactionType(category.type) === categoryType,
+    );
+    const currentCategory = categories.find(
+        (category) =>
+            category.id === categoryId &&
+            normalizeTransactionType(category.type) === categoryType,
+    );
+
+    if (currentCategory) {
+        return currentCategory.id;
+    }
+
+    const backupCategory = backupCategories.find(
+        (category) => category.id === categoryId,
+    );
+
+    if (backupCategory) {
+        const matchingCurrentCategory = categories.find(
+            (category) =>
+                normalizeTransactionType(category.type) === categoryType &&
+                category.name.trim().toLowerCase() ===
+                    backupCategory.name.trim().toLowerCase(),
+        );
+
+        if (matchingCurrentCategory) {
+            return matchingCurrentCategory.id;
+        }
+    }
+
+    const normalizedCategoryId = slugifyCategoryValue(categoryId);
+    const inferredCategory = availableCategories.find((category) => {
+        const categoryNameSlug = slugifyCategoryValue(category.name);
+        const categoryIdSlug = slugifyCategoryValue(category.id);
+
+        return (
+            normalizedCategoryId === categoryNameSlug ||
+            normalizedCategoryId.endsWith(`-${categoryNameSlug}`) ||
+            categoryIdSlug === normalizedCategoryId ||
+            categoryIdSlug.endsWith(`-${normalizedCategoryId}`)
+        );
+    });
+
+    if (inferredCategory) {
+        return inferredCategory.id;
+    }
+
+    return getFirstCategoryId(categories, categoryType) || categoryId;
+}
+
+function parseTransactionBackupPayload(
+    payload: unknown,
+    categories: Category[],
+): Transaction[] {
     const parsed = transactionBackupSchema.safeParse(payload);
 
     if (!parsed.success) {
@@ -177,32 +264,141 @@ function parseTransactionBackupPayload(payload: unknown): Transaction[] {
     const records = Array.isArray(parsed.data)
         ? parsed.data
         : parsed.data.transactions;
+    const backupCategories = Array.isArray(parsed.data)
+        ? []
+        : (parsed.data.categories ?? []);
 
     return records.map((transaction) => ({
         ...transaction,
+        id: crypto.randomUUID(),
+        categoryId: findMatchingCategoryId(
+            transaction.categoryId,
+            normalizeTransactionType(transaction.type),
+            categories,
+            backupCategories,
+        ),
         note: transaction.note ?? "",
     }));
 }
 
-function parseBudgetBackupPayload(payload: unknown): Budget[] {
+function parseBackupAmount(value: unknown) {
+    if (typeof value === "number") {
+        return value;
+    }
+
+    if (typeof value === "string") {
+        const normalized = value.replace(/[^\d.-]/g, "");
+        return normalized ? Number(normalized) : Number.NaN;
+    }
+
+    return Number.NaN;
+}
+
+function normalizeBackupMonth(value: string | undefined) {
+    if (!value) {
+        return "";
+    }
+
+    const trimmed = value.trim();
+    const monthMatch = trimmed.match(/^(\d{4})-(\d{2})/);
+
+    if (monthMatch) {
+        return `${monthMatch[1]}-${monthMatch[2]}`;
+    }
+
+    const parsed = new Date(trimmed);
+
+    if (Number.isNaN(parsed.getTime())) {
+        return trimmed;
+    }
+
+    return toMonthInputValue(parsed);
+}
+
+function parseBudgetBackupPayload(
+    payload: unknown,
+    categories: Category[],
+): Budget[] {
     const parsed = budgetBackupSchema.safeParse(payload);
 
     if (!parsed.success) {
         throw new Error("Invalid budgets backup.");
     }
 
-    return Array.isArray(parsed.data) ? parsed.data : parsed.data.budgets;
+    const records = Array.isArray(parsed.data)
+        ? parsed.data
+        : parsed.data.budgets;
+    const backupCategories = Array.isArray(parsed.data)
+        ? []
+        : (parsed.data.categories ?? []);
+
+    const budgets = records.map((budget) => {
+        const categoryKey =
+            budget.categoryName ??
+            budget.category ??
+            budget.name ??
+            budget.categoryId ??
+            "";
+        const limit = parseBackupAmount(
+            budget.limit ?? budget.amount ?? budget.budget ?? budget.value,
+        );
+        const month = normalizeBackupMonth(
+            budget.month ?? budget.period ?? budget.date,
+        );
+
+        return {
+            id: crypto.randomUUID(),
+            categoryId: findMatchingCategoryId(
+                categoryKey,
+                "expense",
+                categories,
+                backupCategories,
+            ),
+            limit,
+            month,
+        };
+    });
+
+    if (
+        budgets.some(
+            (budget) =>
+                !budget.categoryId ||
+                !Number.isFinite(budget.limit) ||
+                budget.limit <= 0 ||
+                !budget.month,
+        )
+    ) {
+        throw new Error("Invalid budgets backup.");
+    }
+
+    return budgets;
 }
 
 function downloadBackupFile(
     label: "transactions" | "budgets",
     records: Transaction[] | Budget[],
+    categories: Category[],
 ) {
     const exportedAt = new Date().toISOString();
+    const exportedRecords =
+        label === "budgets"
+            ? (records as Budget[]).map((budget) => {
+                  const category = categories.find(
+                      (item) => item.id === budget.categoryId,
+                  );
+
+                  return {
+                      ...budget,
+                      categoryName: category?.name ?? "",
+                      categoryType: category?.type ?? "expense",
+                  };
+              })
+            : records;
     const backup = {
         type: `kwarta.${label}.v1`,
         exportedAt,
-        [label]: records,
+        categories,
+        [label]: exportedRecords,
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], {
         type: "application/json",
@@ -216,6 +412,20 @@ function downloadBackupFile(
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+}
+
+async function persistWorkspace(workspace: StoredWorkspace, userId: string) {
+    const response = await fetch("/api/workspace", {
+        body: JSON.stringify({ ...workspace, userId }),
+        headers: {
+            "Content-Type": "application/json",
+        },
+        method: "PUT",
+    });
+
+    if (!response.ok) {
+        throw new Error("Unable to save workspace.");
+    }
 }
 
 export function KwartaApp() {
@@ -338,20 +548,15 @@ export function KwartaApp() {
             return;
         }
 
-        const workspace: StoredWorkspace = {
-            budgets,
-            categories,
-            transactions,
-        };
-
         const timeout = window.setTimeout(() => {
-            fetch("/api/workspace", {
-                body: JSON.stringify({ ...workspace, userId }),
-                headers: {
-                    "Content-Type": "application/json",
+            persistWorkspace(
+                {
+                    budgets,
+                    categories,
+                    transactions,
                 },
-                method: "PUT",
-            }).catch(() => {
+                userId,
+            ).catch(() => {
                 // The UI remains usable; the next successful change will retry persistence.
             });
         }, 350);
@@ -508,9 +713,7 @@ export function KwartaApp() {
                             setMobileMoreOpen(false);
                         }}
                     >
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                            <Wallet className="h-4 w-4" aria-hidden />
-                        </div>
+                        <LogoMark size={36} />
                         <span className="text-lg font-semibold leading-6">
                             Kwarta
                         </span>
@@ -570,7 +773,6 @@ export function KwartaApp() {
                             )}
                         </div>
                     </nav>
-
                 </div>
             </header>
 
@@ -625,7 +827,18 @@ export function KwartaApp() {
                         onEdit={(transaction) =>
                             setEditingTransactionId(transaction.id)
                         }
-                        onImport={(nextTransactions) => {
+                        onImport={async (nextTransactions) => {
+                            if (userId) {
+                                await persistWorkspace(
+                                    {
+                                        budgets,
+                                        categories,
+                                        transactions: nextTransactions,
+                                    },
+                                    userId,
+                                );
+                            }
+
                             setTransactions(nextTransactions);
                             setEditingTransactionId(null);
                         }}
@@ -671,7 +884,18 @@ export function KwartaApp() {
                             )
                         }
                         onEdit={(budget) => setEditingBudgetId(budget.id)}
-                        onImport={(nextBudgets) => {
+                        onImport={async (nextBudgets) => {
+                            if (userId) {
+                                await persistWorkspace(
+                                    {
+                                        budgets: nextBudgets,
+                                        categories,
+                                        transactions,
+                                    },
+                                    userId,
+                                );
+                            }
+
                             setBudgets(nextBudgets);
                             setEditingBudgetId(null);
                         }}
@@ -778,9 +1002,9 @@ export function KwartaApp() {
 function AuthLoadingScreen() {
     return (
         <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-5">
-            <div className="w-full max-w-sm rounded border border-border bg-white p-5 text-center">
-                <div className="mx-auto mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                    <Wallet className="h-5 w-5" aria-hidden />
+            <div className="w-full max-w-sm rounded-md border border-border bg-white p-6 text-center">
+                <div className="mx-auto mb-1 w-fit">
+                    <LogoMark size={40} />
                 </div>
                 <h1 className="text-xl font-medium leading-7">Kwarta</h1>
                 <p className="mt-2 inline-flex items-center justify-center gap-2 text-sm leading-5 text-muted-foreground">
@@ -904,7 +1128,7 @@ function MobileTabIcon({
 }) {
     const commonProps = {
         "aria-hidden": true,
-        className: "h-5 w-5",
+        className: "h-6 w-6",
         fill: "none",
         viewBox: "0 0 24 24",
         xmlns: "http://www.w3.org/2000/svg",
@@ -921,17 +1145,73 @@ function MobileTabIcon({
             <svg {...commonProps}>
                 {active ? (
                     <>
-                        <rect height="7" rx="1.5" fill="currentColor" width="7" x="4" y="4" />
-                        <rect height="7" rx="1.5" fill="currentColor" width="7" x="13" y="4" />
-                        <rect height="7" rx="1.5" fill="currentColor" width="7" x="4" y="13" />
-                        <rect height="7" rx="1.5" fill="currentColor" width="7" x="13" y="13" />
+                        <rect
+                            height="7"
+                            rx="1.5"
+                            fill="currentColor"
+                            width="7"
+                            x="4"
+                            y="4"
+                        />
+                        <rect
+                            height="7"
+                            rx="1.5"
+                            fill="currentColor"
+                            width="7"
+                            x="13"
+                            y="4"
+                        />
+                        <rect
+                            height="7"
+                            rx="1.5"
+                            fill="currentColor"
+                            width="7"
+                            x="4"
+                            y="13"
+                        />
+                        <rect
+                            height="7"
+                            rx="1.5"
+                            fill="currentColor"
+                            width="7"
+                            x="13"
+                            y="13"
+                        />
                     </>
                 ) : (
                     <>
-                        <rect height="7" rx="1.5" {...strokeProps} width="7" x="4" y="4" />
-                        <rect height="7" rx="1.5" {...strokeProps} width="7" x="13" y="4" />
-                        <rect height="7" rx="1.5" {...strokeProps} width="7" x="4" y="13" />
-                        <rect height="7" rx="1.5" {...strokeProps} width="7" x="13" y="13" />
+                        <rect
+                            height="7"
+                            rx="1.5"
+                            {...strokeProps}
+                            width="7"
+                            x="4"
+                            y="4"
+                        />
+                        <rect
+                            height="7"
+                            rx="1.5"
+                            {...strokeProps}
+                            width="7"
+                            x="13"
+                            y="4"
+                        />
+                        <rect
+                            height="7"
+                            rx="1.5"
+                            {...strokeProps}
+                            width="7"
+                            x="4"
+                            y="13"
+                        />
+                        <rect
+                            height="7"
+                            rx="1.5"
+                            {...strokeProps}
+                            width="7"
+                            x="13"
+                            y="13"
+                        />
                     </>
                 )}
             </svg>
@@ -943,12 +1223,24 @@ function MobileTabIcon({
             <svg {...commonProps}>
                 {active ? (
                     <>
-                        <path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V20l-3-1.75L12 20l-3-1.75L6 20V4.75Z" fill="currentColor" />
-                        <path d="M9 8h6M9 12h6M9 16h3.5" stroke="#FFFFFF" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
+                        <path
+                            d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V20l-3-1.75L12 20l-3-1.75L6 20V4.75Z"
+                            fill="currentColor"
+                        />
+                        <path
+                            d="M9 8h6M9 12h6M9 16h3.5"
+                            stroke="#FFFFFF"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="1.6"
+                        />
                     </>
                 ) : (
                     <>
-                        <path d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V20l-3-1.75L12 20l-3-1.75L6 20V4.75Z" {...strokeProps} />
+                        <path
+                            d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V20l-3-1.75L12 20l-3-1.75L6 20V4.75Z"
+                            {...strokeProps}
+                        />
                         <path d="M9 8h6M9 12h6M9 16h3.5" {...strokeProps} />
                     </>
                 )}
@@ -961,14 +1253,26 @@ function MobileTabIcon({
             <svg {...commonProps}>
                 {active ? (
                     <>
-                        <path d="M4 7.25A2.25 2.25 0 0 1 6.25 5h10.5A2.25 2.25 0 0 1 19 7.25V8H6.25A2.25 2.25 0 0 1 4 5.75v0" fill="currentColor" />
-                        <path d="M4 8h15.25A1.75 1.75 0 0 1 21 9.75v7.5A2.75 2.75 0 0 1 18.25 20H5.75A2.75 2.75 0 0 1 3 17.25v-10" fill="currentColor" />
+                        <path
+                            d="M4 7.25A2.25 2.25 0 0 1 6.25 5h10.5A2.25 2.25 0 0 1 19 7.25V8H6.25A2.25 2.25 0 0 1 4 5.75v0"
+                            fill="currentColor"
+                        />
+                        <path
+                            d="M4 8h15.25A1.75 1.75 0 0 1 21 9.75v7.5A2.75 2.75 0 0 1 18.25 20H5.75A2.75 2.75 0 0 1 3 17.25v-10"
+                            fill="currentColor"
+                        />
                         <circle cx="17.5" cy="14.5" fill="#FFFFFF" r="1.5" />
                     </>
                 ) : (
                     <>
-                        <path d="M4 7.25A2.25 2.25 0 0 1 6.25 5h10.5A2.25 2.25 0 0 1 19 7.25V8H6.25A2.25 2.25 0 0 1 4 5.75v0" {...strokeProps} />
-                        <path d="M4 8h15.25A1.75 1.75 0 0 1 21 9.75v7.5A2.75 2.75 0 0 1 18.25 20H5.75A2.75 2.75 0 0 1 3 17.25v-10" {...strokeProps} />
+                        <path
+                            d="M4 7.25A2.25 2.25 0 0 1 6.25 5h10.5A2.25 2.25 0 0 1 19 7.25V8H6.25A2.25 2.25 0 0 1 4 5.75v0"
+                            {...strokeProps}
+                        />
+                        <path
+                            d="M4 8h15.25A1.75 1.75 0 0 1 21 9.75v7.5A2.75 2.75 0 0 1 18.25 20H5.75A2.75 2.75 0 0 1 3 17.25v-10"
+                            {...strokeProps}
+                        />
                         <circle cx="17.5" cy="14.5" r="1.5" {...strokeProps} />
                     </>
                 )}
@@ -981,12 +1285,18 @@ function MobileTabIcon({
             <svg {...commonProps}>
                 {active ? (
                     <>
-                        <path d="M4.25 5.75A1.75 1.75 0 0 1 6 4h5.1c.46 0 .9.18 1.24.51l7.15 7.15a1.75 1.75 0 0 1 0 2.48l-5.35 5.35a1.75 1.75 0 0 1-2.48 0L4.51 12.34A1.75 1.75 0 0 1 4 11.1V6Z" fill="currentColor" />
+                        <path
+                            d="M4.25 5.75A1.75 1.75 0 0 1 6 4h5.1c.46 0 .9.18 1.24.51l7.15 7.15a1.75 1.75 0 0 1 0 2.48l-5.35 5.35a1.75 1.75 0 0 1-2.48 0L4.51 12.34A1.75 1.75 0 0 1 4 11.1V6Z"
+                            fill="currentColor"
+                        />
                         <circle cx="8.25" cy="8.25" fill="#FFFFFF" r="1.25" />
                     </>
                 ) : (
                     <>
-                        <path d="M4.25 5.75A1.75 1.75 0 0 1 6 4h5.1c.46 0 .9.18 1.24.51l7.15 7.15a1.75 1.75 0 0 1 0 2.48l-5.35 5.35a1.75 1.75 0 0 1-2.48 0L4.51 12.34A1.75 1.75 0 0 1 4 11.1V6Z" {...strokeProps} />
+                        <path
+                            d="M4.25 5.75A1.75 1.75 0 0 1 6 4h5.1c.46 0 .9.18 1.24.51l7.15 7.15a1.75 1.75 0 0 1 0 2.48l-5.35 5.35a1.75 1.75 0 0 1-2.48 0L4.51 12.34A1.75 1.75 0 0 1 4 11.1V6Z"
+                            {...strokeProps}
+                        />
                         <circle cx="8.25" cy="8.25" r="1.25" {...strokeProps} />
                     </>
                 )}
@@ -1058,6 +1368,20 @@ function MobileMoreSheet({
     );
 }
 
+function LogoMark({ size }: { size: number }) {
+    return (
+        <Image
+            alt=""
+            aria-hidden
+            className="shrink-0 bg-black p-[2px] rounded-md"
+            height={size}
+            src="/kwarta-logo.png"
+            width={size}
+            priority
+        />
+    );
+}
+
 function AuthScreen({
     error,
     mode,
@@ -1084,9 +1408,7 @@ function AuthScreen({
             <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center gap-3 px-5 py-8 sm:gap-10 sm:py-10 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
                 <section>
                     <div className="mb-0 flex items-center gap-1 sm:mb-8">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                            <Wallet className="h-5 w-5" aria-hidden />
-                        </div>
+                        <LogoMark size={40} />
                         <span className="text-xl font-semibold leading-6">
                             Kwarta
                         </span>
@@ -1163,7 +1485,9 @@ function AuthScreen({
                                 />
                             </FieldError>
                             <Button className="w-full" type="submit">
-                                {mode === "login" ? "Sign in" : "Create account"}
+                                {mode === "login"
+                                    ? "Sign in"
+                                    : "Create account"}
                             </Button>
                         </form>
                         <div className="mt-4 flex items-center justify-between border-t pt-4 text-sm">
@@ -1352,7 +1676,7 @@ function CashflowTooltip({
     );
 }
 
-function BackupToolbar({
+function BackupOverflowMenu({
     error,
     exportLabel,
     importInputRef,
@@ -1367,25 +1691,76 @@ function BackupToolbar({
     onImportClick: () => void;
     onImportFile: (file: File) => void;
 }) {
-    const title =
-        exportLabel.charAt(0).toUpperCase() + exportLabel.slice(1);
+    const title = exportLabel.charAt(0).toUpperCase() + exportLabel.slice(1);
+    const [isOpen, setIsOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        function handlePointerDown(event: PointerEvent) {
+            if (
+                menuRef.current &&
+                !menuRef.current.contains(event.target as Node)
+            ) {
+                setIsOpen(false);
+            }
+        }
+
+        document.addEventListener("pointerdown", handlePointerDown);
+
+        return () => {
+            document.removeEventListener("pointerdown", handlePointerDown);
+        };
+    }, [isOpen]);
 
     return (
-        <div className="mb-4 flex flex-col gap-2 sm:items-end">
-            <div className="flex flex-col gap-2 sm:flex-row">
-                <Button type="button" variant="secondary" onClick={onExport}>
-                    <Download className="h-4 w-4" aria-hidden />
-                    Export {title}
-                </Button>
-                <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={onImportClick}
+        <div className="relative" ref={menuRef}>
+            <Button
+                aria-expanded={isOpen}
+                aria-haspopup="menu"
+                className="h-8 w-8 rounded-md hover:bg-neutral-100"
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOpen((open) => !open)}
+            >
+                <Ellipsis className="h-5 w-5" aria-hidden />
+                <span className="sr-only">Open {title} backup menu</span>
+            </Button>
+            {isOpen && (
+                <div
+                    className="absolute right-0 top-9 z-20 w-52 overflow-hidden rounded-lg border border-border bg-white p-1 shadow-[0_18px_50px_rgba(0,0,0,0.12)]"
+                    role="menu"
                 >
-                    <Upload className="h-4 w-4" aria-hidden />
-                    Import {title}
-                </Button>
-            </div>
+                    <button
+                        className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 hover:bg-neutral-100"
+                        role="menuitem"
+                        type="button"
+                        onClick={() => {
+                            onExport();
+                            setIsOpen(false);
+                        }}
+                    >
+                        <Download className="h-4 w-4" aria-hidden />
+                        Export {title}
+                    </button>
+                    <button
+                        className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 hover:bg-neutral-100"
+                        role="menuitem"
+                        type="button"
+                        onClick={() => {
+                            onImportClick();
+                            setIsOpen(false);
+                        }}
+                    >
+                        <Upload className="h-4 w-4" aria-hidden />
+                        Import {title}
+                    </button>
+                </div>
+            )}
             <input
                 ref={importInputRef}
                 className="hidden"
@@ -1401,7 +1776,9 @@ function BackupToolbar({
                 }}
             />
             {error && (
-                <p className="text-sm leading-5 text-destructive">{error}</p>
+                <p className="absolute right-0 top-10 z-10 w-64 text-right text-xs leading-4 text-destructive sm:w-80">
+                    {error}
+                </p>
             )}
         </div>
     );
@@ -1432,7 +1809,11 @@ function ImportConfirmationModal({
                     </p>
                 </div>
                 <div className="flex items-center justify-between border-t border-border bg-neutral-50 px-5 py-4">
-                    <Button type="button" variant="secondary" onClick={onCancel}>
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={onCancel}
+                    >
                         Cancel
                     </Button>
                     <Button type="button" onClick={onConfirm}>
@@ -1441,6 +1822,35 @@ function ImportConfirmationModal({
                 </div>
             </Card>
         </EditModal>
+    );
+}
+
+function ImportLoadingModal({
+    itemLabel,
+}: {
+    itemLabel: "transactions" | "budgets";
+}) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+            <div className="absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm" />
+            <Card
+                className="relative w-full max-w-[360px] rounded-2xl bg-white p-6 text-center shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
+                role="dialog"
+                aria-modal="true"
+                aria-live="polite"
+            >
+                <span
+                    className="mx-auto flex h-10 w-10 animate-spin rounded-full border-2 border-neutral-200 border-t-foreground"
+                    aria-hidden
+                />
+                <CardTitle className="mt-4 text-xl font-medium leading-7">
+                    Importing {itemLabel}
+                </CardTitle>
+                <p className="mt-2 text-sm leading-5 text-muted-foreground">
+                    Reading the backup and saving it to your account...
+                </p>
+            </Card>
+        </div>
     );
 }
 
@@ -1459,7 +1869,7 @@ function TransactionsView({
     onCancelEdit: () => void;
     onDelete: (id: string) => void;
     onEdit: (transaction: Transaction) => void;
-    onImport: (transactions: Transaction[]) => void;
+    onImport: (transactions: Transaction[]) => Promise<void>;
     onSubmit: (values: TransactionFormValues) => void;
     transactions: Transaction[];
 }) {
@@ -1468,51 +1878,61 @@ function TransactionsView({
     );
     const importInputRef = useRef<HTMLInputElement>(null);
     const [importError, setImportError] = useState<string | null>(null);
+    const [isImporting, setIsImporting] = useState(false);
     const [pendingImport, setPendingImport] = useState<Transaction[] | null>(
         null,
     );
 
     async function handleImportFile(file: File) {
+        setIsImporting(true);
+
         try {
             const nextTransactions = parseTransactionBackupPayload(
                 JSON.parse(await file.text()),
+                categories,
             );
 
             setImportError(null);
 
             if (transactions.length > 0) {
                 setPendingImport(nextTransactions);
+                setIsImporting(false);
                 return;
             }
 
-            onImport(nextTransactions);
+            await onImport(nextTransactions);
         } catch {
-            setImportError("Choose a valid Kwarta transactions JSON backup.");
+            setImportError(
+                "Transactions could not be imported. Check that this is a Kwarta transactions JSON backup.",
+            );
+        } finally {
+            setIsImporting(false);
         }
     }
 
-    function confirmImport() {
+    async function confirmImport() {
         if (!pendingImport) {
             return;
         }
 
-        onImport(pendingImport);
+        const nextTransactions = pendingImport;
         setPendingImport(null);
-        setImportError(null);
+        setIsImporting(true);
+
+        try {
+            await onImport(nextTransactions);
+            setImportError(null);
+        } catch {
+            setImportError(
+                "Imported transactions could not be saved. Please try importing again.",
+            );
+        } finally {
+            setIsImporting(false);
+        }
     }
 
     return (
         <>
-            <BackupToolbar
-                error={importError}
-                exportLabel="transactions"
-                importInputRef={importInputRef}
-                onExport={() =>
-                    downloadBackupFile("transactions", transactions)
-                }
-                onImportClick={() => importInputRef.current?.click()}
-                onImportFile={handleImportFile}
-            />
             <div className="grid gap-4 md:gap-5 lg:grid-cols-[0.75fr_1.25fr]">
                 <TransactionForm
                     categories={categories}
@@ -1524,6 +1944,24 @@ function TransactionsView({
                     onDelete={onDelete}
                     onEdit={onEdit}
                     transactions={transactions}
+                    backupMenu={
+                        <BackupOverflowMenu
+                            error={importError}
+                            exportLabel="transactions"
+                            importInputRef={importInputRef}
+                            onExport={() =>
+                                downloadBackupFile(
+                                    "transactions",
+                                    transactions,
+                                    categories,
+                                )
+                            }
+                            onImportClick={() =>
+                                importInputRef.current?.click()
+                            }
+                            onImportFile={handleImportFile}
+                        />
+                    }
                 />
             </div>
             {editing && (
@@ -1544,6 +1982,7 @@ function TransactionsView({
                     onConfirm={confirmImport}
                 />
             )}
+            {isImporting && <ImportLoadingModal itemLabel="transactions" />}
         </>
     );
 }
@@ -1578,8 +2017,7 @@ function TransactionForm({
     const availableCategories = useMemo(
         () =>
             categories.filter(
-                (category) =>
-                    normalizeTransactionType(category.type) === type,
+                (category) => normalizeTransactionType(category.type) === type,
             ),
         [categories, type],
     );
@@ -1710,17 +2148,17 @@ function TransactionForm({
                         <Input id="merchant" {...form.register("merchant")} />
                     </FieldError>
                     <FieldError message={form.formState.errors.date?.message}>
-                            <Label htmlFor="date">Date</Label>
-                            <DatePickerInput
-                                id="date"
-                                value={form.watch("date")}
-                                onChange={(value) =>
-                                    form.setValue("date", value, {
-                                        shouldValidate: true,
-                                    })
-                                }
-                            />
-                        </FieldError>
+                        <Label htmlFor="date">Date</Label>
+                        <DatePickerInput
+                            id="date"
+                            value={form.watch("date")}
+                            onChange={(value) =>
+                                form.setValue("date", value, {
+                                    shouldValidate: true,
+                                })
+                            }
+                        />
+                    </FieldError>
                     <div>
                         <Label htmlFor="note">Note</Label>
                         <Input id="note" {...form.register("note")} />
@@ -1778,54 +2216,66 @@ function BudgetsView({
     onCancelEdit: () => void;
     onDelete: (id: string) => void;
     onEdit: (budget: Budget) => void;
-    onImport: (budgets: Budget[]) => void;
+    onImport: (budgets: Budget[]) => Promise<void>;
     onSubmit: (values: BudgetFormValues) => void;
     transactions: Transaction[];
 }) {
     const editing = budgets.find((budget) => budget.id === editingId);
     const importInputRef = useRef<HTMLInputElement>(null);
     const [importError, setImportError] = useState<string | null>(null);
+    const [isImporting, setIsImporting] = useState(false);
     const [pendingImport, setPendingImport] = useState<Budget[] | null>(null);
 
     async function handleImportFile(file: File) {
+        setIsImporting(true);
+
         try {
             const nextBudgets = parseBudgetBackupPayload(
                 JSON.parse(await file.text()),
+                categories,
             );
 
             setImportError(null);
 
             if (budgets.length > 0) {
                 setPendingImport(nextBudgets);
+                setIsImporting(false);
                 return;
             }
 
-            onImport(nextBudgets);
+            await onImport(nextBudgets);
         } catch {
-            setImportError("Choose a valid Kwarta budgets JSON backup.");
+            setImportError(
+                "Budgets could not be imported. Check that this is a Kwarta budgets JSON backup.",
+            );
+        } finally {
+            setIsImporting(false);
         }
     }
 
-    function confirmImport() {
+    async function confirmImport() {
         if (!pendingImport) {
             return;
         }
 
-        onImport(pendingImport);
+        const nextBudgets = pendingImport;
         setPendingImport(null);
-        setImportError(null);
+        setIsImporting(true);
+
+        try {
+            await onImport(nextBudgets);
+            setImportError(null);
+        } catch {
+            setImportError(
+                "Imported budgets could not be saved. Please try importing again.",
+            );
+        } finally {
+            setIsImporting(false);
+        }
     }
 
     return (
         <>
-            <BackupToolbar
-                error={importError}
-                exportLabel="budgets"
-                importInputRef={importInputRef}
-                onExport={() => downloadBackupFile("budgets", budgets)}
-                onImportClick={() => importInputRef.current?.click()}
-                onImportFile={handleImportFile}
-            />
             <div className="grid gap-4 md:gap-5 lg:grid-cols-[0.75fr_1.25fr]">
                 <BudgetForm
                     categories={categories}
@@ -1841,6 +2291,24 @@ function BudgetsView({
                     transactions={transactions.filter(
                         (transaction) => transaction.type === "expense",
                     )}
+                    backupMenu={
+                        <BackupOverflowMenu
+                            error={importError}
+                            exportLabel="budgets"
+                            importInputRef={importInputRef}
+                            onExport={() =>
+                                downloadBackupFile(
+                                    "budgets",
+                                    budgets,
+                                    categories,
+                                )
+                            }
+                            onImportClick={() =>
+                                importInputRef.current?.click()
+                            }
+                            onImportFile={handleImportFile}
+                        />
+                    }
                 />
             </div>
             {editing && (
@@ -1861,6 +2329,7 @@ function BudgetsView({
                     onConfirm={confirmImport}
                 />
             )}
+            {isImporting && <ImportLoadingModal itemLabel="budgets" />}
         </>
     );
 }
@@ -1897,7 +2366,7 @@ function BudgetForm({
                     form.reset();
                 })}
             >
-                <CardHeader className={cn(isEditing && "px-6 pb-2 pt-5")}>
+                <CardHeader className={cn(isEditing && "px-6 pb-2 pt-6")}>
                     <CardTitle
                         className={cn(
                             isEditing && "text-2xl font-medium leading-8",
@@ -2187,6 +2656,7 @@ function CategoryForm({
 
 function BudgetProgressList({
     actions = false,
+    backupMenu,
     budgets,
     categories,
     onDelete,
@@ -2194,6 +2664,7 @@ function BudgetProgressList({
     transactions,
 }: {
     actions?: boolean;
+    backupMenu?: React.ReactNode;
     budgets: Budget[];
     categories: Category[];
     onDelete?: (id: string) => void;
@@ -2203,10 +2674,15 @@ function BudgetProgressList({
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Budget progress</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                    Monthly limits compared with posted spend.
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <CardTitle>Budget progress</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                            Monthly limits compared with posted spend.
+                        </p>
+                    </div>
+                    {backupMenu}
+                </div>
             </CardHeader>
             <CardContent className="space-y-4">
                 {budgets.length === 0 && (
@@ -2327,7 +2803,9 @@ function RecentTransactions({
                     Latest income and expense entries.
                 </p>
             </CardHeader>
-            <CardContent className={cn(transactions.length === 0 && "flex flex-1")}>
+            <CardContent
+                className={cn(transactions.length === 0 && "flex flex-1")}
+            >
                 {transactions.length === 0 ? (
                     <EmptyState
                         className="flex min-h-48 flex-1 flex-col items-center justify-center"
@@ -2385,11 +2863,13 @@ function RecentTransactions({
 }
 
 function TransactionTable({
+    backupMenu,
     categories,
     onDelete,
     onEdit,
     transactions,
 }: {
+    backupMenu?: React.ReactNode;
     categories: Category[];
     onDelete: (id: string) => void;
     onEdit: (transaction: Transaction) => void;
@@ -2398,12 +2878,19 @@ function TransactionTable({
     return (
         <Card className="flex h-full flex-col">
             <CardHeader>
-                <CardTitle>Transactions</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                    Edit or remove posted money movement.
-                </p>
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <CardTitle>Transactions</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                            Edit or remove posted money movement.
+                        </p>
+                    </div>
+                    {backupMenu}
+                </div>
             </CardHeader>
-            <CardContent className={cn(transactions.length === 0 && "flex flex-1")}>
+            <CardContent
+                className={cn(transactions.length === 0 && "flex flex-1")}
+            >
                 {transactions.length === 0 ? (
                     <EmptyState
                         className="flex min-h-64 flex-1 flex-col items-center justify-center md:min-h-80"
@@ -2717,9 +3204,7 @@ function DatePickerInput({
     const days = getCalendarDays(visibleMonth);
 
     useEffect(() => {
-        setVisibleMonth(
-            new Date(selectedYear, selectedMonthIndex, 1),
-        );
+        setVisibleMonth(new Date(selectedYear, selectedMonthIndex, 1));
     }, [selectedMonthIndex, selectedYear]);
 
     useEffect(() => {
@@ -2764,7 +3249,10 @@ function DatePickerInput({
                     setIsOpen((open) => !open);
                 }}
             >
-                <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                <Calendar
+                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                    aria-hidden
+                />
                 <span>{formatPickerDate(selectedDate)}</span>
             </button>
 
@@ -2823,14 +3311,16 @@ function DatePickerInput({
                     </div>
 
                     <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                        {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
-                            <div
-                                className="flex h-8 items-center justify-center text-muted-foreground"
-                                key={`${day}-${index}`}
-                            >
-                                {day}
-                            </div>
-                        ))}
+                        {["S", "M", "T", "W", "T", "F", "S"].map(
+                            (day, index) => (
+                                <div
+                                    className="flex h-8 items-center justify-center text-muted-foreground"
+                                    key={`${day}-${index}`}
+                                >
+                                    {day}
+                                </div>
+                            ),
+                        )}
                         {days.map((day) => {
                             const isCurrentMonth =
                                 day.getMonth() === visibleMonth.getMonth();
@@ -2925,7 +3415,10 @@ function MonthPickerInput({
                     setIsOpen((open) => !open);
                 }}
             >
-                <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                <Calendar
+                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                    aria-hidden
+                />
                 <span>
                     {selectedMonth.toLocaleDateString("en-US", {
                         month: "long",
@@ -2944,13 +3437,17 @@ function MonthPickerInput({
                     )}
                 >
                     <div className="mb-4 flex items-center justify-between">
-                        <p className="text-base font-medium leading-6">{visibleYear}</p>
+                        <p className="text-base font-medium leading-6">
+                            {visibleYear}
+                        </p>
                         <div className="flex gap-1">
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setVisibleYear((year) => year - 1)}
+                                onClick={() =>
+                                    setVisibleYear((year) => year - 1)
+                                }
                             >
                                 <ChevronLeft className="h-4 w-4" aria-hidden />
                                 <span className="sr-only">Previous year</span>
@@ -2959,7 +3456,9 @@ function MonthPickerInput({
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setVisibleYear((year) => year + 1)}
+                                onClick={() =>
+                                    setVisibleYear((year) => year + 1)
+                                }
                             >
                                 <ChevronRight className="h-4 w-4" aria-hidden />
                                 <span className="sr-only">Next year</span>
@@ -2969,7 +3468,11 @@ function MonthPickerInput({
 
                     <div className="grid grid-cols-3 gap-2">
                         {Array.from({ length: 12 }, (_, monthIndex) => {
-                            const monthDate = new Date(visibleYear, monthIndex, 1);
+                            const monthDate = new Date(
+                                visibleYear,
+                                monthIndex,
+                                1,
+                            );
                             const isSelected =
                                 selectedMonth.getFullYear() === visibleYear &&
                                 selectedMonth.getMonth() === monthIndex;
@@ -3139,9 +3642,7 @@ function MetricCard({
         <Card className="bg-white p-3 md:p-4">
             <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100">
                 {icon === "plus" && <Plus className="h-4 w-4" aria-hidden />}
-                {icon === "minus" && (
-                    <Minus className="h-4 w-4" aria-hidden />
-                )}
+                {icon === "minus" && <Minus className="h-4 w-4" aria-hidden />}
                 {icon === "wallet" && (
                     <CircleDollarSign className="h-4 w-4" aria-hidden />
                 )}
