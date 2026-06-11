@@ -8,14 +8,32 @@ import {
     ChevronLeft,
     ChevronRight,
     CircleDollarSign,
+    BadgeDollarSign,
+    Banknote,
+    BriefcaseBusiness,
+    Car,
+    Clapperboard,
+    GraduationCap,
+    HeartPulse,
+    Home,
+    Laptop,
+    Landmark,
+    PiggyBank,
     Download,
     Edit3,
     Ellipsis,
     LogOut,
     Minus,
     Plus,
+    Receipt,
+    Repeat,
+    ShoppingBag,
+    Smartphone,
     Trash2,
+    Utensils,
     Upload,
+    Zap,
+    type LucideIcon,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
@@ -79,6 +97,30 @@ const colorChoices = [
     "#4F46E5",
 ];
 
+const categoryIconChoices = [
+    { value: "home", label: "Home", icon: Home },
+    { value: "utensils", label: "Food", icon: Utensils },
+    { value: "car", label: "Transport", icon: Car },
+    { value: "zap", label: "Utilities", icon: Zap },
+    { value: "heart-pulse", label: "Health", icon: HeartPulse },
+    { value: "shopping-bag", label: "Shopping", icon: ShoppingBag },
+    { value: "repeat", label: "Subscriptions", icon: Repeat },
+    { value: "briefcase", label: "Work", icon: BriefcaseBusiness },
+    { value: "laptop", label: "Freelance", icon: Laptop },
+    { value: "banknote", label: "Cash", icon: Banknote },
+    { value: "landmark", label: "Bank", icon: Landmark },
+    { value: "piggy-bank", label: "Savings", icon: PiggyBank },
+    { value: "receipt", label: "Bills", icon: Receipt },
+    { value: "smartphone", label: "Phone", icon: Smartphone },
+    { value: "graduation-cap", label: "Education", icon: GraduationCap },
+    { value: "clapperboard", label: "Entertainment", icon: Clapperboard },
+    { value: "badge-dollar-sign", label: "Income", icon: BadgeDollarSign },
+] satisfies Array<{ value: string; label: string; icon: LucideIcon }>;
+
+const categoryIconMap = new Map(
+    categoryIconChoices.map((choice) => [choice.value, choice.icon]),
+);
+
 function normalizeTransactionType(value: string) {
     return value.trim().toLowerCase() as TransactionType;
 }
@@ -91,9 +133,34 @@ function slugifyCategoryValue(value: string) {
         .replace(/^-+|-+$/g, "");
 }
 
+function getDefaultCategoryIcon(
+    category: Pick<Category, "id" | "name" | "type">,
+) {
+    const categoryKey = slugifyCategoryValue(category.id || category.name);
+    const nameKey = slugifyCategoryValue(category.name);
+    const defaultCategory = seedCategories.find(
+        (seedCategory) =>
+            slugifyCategoryValue(seedCategory.id) === categoryKey ||
+            slugifyCategoryValue(seedCategory.name) === nameKey,
+    );
+
+    return (
+        defaultCategory?.icon ??
+        (category.type === "income" ? "banknote" : "receipt")
+    );
+}
+
+function withCategoryIcons(categories: Category[]) {
+    return categories.map((category) => ({
+        ...category,
+        icon: category.icon || getDefaultCategoryIcon(category),
+    }));
+}
+
 function withMissingDefaultCategories(categories: Category[], userId: string) {
+    const categoriesWithIcons = withCategoryIcons(categories);
     const existingKeys = new Set(
-        categories.map(
+        categoriesWithIcons.map(
             (category) =>
                 `${normalizeTransactionType(category.type)}:${category.name.trim().toLowerCase()}`,
         ),
@@ -110,7 +177,7 @@ function withMissingDefaultCategories(categories: Category[], userId: string) {
             id: `${userId}-${category.id}`,
         }));
 
-    return [...categories, ...missingDefaults];
+    return [...categoriesWithIcons, ...missingDefaults];
 }
 
 function getFirstCategoryId(categories: Category[], type: TransactionType) {
@@ -315,6 +382,20 @@ function normalizeBackupMonth(value: string | undefined) {
     return toMonthInputValue(parsed);
 }
 
+function isInMonth(dateValue: string, monthValue: string) {
+    return dateValue.slice(0, 7) === monthValue;
+}
+
+function getDefaultTransactionDate(monthValue: string) {
+    const today = toDateInputValue(new Date());
+
+    if (isInMonth(today, monthValue)) {
+        return today;
+    }
+
+    return `${monthValue}-01`;
+}
+
 function parseBudgetBackupPayload(
     payload: unknown,
     categories: Category[],
@@ -438,6 +519,9 @@ export function KwartaApp() {
     const [accountMenuOpen, setAccountMenuOpen] = useState(false);
     const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
     const [view, setView] = useState<View>("dashboard");
+    const [selectedMonth, setSelectedMonth] = useState(() =>
+        toMonthInputValue(new Date()),
+    );
     const [categories, setCategories] = useState<Category[]>(seedCategories);
     const [transactions, setTransactions] =
         useState<Transaction[]>(seedTransactions);
@@ -587,11 +671,23 @@ export function KwartaApp() {
         };
     }, [accountMenuOpen]);
 
+    const monthTransactions = useMemo(
+        () =>
+            transactions.filter((transaction) =>
+                isInMonth(transaction.date, selectedMonth),
+            ),
+        [selectedMonth, transactions],
+    );
+    const monthBudgets = useMemo(
+        () => budgets.filter((budget) => budget.month === selectedMonth),
+        [budgets, selectedMonth],
+    );
+
     const totals = useMemo(() => {
-        const income = transactions
+        const income = monthTransactions
             .filter((transaction) => transaction.type === "income")
             .reduce((sum, transaction) => sum + transaction.amount, 0);
-        const expenses = transactions
+        const expenses = monthTransactions
             .filter((transaction) => transaction.type === "expense")
             .reduce((sum, transaction) => sum + transaction.amount, 0);
 
@@ -600,7 +696,7 @@ export function KwartaApp() {
             expenses,
             balance: income - expenses,
         };
-    }, [transactions]);
+    }, [monthTransactions]);
 
     const expenseCategories = categories.filter(
         (category) => normalizeTransactionType(category.type) === "expense",
@@ -614,7 +710,7 @@ export function KwartaApp() {
         return expenseCategories
             .map((category) => ({
                 name: category.name,
-                value: transactions
+                value: monthTransactions
                     .filter(
                         (transaction) =>
                             transaction.type === "expense" &&
@@ -624,10 +720,10 @@ export function KwartaApp() {
                 color: category.color,
             }))
             .filter((item) => item.value > 0);
-    }, [expenseCategories, transactions]);
+    }, [expenseCategories, monthTransactions]);
 
     const cashflowData = useMemo(() => {
-        return transactions
+        return monthTransactions
             .slice()
             .sort((a, b) => a.date.localeCompare(b.date))
             .map((transaction) => ({
@@ -639,7 +735,7 @@ export function KwartaApp() {
                 expense:
                     transaction.type === "expense" ? transaction.amount : 0,
             }));
-    }, [transactions]);
+    }, [monthTransactions]);
 
     if (!authReady || (isAuthed && !workspaceReady)) {
         return <AuthLoadingScreen />;
@@ -706,7 +802,7 @@ export function KwartaApp() {
             <header className="sticky top-0 z-30 border-b bg-white">
                 <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-4">
                     <button
-                        className="flex items-center gap-1 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="flex items-center gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         type="button"
                         onClick={() => {
                             setView("dashboard");
@@ -741,7 +837,7 @@ export function KwartaApp() {
                             </Button>
                             {accountMenuOpen && (
                                 <div className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-                                    <div className="px-4 py-4">
+                                    <div className="p-4">
                                         <p className="max-w-full truncate text-base font-medium leading-6">
                                             {accountName}
                                         </p>
@@ -752,7 +848,7 @@ export function KwartaApp() {
                                     <div className="h-px bg-border" />
                                     <div className="px-2 py-2">
                                         <Button
-                                            className="h-11 w-full cursor-pointer justify-between rounded-md px-3 text-sm font-normal hover:bg-neutral-100"
+                                            className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-sm font-normal hover:bg-neutral-100"
                                             type="button"
                                             variant="ghost"
                                             onClick={async () => {
@@ -780,10 +876,15 @@ export function KwartaApp() {
                 {view === "dashboard" && (
                     <div className="space-y-4">
                         <section>
-                            <p className="mb-4 inline-flex rounded-full bg-[#E8F0FE] px-3 py-1 text-xs font-medium leading-4 text-[#0B57D0]">
-                                June 2026 overview
-                            </p>
-                            <div className="grid gap-4 sm:grid-cols-3">
+                            <div className="mb-4 max-w-[220px]">
+                                <MonthPickerInput
+                                    ariaLabel="Select dashboard month"
+                                    compact
+                                    value={selectedMonth}
+                                    onChange={setSelectedMonth}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                                 <MetricCard
                                     label="Income"
                                     value={formatCurrency(totals.income)}
@@ -795,6 +896,7 @@ export function KwartaApp() {
                                     icon="minus"
                                 />
                                 <MetricCard
+                                    className="col-span-2 sm:col-span-1"
                                     label="Balance"
                                     value={formatCurrency(totals.balance)}
                                     icon="wallet"
@@ -803,11 +905,11 @@ export function KwartaApp() {
                         </section>
 
                         <DashboardView
-                            budgets={budgets}
+                            budgets={monthBudgets}
                             categories={categories}
                             cashflowData={cashflowData}
                             spendingByCategory={spendingByCategory}
-                            transactions={transactions}
+                            transactions={monthTransactions}
                         />
                     </div>
                 )}
@@ -816,6 +918,7 @@ export function KwartaApp() {
                     <TransactionsView
                         categories={categories}
                         editingId={editingTransactionId}
+                        month={selectedMonth}
                         onCancelEdit={() => setEditingTransactionId(null)}
                         onDelete={(id) =>
                             setTransactions((current) =>
@@ -868,15 +971,18 @@ export function KwartaApp() {
                                 ...current,
                             ]);
                         }}
-                        transactions={transactions}
+                        allTransactions={transactions}
+                        transactions={monthTransactions}
                     />
                 )}
 
                 {view === "budgets" && (
                     <BudgetsView
-                        budgets={budgets}
+                        allBudgets={budgets}
+                        budgets={monthBudgets}
                         categories={expenseCategories}
                         editingId={editingBudgetId}
+                        month={selectedMonth}
                         onCancelEdit={() => setEditingBudgetId(null)}
                         onDelete={(id) =>
                             setBudgets((current) =>
@@ -917,7 +1023,7 @@ export function KwartaApp() {
                                 ...current,
                             ]);
                         }}
-                        transactions={transactions}
+                        transactions={monthTransactions}
                     />
                 )}
 
@@ -1344,17 +1450,17 @@ function MobileMoreSheet({
             />
             <section className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 mx-auto max-w-lg overflow-hidden rounded-xl border border-border bg-white shadow-[0_18px_60px_rgba(0,0,0,0.14)] md:hidden">
                 <div className="px-4 py-4">
-                    <p className="truncate text-sm font-medium leading-5">
+                    <p className="truncate font-medium leading-5">
                         {accountName}
                     </p>
-                    <p className="truncate text-xs leading-4 text-muted-foreground">
+                    <p className="truncate text-sm leading-4 text-muted-foreground">
                         {email}
                     </p>
                 </div>
                 <div className="h-px bg-border" />
                 <div className="px-2 py-2">
                     <Button
-                        className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-xs font-normal hover:bg-neutral-100"
+                        className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-sm font-normal hover:bg-neutral-100"
                         type="button"
                         variant="ghost"
                         onClick={onSignOut}
@@ -1407,7 +1513,7 @@ function AuthScreen({
         <main className="min-h-screen bg-neutral-50">
             <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center gap-3 px-5 py-8 sm:gap-10 sm:py-10 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
                 <section>
-                    <div className="mb-0 flex items-center gap-1 sm:mb-8">
+                    <div className="mb-0 flex items-center gap-2 sm:mb-8">
                         <LogoMark size={40} />
                         <span className="text-xl font-semibold leading-6">
                             Kwarta
@@ -1732,7 +1838,7 @@ function BackupOverflowMenu({
             </Button>
             {isOpen && (
                 <div
-                    className="absolute right-0 top-9 z-20 w-52 overflow-hidden rounded-lg border border-border bg-white p-1 shadow-[0_18px_50px_rgba(0,0,0,0.12)]"
+                    className="absolute right-0 top-9 z-20 w-52 overflow-hidden rounded-lg border border-border bg-white p-2 shadow-[0_18px_50px_rgba(0,0,0,0.12)]"
                     role="menu"
                 >
                     <button
@@ -1855,8 +1961,10 @@ function ImportLoadingModal({
 }
 
 function TransactionsView({
+    allTransactions,
     categories,
     editingId,
+    month,
     onCancelEdit,
     onDelete,
     onEdit,
@@ -1864,8 +1972,10 @@ function TransactionsView({
     onSubmit,
     transactions,
 }: {
+    allTransactions: Transaction[];
     categories: Category[];
     editingId: string | null;
+    month: string;
     onCancelEdit: () => void;
     onDelete: (id: string) => void;
     onEdit: (transaction: Transaction) => void;
@@ -1894,7 +2004,7 @@ function TransactionsView({
 
             setImportError(null);
 
-            if (transactions.length > 0) {
+            if (allTransactions.length > 0) {
                 setPendingImport(nextTransactions);
                 setIsImporting(false);
                 return;
@@ -1936,6 +2046,7 @@ function TransactionsView({
             <div className="grid gap-4 md:gap-5 lg:grid-cols-[0.75fr_1.25fr]">
                 <TransactionForm
                     categories={categories}
+                    month={month}
                     onCancel={onCancelEdit}
                     onSubmit={onSubmit}
                 />
@@ -1952,7 +2063,7 @@ function TransactionsView({
                             onExport={() =>
                                 downloadBackupFile(
                                     "transactions",
-                                    transactions,
+                                    allTransactions,
                                     categories,
                                 )
                             }
@@ -1969,6 +2080,7 @@ function TransactionsView({
                     <TransactionForm
                         categories={categories}
                         editing={editing}
+                        month={month}
                         onCancel={onCancelEdit}
                         onSubmit={onSubmit}
                     />
@@ -1990,11 +2102,13 @@ function TransactionsView({
 function TransactionForm({
     categories,
     editing,
+    month,
     onCancel,
     onSubmit,
 }: {
     categories: Category[];
     editing?: Transaction;
+    month: string;
     onCancel: () => void;
     onSubmit: (values: TransactionFormValues) => void;
 }) {
@@ -2005,9 +2119,9 @@ function TransactionForm({
             categoryId: getFirstCategoryId(categories, "expense"),
             merchant: "",
             note: "",
-            date: new Date().toISOString().slice(0, 10),
+            date: getDefaultTransactionDate(month),
         }),
-        [categories],
+        [categories, month],
     );
     const form = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionSchema),
@@ -2200,9 +2314,11 @@ function TransactionForm({
 }
 
 function BudgetsView({
+    allBudgets,
     budgets,
     categories,
     editingId,
+    month,
     onCancelEdit,
     onDelete,
     onEdit,
@@ -2210,9 +2326,11 @@ function BudgetsView({
     onSubmit,
     transactions,
 }: {
+    allBudgets: Budget[];
     budgets: Budget[];
     categories: Category[];
     editingId: string | null;
+    month: string;
     onCancelEdit: () => void;
     onDelete: (id: string) => void;
     onEdit: (budget: Budget) => void;
@@ -2220,7 +2338,7 @@ function BudgetsView({
     onSubmit: (values: BudgetFormValues) => void;
     transactions: Transaction[];
 }) {
-    const editing = budgets.find((budget) => budget.id === editingId);
+    const editing = allBudgets.find((budget) => budget.id === editingId);
     const importInputRef = useRef<HTMLInputElement>(null);
     const [importError, setImportError] = useState<string | null>(null);
     const [isImporting, setIsImporting] = useState(false);
@@ -2237,7 +2355,7 @@ function BudgetsView({
 
             setImportError(null);
 
-            if (budgets.length > 0) {
+            if (allBudgets.length > 0) {
                 setPendingImport(nextBudgets);
                 setIsImporting(false);
                 return;
@@ -2279,6 +2397,7 @@ function BudgetsView({
             <div className="grid gap-4 md:gap-5 lg:grid-cols-[0.75fr_1.25fr]">
                 <BudgetForm
                     categories={categories}
+                    month={month}
                     onCancel={onCancelEdit}
                     onSubmit={onSubmit}
                 />
@@ -2299,7 +2418,7 @@ function BudgetsView({
                             onExport={() =>
                                 downloadBackupFile(
                                     "budgets",
-                                    budgets,
+                                    allBudgets,
                                     categories,
                                 )
                             }
@@ -2316,6 +2435,7 @@ function BudgetsView({
                     <BudgetForm
                         categories={categories}
                         editing={editing}
+                        month={month}
                         onCancel={onCancelEdit}
                         onSubmit={onSubmit}
                     />
@@ -2337,11 +2457,13 @@ function BudgetsView({
 function BudgetForm({
     categories,
     editing,
+    month,
     onCancel,
     onSubmit,
 }: {
     categories: Category[];
     editing?: Budget;
+    month: string;
     onCancel: () => void;
     onSubmit: (values: BudgetFormValues) => void;
 }) {
@@ -2350,7 +2472,7 @@ function BudgetForm({
         values: editing ?? {
             categoryId: categories[0]?.id ?? "",
             limit: 0,
-            month: new Date().toISOString().slice(0, 7),
+            month,
         },
     });
 
@@ -2537,9 +2659,11 @@ function CategoryForm({
             name: "",
             type: "expense",
             color: colorChoices[0],
+            icon: "receipt",
         },
     });
     const selectedColor = form.watch("color");
+    const selectedIcon = form.watch("icon");
 
     const isEditing = Boolean(editing);
 
@@ -2618,6 +2742,38 @@ function CategoryForm({
                             ))}
                         </div>
                     </div>
+                    <FieldError message={form.formState.errors.icon?.message}>
+                        <Label>Icon</Label>
+                        <div className="mt-2 flex max-w-[560px] flex-wrap gap-2">
+                            {categoryIconChoices.map((choice) => {
+                                const Icon = choice.icon;
+                                const isSelected =
+                                    selectedIcon === choice.value;
+
+                                return (
+                                    <button
+                                        key={choice.value}
+                                        aria-label={`Use ${choice.label} icon`}
+                                        className={cn(
+                                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                            isSelected &&
+                                                "border-[#2563EB] bg-[#E8F0FE] text-[#0B57D0] ring-2 ring-[#2563EB]/20",
+                                        )}
+                                        type="button"
+                                        onClick={() =>
+                                            form.setValue(
+                                                "icon",
+                                                choice.value,
+                                                { shouldValidate: true },
+                                            )
+                                        }
+                                    >
+                                        <Icon className="h-4 w-4" aria-hidden />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </FieldError>
                 </CardContent>
                 <div
                     className={cn(
@@ -2672,7 +2828,7 @@ function BudgetProgressList({
     transactions: Transaction[];
 }) {
     return (
-        <Card>
+        <Card className="flex h-full flex-col">
             <CardHeader>
                 <div className="flex items-start justify-between gap-3">
                     <div>
@@ -2684,10 +2840,15 @@ function BudgetProgressList({
                     {backupMenu}
                 </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent
+                className={cn(
+                    "space-y-4",
+                    budgets.length === 0 && "flex flex-1",
+                )}
+            >
                 {budgets.length === 0 && (
                     <EmptyState
-                        className="flex h-56 flex-col items-center justify-center md:h-72"
+                        className="flex min-h-56 flex-1 flex-col items-center justify-center md:min-h-72"
                         title="No budgets yet"
                         description="Create a monthly budget after adding expense categories."
                     />
@@ -2796,7 +2957,7 @@ function RecentTransactions({
     transactions: Transaction[];
 }) {
     return (
-        <Card>
+        <Card className="flex h-full flex-col">
             <CardHeader>
                 <CardTitle>Recent activity</CardTitle>
                 <p className="text-sm text-muted-foreground">
@@ -2808,7 +2969,7 @@ function RecentTransactions({
             >
                 {transactions.length === 0 ? (
                     <EmptyState
-                        className="flex min-h-48 flex-1 flex-col items-center justify-center"
+                        className="flex min-h-48 flex-1 flex-col items-center justify-center md:min-h-72"
                         title="No activity yet"
                         description="New transactions will appear here."
                     />
@@ -2826,6 +2987,7 @@ function RecentTransactions({
                                 >
                                     <div className="flex min-w-0 items-center gap-3">
                                         <TransactionIcon
+                                            category={category}
                                             type={transaction.type}
                                         />
                                         <div className="min-w-0">
@@ -2914,6 +3076,7 @@ function TransactionTable({
                                         <div className="flex items-center justify-between gap-3">
                                             <div className="flex min-w-0 items-center gap-3">
                                                 <TransactionIcon
+                                                    category={category}
                                                     type={transaction.type}
                                                 />
                                                 <div className="min-w-0">
@@ -3023,6 +3186,7 @@ function TransactionTable({
                                                 <td className="py-3">
                                                     <div className="flex items-center gap-3">
                                                         <TransactionIcon
+                                                            category={category}
                                                             type={
                                                                 transaction.type
                                                             }
@@ -3148,10 +3312,7 @@ function CategoryList({
                         className="flex items-center justify-between gap-3 rounded-md border bg-white p-3"
                     >
                         <div className="flex min-w-0 items-center gap-3">
-                            <span
-                                className="h-3 w-3 shrink-0 rounded-full"
-                                style={{ backgroundColor: category.color }}
-                            />
+                            <CategoryIconBadge category={category} />
                             <span className="truncate text-sm font-medium leading-5">
                                 {category.name}
                             </span>
@@ -3354,10 +3515,14 @@ function DatePickerInput({
 }
 
 function MonthPickerInput({
+    ariaLabel,
+    compact = false,
     id,
     onChange,
     value,
 }: {
+    ariaLabel?: string;
+    compact?: boolean;
     id?: string;
     onChange: (value: string) => void;
     value: string;
@@ -3403,11 +3568,16 @@ function MonthPickerInput({
     return (
         <div className="relative" ref={pickerRef}>
             <button
+                aria-label={ariaLabel}
                 id={id}
                 className={cn(
                     "flex h-10 w-full cursor-pointer items-center gap-3 rounded-md border border-input bg-white px-3 py-2 text-left text-base text-foreground transition-[border-color,box-shadow] duration-150 ease-out focus-visible:border-[#2563EB] focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgba(37,99,235,0.18)] sm:text-sm",
+                    compact &&
+                        "inline-flex w-auto rounded-full border-transparent bg-[#E8F0FE] px-3 py-1 text-xs font-medium leading-4 text-[#0B57D0] hover:bg-[#DCE8FD] sm:text-xs",
                     isOpen &&
-                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
+                        (compact
+                            ? "border-[#2563EB] bg-[#E8F0FE] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]"
+                            : "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]"),
                 )}
                 type="button"
                 onClick={() => {
@@ -3416,7 +3586,10 @@ function MonthPickerInput({
                 }}
             >
                 <Calendar
-                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                    className={cn(
+                        "h-4 w-4 shrink-0",
+                        compact ? "text-[#0B57D0]" : "text-muted-foreground",
+                    )}
                     aria-hidden
                 />
                 <span>
@@ -3611,7 +3784,7 @@ function EditModal({
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 pb-6 pt-4 sm:items-center sm:py-6">
             <button
                 aria-label="Close modal"
                 className="absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm"
@@ -3630,16 +3803,18 @@ function EditModal({
 }
 
 function MetricCard({
+    className,
     icon,
     label,
     value,
 }: {
+    className?: string;
     icon: "minus" | "plus" | "wallet";
     label: string;
     value: string;
 }) {
     return (
-        <Card className="bg-white p-3 md:p-4">
+        <Card className={cn("bg-white p-3 md:p-4", className)}>
             <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100">
                 {icon === "plus" && <Plus className="h-4 w-4" aria-hidden />}
                 {icon === "minus" && <Minus className="h-4 w-4" aria-hidden />}
@@ -3655,7 +3830,30 @@ function MetricCard({
     );
 }
 
-function TransactionIcon({ type }: { type: TransactionType }) {
+function CategoryIconBadge({ category }: { category: Category }) {
+    const Icon = categoryIconMap.get(category.icon) ?? Receipt;
+
+    return (
+        <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-white"
+            style={{ color: category.color }}
+        >
+            <Icon className="h-4 w-4" aria-hidden />
+        </span>
+    );
+}
+
+function TransactionIcon({
+    category,
+    type,
+}: {
+    category?: Category;
+    type: TransactionType;
+}) {
+    if (category) {
+        return <CategoryIconBadge category={category} />;
+    }
+
     return (
         <span
             className={cn(

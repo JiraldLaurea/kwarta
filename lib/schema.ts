@@ -18,6 +18,7 @@ export const categorySchema = z.object({
     name: z.string().min(2, "Use at least 2 characters."),
     type: z.enum(["income", "expense"]),
     color: z.string().min(4, "Choose a color."),
+    icon: z.string().min(1, "Choose an icon.").default("receipt"),
 });
 
 export const budgetSchema = z.object({
