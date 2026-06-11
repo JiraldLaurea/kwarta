@@ -8,11 +8,13 @@ import {
     ChevronLeft,
     ChevronRight,
     CircleDollarSign,
+    Download,
     Edit3,
     LogOut,
     Minus,
     Plus,
     Trash2,
+    Upload,
     Wallet,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
@@ -31,6 +33,7 @@ import {
     XAxis,
     YAxis,
 } from "recharts";
+import { z } from "zod";
 import {
     budgets as seedBudgets,
     categories as seedCategories,
@@ -136,6 +139,84 @@ type StoredWorkspace = {
     categories: Category[];
     transactions: Transaction[];
 };
+
+const transactionBackupRecordSchema = transactionSchema.extend({
+    id: z.string().min(1),
+    note: z.string().optional(),
+});
+
+const budgetBackupRecordSchema = budgetSchema.extend({
+    id: z.string().min(1),
+});
+
+const transactionBackupSchema = z.union([
+    z.array(transactionBackupRecordSchema),
+    z.object({
+        type: z.string().optional(),
+        exportedAt: z.string().optional(),
+        transactions: z.array(transactionBackupRecordSchema),
+    }),
+]);
+
+const budgetBackupSchema = z.union([
+    z.array(budgetBackupRecordSchema),
+    z.object({
+        type: z.string().optional(),
+        exportedAt: z.string().optional(),
+        budgets: z.array(budgetBackupRecordSchema),
+    }),
+]);
+
+function parseTransactionBackupPayload(payload: unknown): Transaction[] {
+    const parsed = transactionBackupSchema.safeParse(payload);
+
+    if (!parsed.success) {
+        throw new Error("Invalid transactions backup.");
+    }
+
+    const records = Array.isArray(parsed.data)
+        ? parsed.data
+        : parsed.data.transactions;
+
+    return records.map((transaction) => ({
+        ...transaction,
+        note: transaction.note ?? "",
+    }));
+}
+
+function parseBudgetBackupPayload(payload: unknown): Budget[] {
+    const parsed = budgetBackupSchema.safeParse(payload);
+
+    if (!parsed.success) {
+        throw new Error("Invalid budgets backup.");
+    }
+
+    return Array.isArray(parsed.data) ? parsed.data : parsed.data.budgets;
+}
+
+function downloadBackupFile(
+    label: "transactions" | "budgets",
+    records: Transaction[] | Budget[],
+) {
+    const exportedAt = new Date().toISOString();
+    const backup = {
+        type: `kwarta.${label}.v1`,
+        exportedAt,
+        [label]: records,
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {
+        type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `kwarta-${label}-${exportedAt.slice(0, 10)}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+}
 
 export function KwartaApp() {
     const [authReady, setAuthReady] = useState(false);
@@ -544,6 +625,10 @@ export function KwartaApp() {
                         onEdit={(transaction) =>
                             setEditingTransactionId(transaction.id)
                         }
+                        onImport={(nextTransactions) => {
+                            setTransactions(nextTransactions);
+                            setEditingTransactionId(null);
+                        }}
                         onSubmit={(values) => {
                             if (editingTransactionId) {
                                 setTransactions((current) =>
@@ -586,6 +671,10 @@ export function KwartaApp() {
                             )
                         }
                         onEdit={(budget) => setEditingBudgetId(budget.id)}
+                        onImport={(nextBudgets) => {
+                            setBudgets(nextBudgets);
+                            setEditingBudgetId(null);
+                        }}
                         onSubmit={(values) => {
                             if (editingBudgetId) {
                                 setBudgets((current) =>
@@ -1263,12 +1352,105 @@ function CashflowTooltip({
     );
 }
 
+function BackupToolbar({
+    error,
+    exportLabel,
+    importInputRef,
+    onExport,
+    onImportClick,
+    onImportFile,
+}: {
+    error: string | null;
+    exportLabel: "transactions" | "budgets";
+    importInputRef: React.RefObject<HTMLInputElement>;
+    onExport: () => void;
+    onImportClick: () => void;
+    onImportFile: (file: File) => void;
+}) {
+    const title =
+        exportLabel.charAt(0).toUpperCase() + exportLabel.slice(1);
+
+    return (
+        <div className="mb-4 flex flex-col gap-2 sm:items-end">
+            <div className="flex flex-col gap-2 sm:flex-row">
+                <Button type="button" variant="secondary" onClick={onExport}>
+                    <Download className="h-4 w-4" aria-hidden />
+                    Export {title}
+                </Button>
+                <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={onImportClick}
+                >
+                    <Upload className="h-4 w-4" aria-hidden />
+                    Import {title}
+                </Button>
+            </div>
+            <input
+                ref={importInputRef}
+                className="hidden"
+                type="file"
+                accept="application/json,.json"
+                onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    event.currentTarget.value = "";
+
+                    if (file) {
+                        onImportFile(file);
+                    }
+                }}
+            />
+            {error && (
+                <p className="text-sm leading-5 text-destructive">{error}</p>
+            )}
+        </div>
+    );
+}
+
+function ImportConfirmationModal({
+    count,
+    itemLabel,
+    onCancel,
+    onConfirm,
+}: {
+    count: number;
+    itemLabel: "transactions" | "budgets";
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    return (
+        <EditModal onClose={onCancel}>
+            <Card className="overflow-hidden rounded-2xl bg-white">
+                <div className="px-6 pb-6 pt-5">
+                    <CardTitle className="text-2xl font-medium leading-8">
+                        Replace existing {itemLabel}?
+                    </CardTitle>
+                    <p className="mt-2 text-base leading-6 text-muted-foreground">
+                        This import contains {count} {itemLabel}. Continuing
+                        will replace the {itemLabel} currently shown on this
+                        page and then save the imported backup.
+                    </p>
+                </div>
+                <div className="flex items-center justify-between border-t border-border bg-neutral-50 px-5 py-4">
+                    <Button type="button" variant="secondary" onClick={onCancel}>
+                        Cancel
+                    </Button>
+                    <Button type="button" onClick={onConfirm}>
+                        Replace {itemLabel}
+                    </Button>
+                </div>
+            </Card>
+        </EditModal>
+    );
+}
+
 function TransactionsView({
     categories,
     editingId,
     onCancelEdit,
     onDelete,
     onEdit,
+    onImport,
     onSubmit,
     transactions,
 }: {
@@ -1277,15 +1459,60 @@ function TransactionsView({
     onCancelEdit: () => void;
     onDelete: (id: string) => void;
     onEdit: (transaction: Transaction) => void;
+    onImport: (transactions: Transaction[]) => void;
     onSubmit: (values: TransactionFormValues) => void;
     transactions: Transaction[];
 }) {
     const editing = transactions.find(
         (transaction) => transaction.id === editingId,
     );
+    const importInputRef = useRef<HTMLInputElement>(null);
+    const [importError, setImportError] = useState<string | null>(null);
+    const [pendingImport, setPendingImport] = useState<Transaction[] | null>(
+        null,
+    );
+
+    async function handleImportFile(file: File) {
+        try {
+            const nextTransactions = parseTransactionBackupPayload(
+                JSON.parse(await file.text()),
+            );
+
+            setImportError(null);
+
+            if (transactions.length > 0) {
+                setPendingImport(nextTransactions);
+                return;
+            }
+
+            onImport(nextTransactions);
+        } catch {
+            setImportError("Choose a valid Kwarta transactions JSON backup.");
+        }
+    }
+
+    function confirmImport() {
+        if (!pendingImport) {
+            return;
+        }
+
+        onImport(pendingImport);
+        setPendingImport(null);
+        setImportError(null);
+    }
 
     return (
         <>
+            <BackupToolbar
+                error={importError}
+                exportLabel="transactions"
+                importInputRef={importInputRef}
+                onExport={() =>
+                    downloadBackupFile("transactions", transactions)
+                }
+                onImportClick={() => importInputRef.current?.click()}
+                onImportFile={handleImportFile}
+            />
             <div className="grid gap-4 md:gap-5 lg:grid-cols-[0.75fr_1.25fr]">
                 <TransactionForm
                     categories={categories}
@@ -1308,6 +1535,14 @@ function TransactionsView({
                         onSubmit={onSubmit}
                     />
                 </EditModal>
+            )}
+            {pendingImport && (
+                <ImportConfirmationModal
+                    count={pendingImport.length}
+                    itemLabel="transactions"
+                    onCancel={() => setPendingImport(null)}
+                    onConfirm={confirmImport}
+                />
             )}
         </>
     );
@@ -1533,6 +1768,7 @@ function BudgetsView({
     onCancelEdit,
     onDelete,
     onEdit,
+    onImport,
     onSubmit,
     transactions,
 }: {
@@ -1542,13 +1778,54 @@ function BudgetsView({
     onCancelEdit: () => void;
     onDelete: (id: string) => void;
     onEdit: (budget: Budget) => void;
+    onImport: (budgets: Budget[]) => void;
     onSubmit: (values: BudgetFormValues) => void;
     transactions: Transaction[];
 }) {
     const editing = budgets.find((budget) => budget.id === editingId);
+    const importInputRef = useRef<HTMLInputElement>(null);
+    const [importError, setImportError] = useState<string | null>(null);
+    const [pendingImport, setPendingImport] = useState<Budget[] | null>(null);
+
+    async function handleImportFile(file: File) {
+        try {
+            const nextBudgets = parseBudgetBackupPayload(
+                JSON.parse(await file.text()),
+            );
+
+            setImportError(null);
+
+            if (budgets.length > 0) {
+                setPendingImport(nextBudgets);
+                return;
+            }
+
+            onImport(nextBudgets);
+        } catch {
+            setImportError("Choose a valid Kwarta budgets JSON backup.");
+        }
+    }
+
+    function confirmImport() {
+        if (!pendingImport) {
+            return;
+        }
+
+        onImport(pendingImport);
+        setPendingImport(null);
+        setImportError(null);
+    }
 
     return (
         <>
+            <BackupToolbar
+                error={importError}
+                exportLabel="budgets"
+                importInputRef={importInputRef}
+                onExport={() => downloadBackupFile("budgets", budgets)}
+                onImportClick={() => importInputRef.current?.click()}
+                onImportFile={handleImportFile}
+            />
             <div className="grid gap-4 md:gap-5 lg:grid-cols-[0.75fr_1.25fr]">
                 <BudgetForm
                     categories={categories}
@@ -1575,6 +1852,14 @@ function BudgetsView({
                         onSubmit={onSubmit}
                     />
                 </EditModal>
+            )}
+            {pendingImport && (
+                <ImportConfirmationModal
+                    count={pendingImport.length}
+                    itemLabel="budgets"
+                    onCancel={() => setPendingImport(null)}
+                    onConfirm={confirmImport}
+                />
             )}
         </>
     );

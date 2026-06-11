@@ -241,6 +241,8 @@ Form action rows place the primary add/save action on the right side of the form
 
 Transaction forms keep Type and Amount in one two-column row even on small screens. Amount and budget Limit fields should use decimal numeric input behavior on mobile and accept only digits plus one decimal point; do not allow signs, currency symbols, commas, or other special characters in the field.
 
+Transactions and Budgets pages include compact backup actions above their page panels. Export and Import buttons use secondary button styling with a small leading icon, stack on mobile, and align to the right on wider screens. Imports must validate the selected JSON backup before changing state. If the page already contains rows, show a modal confirmation before replacing existing data so live user data is never overwritten accidentally.
+
 Authentication screens show only the product mark and form on small screens. Hide the larger intro headline and supporting copy until larger viewports so mobile login stays focused and avoids pushing the form too far down the page. On small screens, group the product mark and form in one centered vertical stack so viewport height does not stretch the gap; keep that gap tight, around 12px, then restore the split layout and more generous spacing on larger screens. Sign-in form headers use direct action copy such as "Sign in" with a friendly subheader, social auth appears first, and a thin horizontal divider with centered "or" separates social auth from email/password fields. Primary auth submit buttons use text only.
 
 ## Elevation & Depth
