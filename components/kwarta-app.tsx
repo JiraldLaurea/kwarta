@@ -2102,17 +2102,16 @@ function CategoryQuickAddSection({
     const handleDragEnd = (event: DragEndEvent) => {
         const activeId = String(event.active.id);
         const overId = event.over ? String(event.over.id) : null;
-        setActiveCategory(null);
 
-        if (!overId || activeId === overId) {
-            return;
+        if (overId && activeId !== overId) {
+            onReorderCategory(
+                normalizeTransactionType(categories[0]?.type ?? "expense"),
+                activeId,
+                overId,
+            );
         }
 
-        onReorderCategory(
-            normalizeTransactionType(categories[0]?.type ?? "expense"),
-            activeId,
-            overId,
-        );
+        setActiveCategory(null);
     };
 
     return (
@@ -2156,7 +2155,7 @@ function CategoryQuickAddSection({
                             ))}
                         </div>
                     </SortableContext>
-                    <DragOverlay adjustScale={false}>
+                    <DragOverlay adjustScale={false} dropAnimation={null}>
                         {activeCategory ? (
                             <SortableCategoryCard
                                 category={activeCategory}
@@ -2233,7 +2232,7 @@ function SortableCategoryCard({
                     "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
                 isDragging && "opacity-20",
                 isOverlay &&
-                    "cursor-grabbing border-[#2563EB] shadow-[0_22px_55px_rgba(37,99,235,0.24)]",
+                    "cursor-grabbing shadow-[0_22px_55px_rgba(37,99,235,0.24)]",
             )}
             role="button"
             tabIndex={0}
@@ -2562,31 +2561,21 @@ function QuickTransactionModal({
                             />
                         </FieldError>
                         <div>
-                            <Label>Subcategory</Label>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                                {subcategories.map((subcategory) => {
-                                    const selected =
-                                        selectedSubcategory === subcategory;
-
-                                    return (
-                                        <button
-                                            key={subcategory}
-                                            className={cn(
-                                                "h-10 rounded-md border border-border bg-white px-4 text-sm font-medium leading-5 transition-colors md:hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                                selected &&
-                                                    "border-primary bg-primary text-primary-foreground md:hover:bg-primary",
-                                            )}
-                                            type="button"
-                                            onClick={() =>
-                                                setSelectedSubcategory(
-                                                    subcategory,
-                                                )
-                                            }
-                                        >
-                                            {subcategory}
-                                        </button>
-                                    );
-                                })}
+                            <Label htmlFor="quick-subcategory">
+                                Subcategory
+                            </Label>
+                            <div className="mt-2">
+                                <Select
+                                    id="quick-subcategory"
+                                    onValueChange={setSelectedSubcategory}
+                                    options={subcategories.map(
+                                        (subcategory) => ({
+                                            label: subcategory,
+                                            value: subcategory,
+                                        }),
+                                    )}
+                                    value={selectedSubcategory}
+                                />
                             </div>
                         </div>
                     </CardContent>
@@ -3333,33 +3322,24 @@ function TransactionForm({
                     <FieldError
                         message={form.formState.errors.merchant?.message}
                     >
-                        <Label>Subcategory</Label>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                            {subcategories.map((subcategory) => {
-                                const selected =
-                                    selectedSubcategory === subcategory;
-
-                                return (
-                                    <button
-                                        key={subcategory}
-                                        className={cn(
-                                            "h-10 rounded-md border border-border bg-white px-4 text-sm font-medium leading-5 transition-colors md:hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                            selected &&
-                                                "border-primary bg-primary text-primary-foreground md:hover:bg-primary",
-                                        )}
-                                        type="button"
-                                        onClick={() =>
-                                            form.setValue(
-                                                "merchant",
-                                                subcategory,
-                                                { shouldValidate: true },
-                                            )
-                                        }
-                                    >
-                                        {subcategory}
-                                    </button>
-                                );
-                            })}
+                        <Label htmlFor="transaction-subcategory">
+                            Subcategory
+                        </Label>
+                        <div className="mt-2">
+                            <Select
+                                disabled={subcategories.length === 0}
+                                id="transaction-subcategory"
+                                onValueChange={(value) =>
+                                    form.setValue("merchant", value, {
+                                        shouldValidate: true,
+                                    })
+                                }
+                                options={subcategories.map((subcategory) => ({
+                                    label: subcategory,
+                                    value: subcategory,
+                                }))}
+                                value={selectedSubcategory}
+                            />
                         </div>
                     </FieldError>
                     <FieldError message={form.formState.errors.date?.message}>
