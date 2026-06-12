@@ -52,7 +52,7 @@ export function Select({
           <SelectPrimitive.Viewport>
             {options.map((option) => (
               <SelectPrimitive.Item
-                className="relative flex h-10 cursor-pointer select-none items-center rounded-md px-3 pr-8 text-sm leading-5 text-foreground outline-none hover:bg-neutral-100 focus:bg-neutral-100 data-[disabled]:pointer-events-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
+                className="relative flex h-10 cursor-pointer select-none items-center rounded-md px-3 pr-8 text-sm leading-5 text-foreground outline-none md:hover:bg-neutral-100 focus:bg-neutral-100 data-[disabled]:pointer-events-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"
                 disabled={option.disabled}
                 key={option.value}
                 value={option.value}

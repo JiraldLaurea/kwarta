@@ -2,6 +2,24 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+    closestCenter,
+    DndContext,
+    DragOverlay,
+    KeyboardSensor,
+    PointerSensor,
+    type DragEndEvent,
+    type DragStartEvent,
+    useSensor,
+    useSensors,
+} from "@dnd-kit/core";
+import {
+    rectSortingStrategy,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
     Calendar,
     Check,
     ChevronDown,
@@ -14,6 +32,7 @@ import {
     Car,
     Clapperboard,
     GraduationCap,
+    GripVertical,
     HeartPulse,
     Home,
     Laptop,
@@ -83,7 +102,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select } from "@/components/ui/select";
 
-type View = "dashboard" | "transactions" | "budgets" | "categories";
+type View = "dashboard" | "transactions" | "budgets" | "reports";
 
 const colorChoices = [
     "#171717",
@@ -121,6 +140,26 @@ const categoryIconMap = new Map(
     categoryIconChoices.map((choice) => [choice.value, choice.icon]),
 );
 
+const defaultSubcategories: Record<string, string[]> = {
+    salary: ["Paycheck", "Bonus", "Allowance", "Commission"],
+    freelance: ["Project", "Client", "Retainer", "Commission"],
+    housing: ["Rent", "Mortgage", "Maintenance", "Dues"],
+    food: [
+        "Breakfast",
+        "Lunch",
+        "Dinner",
+        "Snack",
+        "Groceries",
+        "Coffee",
+        "Beverage",
+    ],
+    transport: ["Commute", "Fuel", "Ride hailing", "Parking", "Fare"],
+    utilities: ["Electricity", "Water", "Internet", "Phone", "Gas"],
+    health: ["Medicine", "Doctor", "Dental", "Insurance", "Fitness"],
+    shopping: ["Clothes", "Household", "Personal care", "Gifts"],
+    subscriptions: ["Streaming", "Software", "Membership", "Cloud"],
+};
+
 function normalizeTransactionType(value: string) {
     return value.trim().toLowerCase() as TransactionType;
 }
@@ -155,6 +194,86 @@ function withCategoryIcons(categories: Category[]) {
         ...category,
         icon: category.icon || getDefaultCategoryIcon(category),
     }));
+}
+
+function getSubcategoriesForCategory(category: Category) {
+    const categoryKey = slugifyCategoryValue(category.id || category.name);
+    const nameKey = slugifyCategoryValue(category.name);
+
+    return (
+        defaultSubcategories[categoryKey] ??
+        defaultSubcategories[nameKey] ??
+        (category.type === "income"
+            ? ["Payment", "Bonus", "Transfer"]
+            : ["General", "Personal", "Household"])
+    );
+}
+
+function getUniqueCategoryId(name: string, categories: Category[]) {
+    const baseId = slugifyCategoryValue(name) || crypto.randomUUID();
+    const existingIds = new Set(categories.map((category) => category.id));
+
+    if (!existingIds.has(baseId)) {
+        return baseId;
+    }
+
+    let index = 2;
+    let nextId = `${baseId}-${index}`;
+
+    while (existingIds.has(nextId)) {
+        index += 1;
+        nextId = `${baseId}-${index}`;
+    }
+
+    return nextId;
+}
+
+function reorderCategoriesByType(
+    categories: Category[],
+    type: TransactionType,
+    fromId: string,
+    toId: string,
+) {
+    if (fromId === toId) {
+        return categories;
+    }
+
+    const typedCategories = categories.filter(
+        (category) => normalizeTransactionType(category.type) === type,
+    );
+    const fromIndex = typedCategories.findIndex(
+        (category) => category.id === fromId,
+    );
+    const toIndex = typedCategories.findIndex(
+        (category) => category.id === toId,
+    );
+
+    if (fromIndex < 0 || toIndex < 0) {
+        return categories;
+    }
+
+    const nextTypedCategories = typedCategories.slice();
+    const [movedCategory] = nextTypedCategories.splice(fromIndex, 1);
+    nextTypedCategories.splice(toIndex, 0, movedCategory);
+
+    const queues = {
+        expense: nextTypedCategories.filter(
+            (category) => normalizeTransactionType(category.type) === "expense",
+        ),
+        income: nextTypedCategories.filter(
+            (category) => normalizeTransactionType(category.type) === "income",
+        ),
+    };
+
+    return categories.map((category) => {
+        const categoryType = normalizeTransactionType(category.type);
+
+        if (categoryType !== type) {
+            return category;
+        }
+
+        return queues[categoryType].shift() ?? category;
+    });
 }
 
 function withMissingDefaultCategories(categories: Category[], userId: string) {
@@ -211,6 +330,11 @@ function parseDecimalInput(value: unknown) {
 
 type StoredWorkspace = {
     budgets: Budget[];
+    categories: Category[];
+    transactions: Transaction[];
+};
+
+type TransactionImportResult = {
     categories: Category[];
     transactions: Transaction[];
 };
@@ -318,10 +442,42 @@ function findMatchingCategoryId(
     return getFirstCategoryId(categories, categoryType) || categoryId;
 }
 
+function mergeBackupCategories(
+    categories: Category[],
+    backupCategories: Category[],
+) {
+    const nextCategories = [...withCategoryIcons(categories)];
+
+    withCategoryIcons(backupCategories).forEach((backupCategory) => {
+        const matchingCategory = nextCategories.find(
+            (category) =>
+                normalizeTransactionType(category.type) ===
+                    normalizeTransactionType(backupCategory.type) &&
+                category.name.trim().toLowerCase() ===
+                    backupCategory.name.trim().toLowerCase(),
+        );
+
+        if (matchingCategory) {
+            return;
+        }
+
+        const idExists = nextCategories.some(
+            (category) => category.id === backupCategory.id,
+        );
+
+        nextCategories.push({
+            ...backupCategory,
+            id: idExists ? crypto.randomUUID() : backupCategory.id,
+        });
+    });
+
+    return nextCategories;
+}
+
 function parseTransactionBackupPayload(
     payload: unknown,
     categories: Category[],
-): Transaction[] {
+): TransactionImportResult {
     const parsed = transactionBackupSchema.safeParse(payload);
 
     if (!parsed.success) {
@@ -334,18 +490,22 @@ function parseTransactionBackupPayload(
     const backupCategories = Array.isArray(parsed.data)
         ? []
         : (parsed.data.categories ?? []);
+    const nextCategories = mergeBackupCategories(categories, backupCategories);
 
-    return records.map((transaction) => ({
-        ...transaction,
-        id: crypto.randomUUID(),
-        categoryId: findMatchingCategoryId(
-            transaction.categoryId,
-            normalizeTransactionType(transaction.type),
-            categories,
-            backupCategories,
-        ),
-        note: transaction.note ?? "",
-    }));
+    return {
+        categories: nextCategories,
+        transactions: records.map((transaction) => ({
+            ...transaction,
+            id: crypto.randomUUID(),
+            categoryId: findMatchingCategoryId(
+                transaction.categoryId,
+                normalizeTransactionType(transaction.type),
+                nextCategories,
+                backupCategories,
+            ),
+            note: transaction.note ?? "",
+        })),
+    };
 }
 
 function parseBackupAmount(value: unknown) {
@@ -394,6 +554,19 @@ function getDefaultTransactionDate(monthValue: string) {
     }
 
     return `${monthValue}-01`;
+}
+
+function formatMonthLabel(monthValue: string) {
+    return parseMonthValue(monthValue).toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+    });
+}
+
+function getDaysInMonth(monthValue: string) {
+    const date = parseMonthValue(monthValue);
+
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 }
 
 function parseBudgetBackupPayload(
@@ -533,6 +706,13 @@ export function KwartaApp() {
         null,
     );
     const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+    const [quickAddCategory, setQuickAddCategory] = useState<Category | null>(
+        null,
+    );
+    const [homeCategoryFormOpen, setHomeCategoryFormOpen] = useState(false);
+    const [homeEditMode, setHomeEditMode] = useState(false);
+    const [categoryPendingDelete, setCategoryPendingDelete] =
+        useState<Category | null>(null);
     const accountMenuRef = useRef<HTMLDivElement>(null);
     const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
@@ -848,7 +1028,7 @@ export function KwartaApp() {
                                     <div className="h-px bg-border" />
                                     <div className="px-2 py-2">
                                         <Button
-                                            className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-sm font-normal hover:bg-neutral-100"
+                                            className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-sm font-normal md:hover:bg-neutral-100"
                                             type="button"
                                             variant="ghost"
                                             onClick={async () => {
@@ -874,44 +1054,32 @@ export function KwartaApp() {
 
             <div className="mx-auto w-full max-w-7xl px-4 pb-28 pt-5 md:px-5 md:py-7">
                 {view === "dashboard" && (
-                    <div className="space-y-4">
-                        <section>
-                            <div className="mb-4 max-w-[220px]">
-                                <MonthPickerInput
-                                    ariaLabel="Select dashboard month"
-                                    compact
-                                    value={selectedMonth}
-                                    onChange={setSelectedMonth}
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                                <MetricCard
-                                    label="Income"
-                                    value={formatCurrency(totals.income)}
-                                    icon="plus"
-                                />
-                                <MetricCard
-                                    label="Expenses"
-                                    value={formatCurrency(totals.expenses)}
-                                    icon="minus"
-                                />
-                                <MetricCard
-                                    className="col-span-2 sm:col-span-1"
-                                    label="Balance"
-                                    value={formatCurrency(totals.balance)}
-                                    icon="wallet"
-                                />
-                            </div>
-                        </section>
-
-                        <DashboardView
-                            budgets={monthBudgets}
-                            categories={categories}
-                            cashflowData={cashflowData}
-                            spendingByCategory={spendingByCategory}
-                            transactions={monthTransactions}
-                        />
-                    </div>
+                    <HomeView
+                        budgets={monthBudgets}
+                        editMode={homeEditMode}
+                        expenseCategories={expenseCategories}
+                        incomeCategories={incomeCategories}
+                        month={selectedMonth}
+                        onAddCategory={() => setHomeCategoryFormOpen(true)}
+                        onDeleteCategory={setCategoryPendingDelete}
+                        onEditCategory={(category) =>
+                            setEditingCategoryId(category.id)
+                        }
+                        onEditModeChange={setHomeEditMode}
+                        onMonthChange={setSelectedMonth}
+                        onReorderCategory={(type, fromId, toId) =>
+                            setCategories((current) =>
+                                reorderCategoriesByType(
+                                    current,
+                                    type,
+                                    fromId,
+                                    toId,
+                                ),
+                            )
+                        }
+                        onSelectCategory={setQuickAddCategory}
+                        transactions={monthTransactions}
+                    />
                 )}
 
                 {view === "transactions" && (
@@ -930,18 +1098,22 @@ export function KwartaApp() {
                         onEdit={(transaction) =>
                             setEditingTransactionId(transaction.id)
                         }
-                        onImport={async (nextTransactions) => {
+                        onImport={async (
+                            nextTransactions,
+                            nextCategories = categories,
+                        ) => {
                             if (userId) {
                                 await persistWorkspace(
                                     {
                                         budgets,
-                                        categories,
+                                        categories: nextCategories,
                                         transactions: nextTransactions,
                                     },
                                     userId,
                                 );
                             }
 
+                            setCategories(nextCategories);
                             setTransactions(nextTransactions);
                             setEditingTransactionId(null);
                         }}
@@ -1027,32 +1199,136 @@ export function KwartaApp() {
                     />
                 )}
 
-                {view === "categories" && (
-                    <CategoriesView
-                        categories={categories}
-                        editingId={editingCategoryId}
-                        onCancelEdit={() => setEditingCategoryId(null)}
-                        onDelete={(id) => {
-                            setCategories((current) =>
-                                current.filter(
-                                    (category) => category.id !== id,
-                                ),
+                {view === "reports" && (
+                    <div className="space-y-4">
+                        <section>
+                            <div className="mb-4 max-w-[220px]">
+                                <MonthPickerInput
+                                    ariaLabel="Select reports month"
+                                    compact
+                                    value={selectedMonth}
+                                    onChange={setSelectedMonth}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                                <MetricCard
+                                    label="Income"
+                                    value={formatCurrency(totals.income)}
+                                    icon="plus"
+                                />
+                                <MetricCard
+                                    label="Expenses"
+                                    value={formatCurrency(totals.expenses)}
+                                    icon="minus"
+                                />
+                                <MetricCard
+                                    className="col-span-2 sm:col-span-1"
+                                    label="Balance"
+                                    value={formatCurrency(totals.balance)}
+                                    icon="wallet"
+                                />
+                            </div>
+                        </section>
+
+                        <DashboardView
+                            budgets={monthBudgets}
+                            categories={categories}
+                            cashflowData={cashflowData}
+                            spendingByCategory={spendingByCategory}
+                            transactions={monthTransactions}
+                        />
+                    </div>
+                )}
+            </div>
+            {quickAddCategory && (
+                <QuickTransactionModal
+                    budget={monthBudgets.find(
+                        (budget) => budget.categoryId === quickAddCategory.id,
+                    )}
+                    category={quickAddCategory}
+                    month={selectedMonth}
+                    onClose={() => setQuickAddCategory(null)}
+                    onSetBudget={(limit) => {
+                        setBudgets((current) => {
+                            const existingBudget = current.find(
+                                (budget) =>
+                                    budget.categoryId === quickAddCategory.id &&
+                                    budget.month === selectedMonth,
                             );
-                            setTransactions((current) =>
-                                current.filter(
-                                    (transaction) =>
-                                        transaction.categoryId !== id,
-                                ),
-                            );
-                            setBudgets((current) =>
-                                current.filter(
-                                    (budget) => budget.categoryId !== id,
-                                ),
-                            );
-                        }}
-                        onEdit={(category) => setEditingCategoryId(category.id)}
+
+                            if (existingBudget) {
+                                return current.map((budget) =>
+                                    budget.id === existingBudget.id
+                                        ? { ...budget, limit }
+                                        : budget,
+                                );
+                            }
+
+                            return [
+                                {
+                                    id: crypto.randomUUID(),
+                                    categoryId: quickAddCategory.id,
+                                    limit,
+                                    month: selectedMonth,
+                                },
+                                ...current,
+                            ];
+                        });
+                        setQuickAddCategory(null);
+                    }}
+                    onSubmit={({ amount, date, subcategory }) => {
+                        setTransactions((current) => [
+                            {
+                                id: crypto.randomUUID(),
+                                amount,
+                                categoryId: quickAddCategory.id,
+                                date,
+                                merchant: subcategory,
+                                note: "",
+                                type: quickAddCategory.type,
+                            },
+                            ...current,
+                        ]);
+                        setQuickAddCategory(null);
+                    }}
+                />
+            )}
+            {homeCategoryFormOpen && (
+                <EditModal onClose={() => setHomeCategoryFormOpen(false)}>
+                    <CategoryForm
+                        modal
+                        onCancel={() => setHomeCategoryFormOpen(false)}
                         onSubmit={(values) => {
-                            if (editingCategoryId) {
+                            setCategories((current) => [
+                                {
+                                    id: getUniqueCategoryId(
+                                        values.name,
+                                        current,
+                                    ),
+                                    ...values,
+                                },
+                                ...current,
+                            ]);
+                            setHomeCategoryFormOpen(false);
+                        }}
+                    />
+                </EditModal>
+            )}
+            {view === "dashboard" &&
+                editingCategoryId &&
+                categories.find(
+                    (category) => category.id === editingCategoryId,
+                ) && (
+                    <EditModal onClose={() => setEditingCategoryId(null)}>
+                        <CategoryForm
+                            editing={
+                                categories.find(
+                                    (category) =>
+                                        category.id === editingCategoryId,
+                                )!
+                            }
+                            onCancel={() => setEditingCategoryId(null)}
+                            onSubmit={(values) => {
                                 setCategories((current) =>
                                     current.map((category) =>
                                         category.id === editingCategoryId
@@ -1061,24 +1337,37 @@ export function KwartaApp() {
                                     ),
                                 );
                                 setEditingCategoryId(null);
-                                return;
-                            }
-
-                            setCategories((current) => [
-                                {
-                                    id: values.name
-                                        .toLowerCase()
-                                        .replace(/\s+/g, "-"),
-                                    ...values,
-                                },
-                                ...current,
-                            ]);
-                        }}
-                        incomeCategories={incomeCategories}
-                        expenseCategories={expenseCategories}
-                    />
+                            }}
+                        />
+                    </EditModal>
                 )}
-            </div>
+            {categoryPendingDelete && (
+                <DeleteCategoryConfirmationModal
+                    category={categoryPendingDelete}
+                    onCancel={() => setCategoryPendingDelete(null)}
+                    onConfirm={() => {
+                        const categoryId = categoryPendingDelete.id;
+
+                        setCategories((current) =>
+                            current.filter(
+                                (category) => category.id !== categoryId,
+                            ),
+                        );
+                        setTransactions((current) =>
+                            current.filter(
+                                (transaction) =>
+                                    transaction.categoryId !== categoryId,
+                            ),
+                        );
+                        setBudgets((current) =>
+                            current.filter(
+                                (budget) => budget.categoryId !== categoryId,
+                            ),
+                        );
+                        setCategoryPendingDelete(null);
+                    }}
+                />
+            )}
             {mobileMoreOpen && (
                 <MobileMoreSheet
                     accountName={accountName}
@@ -1134,23 +1423,28 @@ function NavItems({
     mobile?: boolean;
     onSelect: (view: View) => void;
 }) {
+    const items: Array<{ label: string; view: View }> = [
+        { label: "Home", view: "dashboard" },
+        { label: "Transactions", view: "transactions" },
+        { label: "Budgets", view: "budgets" },
+        { label: "Reports", view: "reports" },
+    ];
+
     return (
         <>
-            {(
-                ["dashboard", "transactions", "budgets", "categories"] as View[]
-            ).map((item) => (
+            {items.map((item) => (
                 <Button
                     className={cn(
                         "min-w-28 justify-center",
                         mobile && "w-full justify-start",
                     )}
-                    key={item}
+                    key={item.view}
                     type="button"
-                    variant={activeView === item ? "default" : "secondary"}
+                    variant={activeView === item.view ? "default" : "secondary"}
                     size="sm"
-                    onClick={() => onSelect(item)}
+                    onClick={() => onSelect(item.view)}
                 >
-                    {item[0].toUpperCase() + item.slice(1)}
+                    {item.label}
                 </Button>
             ))}
         </>
@@ -1173,10 +1467,10 @@ function MobileTabBar({
         label: string;
         view: View;
     }> = [
-        { icon: "dashboard", label: "Dashboard", view: "dashboard" },
+        { icon: "dashboard", label: "Home", view: "dashboard" },
         { icon: "transactions", label: "Transactions", view: "transactions" },
         { icon: "budgets", label: "Budgets", view: "budgets" },
-        { icon: "categories", label: "Categories", view: "categories" },
+        { icon: "reports", label: "Reports", view: "reports" },
     ];
 
     return (
@@ -1222,7 +1516,7 @@ type MobileTabIconName =
     | "dashboard"
     | "transactions"
     | "budgets"
-    | "categories"
+    | "reports"
     | "more";
 
 function MobileTabIcon({
@@ -1386,24 +1680,38 @@ function MobileTabIcon({
         );
     }
 
-    if (name === "categories") {
+    if (name === "reports") {
         return (
             <svg {...commonProps}>
                 {active ? (
                     <>
-                        <path
-                            d="M4.25 5.75A1.75 1.75 0 0 1 6 4h5.1c.46 0 .9.18 1.24.51l7.15 7.15a1.75 1.75 0 0 1 0 2.48l-5.35 5.35a1.75 1.75 0 0 1-2.48 0L4.51 12.34A1.75 1.75 0 0 1 4 11.1V6Z"
+                        <rect
+                            height="14"
+                            rx="2"
                             fill="currentColor"
+                            width="16"
+                            x="4"
+                            y="5"
                         />
-                        <circle cx="8.25" cy="8.25" fill="#FFFFFF" r="1.25" />
+                        <path
+                            d="M8 15v-3M12 15V9M16 15v-5"
+                            stroke="#FFFFFF"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="1.7"
+                        />
                     </>
                 ) : (
                     <>
-                        <path
-                            d="M4.25 5.75A1.75 1.75 0 0 1 6 4h5.1c.46 0 .9.18 1.24.51l7.15 7.15a1.75 1.75 0 0 1 0 2.48l-5.35 5.35a1.75 1.75 0 0 1-2.48 0L4.51 12.34A1.75 1.75 0 0 1 4 11.1V6Z"
+                        <rect
+                            height="14"
+                            rx="2"
+                            width="16"
+                            x="4"
+                            y="5"
                             {...strokeProps}
                         />
-                        <circle cx="8.25" cy="8.25" r="1.25" {...strokeProps} />
+                        <path d="M8 15v-3M12 15V9M16 15v-5" {...strokeProps} />
                     </>
                 )}
             </svg>
@@ -1460,7 +1768,7 @@ function MobileMoreSheet({
                 <div className="h-px bg-border" />
                 <div className="px-2 py-2">
                     <Button
-                        className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-sm font-normal hover:bg-neutral-100"
+                        className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-sm font-normal md:hover:bg-neutral-100"
                         type="button"
                         variant="ghost"
                         onClick={onSignOut}
@@ -1622,6 +1930,685 @@ function AuthScreen({
     );
 }
 
+function HomeView({
+    budgets,
+    editMode,
+    expenseCategories,
+    incomeCategories,
+    month,
+    onAddCategory,
+    onDeleteCategory,
+    onEditCategory,
+    onEditModeChange,
+    onMonthChange,
+    onReorderCategory,
+    onSelectCategory,
+    transactions,
+}: {
+    budgets: Budget[];
+    editMode: boolean;
+    expenseCategories: Category[];
+    incomeCategories: Category[];
+    month: string;
+    onAddCategory: () => void;
+    onDeleteCategory: (category: Category) => void;
+    onEditCategory: (category: Category) => void;
+    onEditModeChange: (editMode: boolean) => void;
+    onMonthChange: (month: string) => void;
+    onReorderCategory: (
+        type: TransactionType,
+        fromId: string,
+        toId: string,
+    ) => void;
+    onSelectCategory: (category: Category) => void;
+    transactions: Transaction[];
+}) {
+    return (
+        <div className="space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <MonthPickerInput
+                    ariaLabel="Select home month"
+                    compact
+                    value={month}
+                    onChange={onMonthChange}
+                />
+                <div className="flex gap-2">
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={onAddCategory}
+                    >
+                        <Plus className="h-4 w-4" aria-hidden />
+                        Add
+                    </Button>
+                    <Button
+                        type="button"
+                        variant={editMode ? "default" : "secondary"}
+                        onClick={() => onEditModeChange(!editMode)}
+                    >
+                        {editMode ? (
+                            <Check className="h-4 w-4" aria-hidden />
+                        ) : (
+                            <Edit3 className="h-4 w-4" aria-hidden />
+                        )}
+                        {editMode ? "Done" : "Edit"}
+                    </Button>
+                </div>
+            </div>
+            <CategoryQuickAddSection
+                budgets={budgets}
+                editMode={editMode}
+                title="Expenses"
+                categories={expenseCategories}
+                onDeleteCategory={onDeleteCategory}
+                onEditCategory={onEditCategory}
+                onReorderCategory={onReorderCategory}
+                transactions={transactions}
+                onSelectCategory={onSelectCategory}
+            />
+            <CategoryQuickAddSection
+                budgets={budgets}
+                editMode={editMode}
+                title="Income"
+                categories={incomeCategories}
+                onDeleteCategory={onDeleteCategory}
+                onEditCategory={onEditCategory}
+                onReorderCategory={onReorderCategory}
+                transactions={transactions}
+                onSelectCategory={onSelectCategory}
+            />
+        </div>
+    );
+}
+
+function CategoryQuickAddSection({
+    budgets,
+    categories,
+    editMode,
+    onDeleteCategory,
+    onEditCategory,
+    onReorderCategory,
+    onSelectCategory,
+    title,
+    transactions,
+}: {
+    budgets: Budget[];
+    categories: Category[];
+    editMode: boolean;
+    onDeleteCategory: (category: Category) => void;
+    onEditCategory: (category: Category) => void;
+    onReorderCategory: (
+        type: TransactionType,
+        fromId: string,
+        toId: string,
+    ) => void;
+    onSelectCategory: (category: Category) => void;
+    title: string;
+    transactions: Transaction[];
+}) {
+    const [activeCategory, setActiveCategory] = useState<Category | null>(null);
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        }),
+    );
+    const categoryIds = useMemo(
+        () => categories.map((category) => category.id),
+        [categories],
+    );
+    const totalsByCategoryId = useMemo(() => {
+        const totals = new Map<string, number>();
+
+        transactions.forEach((transaction) => {
+            totals.set(
+                transaction.categoryId,
+                (totals.get(transaction.categoryId) ?? 0) + transaction.amount,
+            );
+        });
+
+        return totals;
+    }, [transactions]);
+    const budgetsByCategoryId = useMemo(() => {
+        const budgetMap = new Map<string, Budget>();
+
+        budgets.forEach((budget) => {
+            budgetMap.set(budget.categoryId, budget);
+        });
+
+        return budgetMap;
+    }, [budgets]);
+
+    useEffect(() => {
+        if (!activeCategory) {
+            return;
+        }
+
+        const previousCursor = document.body.style.cursor;
+        document.body.style.cursor = "grabbing";
+
+        return () => {
+            document.body.style.cursor = previousCursor;
+        };
+    }, [activeCategory]);
+
+    const handleDragStart = (event: DragStartEvent) => {
+        const category = categories.find(
+            (item) => item.id === String(event.active.id),
+        );
+        setActiveCategory(category ?? null);
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const activeId = String(event.active.id);
+        const overId = event.over ? String(event.over.id) : null;
+        setActiveCategory(null);
+
+        if (!overId || activeId === overId) {
+            return;
+        }
+
+        onReorderCategory(
+            normalizeTransactionType(categories[0]?.type ?? "expense"),
+            activeId,
+            overId,
+        );
+    };
+
+    return (
+        <section>
+            <h2 className="mb-3 text-xl font-medium leading-7">{title}</h2>
+            {categories.length === 0 ? (
+                <EmptyState
+                    title={`No ${title.toLowerCase()} categories yet`}
+                    description="Create categories to start adding transactions quickly."
+                />
+            ) : (
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragCancel={() => setActiveCategory(null)}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext
+                        items={categoryIds}
+                        strategy={rectSortingStrategy}
+                    >
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                            {categories.map((category) => (
+                                <SortableCategoryCard
+                                    key={category.id}
+                                    category={category}
+                                    disabled={!editMode}
+                                    editMode={editMode}
+                                    isOverlay={false}
+                                    onDeleteCategory={onDeleteCategory}
+                                    onEditCategory={onEditCategory}
+                                    onSelectCategory={onSelectCategory}
+                                    budget={budgetsByCategoryId.get(
+                                        category.id,
+                                    )}
+                                    total={
+                                        totalsByCategoryId.get(category.id) ?? 0
+                                    }
+                                />
+                            ))}
+                        </div>
+                    </SortableContext>
+                    <DragOverlay adjustScale={false}>
+                        {activeCategory ? (
+                            <SortableCategoryCard
+                                category={activeCategory}
+                                disabled
+                                editMode={editMode}
+                                isOverlay
+                                onDeleteCategory={onDeleteCategory}
+                                onEditCategory={onEditCategory}
+                                onSelectCategory={onSelectCategory}
+                                budget={budgetsByCategoryId.get(
+                                    activeCategory.id,
+                                )}
+                                total={
+                                    totalsByCategoryId.get(activeCategory.id) ??
+                                    0
+                                }
+                            />
+                        ) : null}
+                    </DragOverlay>
+                </DndContext>
+            )}
+        </section>
+    );
+}
+
+function SortableCategoryCard({
+    budget,
+    category,
+    disabled,
+    editMode,
+    isOverlay,
+    onDeleteCategory,
+    onEditCategory,
+    onSelectCategory,
+    total,
+}: {
+    budget?: Budget;
+    category: Category;
+    disabled: boolean;
+    editMode: boolean;
+    isOverlay: boolean;
+    onDeleteCategory: (category: Category) => void;
+    onEditCategory: (category: Category) => void;
+    onSelectCategory: (category: Category) => void;
+    total: number;
+}) {
+    const {
+        attributes,
+        isDragging,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+    } = useSortable({
+        disabled,
+        id: category.id,
+    });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+    const hasBudgetTracking =
+        normalizeTransactionType(category.type) === "expense";
+
+    return (
+        <div
+            ref={isOverlay ? undefined : setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            className={cn(
+                "relative rounded-md border border-border bg-white p-3 text-left transition-[border-color,box-shadow,opacity] md:hover:border-[#2563EB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-4",
+                editMode &&
+                    "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
+                isDragging && "opacity-20",
+                isOverlay &&
+                    "cursor-grabbing border-[#2563EB] shadow-[0_22px_55px_rgba(37,99,235,0.24)]",
+            )}
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+                if (!editMode) {
+                    onSelectCategory(category);
+                }
+            }}
+            onKeyDown={(event) => {
+                if (!editMode && (event.key === "Enter" || event.key === " ")) {
+                    event.preventDefault();
+                    onSelectCategory(category);
+                }
+            }}
+        >
+            <div className="mb-4 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2">
+                    <CategoryIconBadge category={category} />
+                    {editMode && (
+                        <span className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground">
+                            <GripVertical className="h-4 w-4" aria-hidden />
+                            <span className="sr-only">Drag to reorder</span>
+                        </span>
+                    )}
+                </div>
+                <div className="h-8 w-8 shrink-0">
+                    {editMode && !isOverlay && (
+                        <CategoryCardActionMenu
+                            category={category}
+                            onDeleteCategory={onDeleteCategory}
+                            onEditCategory={onEditCategory}
+                        />
+                    )}
+                </div>
+            </div>
+            <p className="truncate text-sm font-medium leading-5">
+                {category.name}
+            </p>
+            {hasBudgetTracking && (
+                <div className="mt-3">
+                    <div
+                        aria-label={`${category.name} budget progress`}
+                        className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
+                    >
+                        {budget && (
+                            <div
+                                className={cn(
+                                    "h-full rounded-full bg-neutral-900",
+                                    total > budget.limit && "bg-destructive",
+                                )}
+                                style={{
+                                    width: `${Math.min(
+                                        100,
+                                        budget.limit > 0
+                                            ? (total / budget.limit) * 100
+                                            : 0,
+                                    )}%`,
+                                }}
+                            />
+                        )}
+                    </div>
+                </div>
+            )}
+            <div className="mt-3 flex items-end justify-between gap-3">
+                <span className="text-sm font-medium leading-5">
+                    {formatCurrency(total)}
+                </span>
+                {hasBudgetTracking && (
+                    <span
+                        className={cn(
+                            "text-right text-xs font-medium leading-4 text-muted-foreground",
+                            budget && total > budget.limit && "text-destructive",
+                        )}
+                    >
+                        {budget
+                            ? total > budget.limit
+                                ? `${formatCurrency(total - budget.limit)} excess`
+                                : `${formatCurrency(budget.limit - total)} remaining`
+                            : "No budget set"}
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function CategoryCardActionMenu({
+    category,
+    onDeleteCategory,
+    onEditCategory,
+}: {
+    category: Category;
+    onDeleteCategory: (category: Category) => void;
+    onEditCategory: (category: Category) => void;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        function handlePointerDown(event: PointerEvent) {
+            if (
+                menuRef.current &&
+                !menuRef.current.contains(event.target as Node)
+            ) {
+                setIsOpen(false);
+            }
+        }
+
+        document.addEventListener("pointerdown", handlePointerDown);
+
+        return () => {
+            document.removeEventListener("pointerdown", handlePointerDown);
+        };
+    }, [isOpen]);
+
+    return (
+        <div className="relative z-20" ref={menuRef}>
+            <Button
+                aria-expanded={isOpen}
+                aria-haspopup="menu"
+                className="h-8 w-8 rounded-md md:hover:bg-neutral-100"
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={(event) => {
+                    event.stopPropagation();
+                    setIsOpen((open) => !open);
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
+            >
+                <Ellipsis className="h-5 w-5" aria-hidden />
+                <span className="sr-only">Open {category.name} menu</span>
+            </Button>
+            {isOpen && (
+                <div
+                    className="absolute right-0 top-9 z-30 w-44 overflow-hidden rounded-lg border border-border bg-white p-2 shadow-[0_18px_50px_rgba(0,0,0,0.12)]"
+                    role="menu"
+                    onPointerDown={(event) => event.stopPropagation()}
+                >
+                    <button
+                        className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 md:hover:bg-neutral-100"
+                        role="menuitem"
+                        type="button"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            onEditCategory(category);
+                            setIsOpen(false);
+                        }}
+                    >
+                        <Edit3 className="h-4 w-4" aria-hidden />
+                        Edit
+                    </button>
+                    <button
+                        className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 text-destructive md:hover:bg-neutral-100"
+                        role="menuitem"
+                        type="button"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            onDeleteCategory(category);
+                            setIsOpen(false);
+                        }}
+                    >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                        Delete
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function QuickTransactionModal({
+    budget,
+    category,
+    month,
+    onClose,
+    onSetBudget,
+    onSubmit,
+}: {
+    budget?: Budget;
+    category: Category;
+    month: string;
+    onClose: () => void;
+    onSetBudget: (limit: number) => void;
+    onSubmit: (values: {
+        amount: number;
+        date: string;
+        subcategory: string;
+    }) => void;
+}) {
+    const subcategories = getSubcategoriesForCategory(category);
+    const [amount, setAmount] = useState("");
+    const [date, setDate] = useState(toDateInputValue(new Date()));
+    const [selectedSubcategory, setSelectedSubcategory] = useState(
+        subcategories[0] ?? "General",
+    );
+    const parsedAmount = parseDecimalInput(amount);
+    const canSubmit = Number.isFinite(parsedAmount) && parsedAmount > 0;
+    const [limit, setLimit] = useState("");
+    const parsedLimit = parseDecimalInput(limit);
+    const canSetBudget = Number.isFinite(parsedLimit) && parsedLimit > 0;
+    const requiresBudget =
+        normalizeTransactionType(category.type) === "expense";
+
+    if (requiresBudget && !budget) {
+        return (
+            <EditModal onClose={onClose}>
+                <Card className="overflow-hidden rounded-2xl bg-white">
+                    <form
+                        onSubmit={(event) => {
+                            event.preventDefault();
+
+                            if (!canSetBudget) {
+                                return;
+                            }
+
+                            onSetBudget(parsedLimit);
+                        }}
+                    >
+                        <CardHeader className="px-6 pb-2 pt-5">
+                            <div className="mb-3 flex items-start justify-between gap-3">
+                                <CategoryIconBadge category={category} />
+                            </div>
+                            <CardTitle className="text-2xl font-medium leading-8">
+                                No Budget Set
+                            </CardTitle>
+                            <p className="text-base leading-6 text-muted-foreground">
+                                Set a limit for {category.name} before adding
+                                transactions.
+                            </p>
+                        </CardHeader>
+                        <CardContent className="px-6 pb-6 pt-0">
+                            <FieldError>
+                                <Label htmlFor="quick-budget-limit">
+                                    Limit
+                                </Label>
+                                <Input
+                                    autoFocus
+                                    id="quick-budget-limit"
+                                    inputMode="decimal"
+                                    onInput={handleDecimalInput}
+                                    pattern="[0-9]*[.]?[0-9]*"
+                                    type="text"
+                                    value={limit}
+                                    onChange={(event) =>
+                                        setLimit(event.currentTarget.value)
+                                    }
+                                />
+                            </FieldError>
+                        </CardContent>
+                        <div className="flex items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={onClose}
+                            >
+                                Cancel
+                            </Button>
+                            <Button type="submit" disabled={!canSetBudget}>
+                                Set budget
+                            </Button>
+                        </div>
+                    </form>
+                </Card>
+            </EditModal>
+        );
+    }
+
+    return (
+        <EditModal onClose={onClose}>
+            <Card className="overflow-visible rounded-2xl bg-white">
+                <form
+                    onSubmit={(event) => {
+                        event.preventDefault();
+
+                        if (!canSubmit) {
+                            return;
+                        }
+
+                        onSubmit({
+                            amount: parsedAmount,
+                            date,
+                            subcategory: selectedSubcategory,
+                        });
+                    }}
+                >
+                    <CardHeader className="px-6 pb-2 pt-5">
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <CategoryIconBadge category={category} />
+                            <div className="w-[164px]">
+                                <DatePickerInput
+                                    ariaLabel="Select transaction date"
+                                    displayTodayLabel
+                                    popoverAlign="right"
+                                    value={date}
+                                    onChange={setDate}
+                                />
+                            </div>
+                        </div>
+                        <CardTitle className="text-2xl font-medium leading-8">
+                            Add {category.name}
+                        </CardTitle>
+                        <p className="text-base leading-6 text-muted-foreground">
+                            Record this {category.type} for{" "}
+                            {formatMonthLabel(month)}.
+                        </p>
+                    </CardHeader>
+                    <CardContent className="space-y-5 px-6 pb-6 pt-0">
+                        <FieldError>
+                            <Label htmlFor="quick-amount">Amount</Label>
+                            <Input
+                                autoFocus
+                                id="quick-amount"
+                                inputMode="decimal"
+                                onInput={handleDecimalInput}
+                                pattern="[0-9]*[.]?[0-9]*"
+                                type="text"
+                                value={amount}
+                                onChange={(event) =>
+                                    setAmount(event.currentTarget.value)
+                                }
+                            />
+                        </FieldError>
+                        <div>
+                            <Label>Subcategory</Label>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                {subcategories.map((subcategory) => {
+                                    const selected =
+                                        selectedSubcategory === subcategory;
+
+                                    return (
+                                        <button
+                                            key={subcategory}
+                                            className={cn(
+                                                "h-10 rounded-md border border-border bg-white px-4 text-sm font-medium leading-5 transition-colors md:hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                selected &&
+                                                    "border-primary bg-primary text-primary-foreground md:hover:bg-primary",
+                                            )}
+                                            type="button"
+                                            onClick={() =>
+                                                setSelectedSubcategory(
+                                                    subcategory,
+                                                )
+                                            }
+                                        >
+                                            {subcategory}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </CardContent>
+                    <div className="flex items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={onClose}
+                        >
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={!canSubmit}>
+                            <Plus className="h-4 w-4" aria-hidden />
+                            Add transaction
+                        </Button>
+                    </div>
+                </form>
+            </Card>
+        </EditModal>
+    );
+}
+
 function DashboardView({
     budgets,
     categories,
@@ -1658,31 +2645,51 @@ function DashboardView({
                 </CardHeader>
                 <CardContent>
                     {spendingByCategory.length > 0 ? (
-                        <div className="h-56 md:h-72">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <RePieChart>
-                                    <Pie
-                                        data={spendingByCategory}
-                                        dataKey="value"
-                                        nameKey="name"
-                                        innerRadius={56}
-                                        outerRadius={86}
-                                        paddingAngle={3}
+                        <div>
+                            <div className="h-56 md:h-72">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <RePieChart>
+                                        <Pie
+                                            data={spendingByCategory}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            innerRadius={56}
+                                            outerRadius={86}
+                                            paddingAngle={3}
+                                        >
+                                            {spendingByCategory.map((entry) => (
+                                                <Cell
+                                                    key={entry.name}
+                                                    fill={entry.color}
+                                                />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            formatter={(value) =>
+                                                formatCurrency(Number(value))
+                                            }
+                                        />
+                                    </RePieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+                                {spendingByCategory.map((entry) => (
+                                    <div
+                                        key={entry.name}
+                                        className="flex min-w-0 items-center gap-2 text-sm leading-5"
                                     >
-                                        {spendingByCategory.map((entry) => (
-                                            <Cell
-                                                key={entry.name}
-                                                fill={entry.color}
-                                            />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        formatter={(value) =>
-                                            formatCurrency(Number(value))
-                                        }
-                                    />
-                                </RePieChart>
-                            </ResponsiveContainer>
+                                        <span
+                                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                            style={{
+                                                backgroundColor: entry.color,
+                                            }}
+                                        />
+                                        <span className="truncate">
+                                            {entry.name}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     ) : (
                         <EmptyState
@@ -1827,7 +2834,7 @@ function BackupOverflowMenu({
             <Button
                 aria-expanded={isOpen}
                 aria-haspopup="menu"
-                className="h-8 w-8 rounded-md hover:bg-neutral-100"
+                className="h-8 w-8 rounded-md md:hover:bg-neutral-100"
                 type="button"
                 variant="ghost"
                 size="icon"
@@ -1842,7 +2849,7 @@ function BackupOverflowMenu({
                     role="menu"
                 >
                     <button
-                        className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 hover:bg-neutral-100"
+                        className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 md:hover:bg-neutral-100"
                         role="menuitem"
                         type="button"
                         onClick={() => {
@@ -1854,7 +2861,7 @@ function BackupOverflowMenu({
                         Export {title}
                     </button>
                     <button
-                        className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 hover:bg-neutral-100"
+                        className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 md:hover:bg-neutral-100"
                         role="menuitem"
                         type="button"
                         onClick={() => {
@@ -1931,6 +2938,44 @@ function ImportConfirmationModal({
     );
 }
 
+function DeleteCategoryConfirmationModal({
+    category,
+    onCancel,
+    onConfirm,
+}: {
+    category: Category;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    return (
+        <EditModal onClose={onCancel}>
+            <Card className="overflow-hidden rounded-2xl bg-white">
+                <div className="px-6 pb-6 pt-5">
+                    <CardTitle className="text-2xl font-medium leading-8">
+                        Delete {category.name}?
+                    </CardTitle>
+                    <p className="mt-2 text-base leading-6 text-muted-foreground">
+                        This will remove the card, its transactions, and any
+                        budgets linked to this category.
+                    </p>
+                </div>
+                <div className="flex items-center justify-between border-t border-border bg-neutral-50 px-5 py-4">
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={onCancel}
+                    >
+                        Cancel
+                    </Button>
+                    <Button type="button" onClick={onConfirm}>
+                        Delete card
+                    </Button>
+                </div>
+            </Card>
+        </EditModal>
+    );
+}
+
 function ImportLoadingModal({
     itemLabel,
 }: {
@@ -1979,7 +3024,10 @@ function TransactionsView({
     onCancelEdit: () => void;
     onDelete: (id: string) => void;
     onEdit: (transaction: Transaction) => void;
-    onImport: (transactions: Transaction[]) => Promise<void>;
+    onImport: (
+        transactions: Transaction[],
+        categories?: Category[],
+    ) => Promise<void>;
     onSubmit: (values: TransactionFormValues) => void;
     transactions: Transaction[];
 }) {
@@ -1989,31 +3037,39 @@ function TransactionsView({
     const importInputRef = useRef<HTMLInputElement>(null);
     const [importError, setImportError] = useState<string | null>(null);
     const [isImporting, setIsImporting] = useState(false);
-    const [pendingImport, setPendingImport] = useState<Transaction[] | null>(
-        null,
-    );
+    const [pendingImport, setPendingImport] =
+        useState<TransactionImportResult | null>(null);
 
     async function handleImportFile(file: File) {
         setIsImporting(true);
+        let nextImport: TransactionImportResult;
 
         try {
-            const nextTransactions = parseTransactionBackupPayload(
+            nextImport = parseTransactionBackupPayload(
                 JSON.parse(await file.text()),
                 categories,
             );
-
-            setImportError(null);
-
-            if (allTransactions.length > 0) {
-                setPendingImport(nextTransactions);
-                setIsImporting(false);
-                return;
-            }
-
-            await onImport(nextTransactions);
         } catch {
             setImportError(
                 "Transactions could not be imported. Check that this is a Kwarta transactions JSON backup.",
+            );
+            setIsImporting(false);
+            return;
+        }
+
+        setImportError(null);
+
+        if (allTransactions.length > 0) {
+            setPendingImport(nextImport);
+            setIsImporting(false);
+            return;
+        }
+
+        try {
+            await onImport(nextImport.transactions, nextImport.categories);
+        } catch {
+            setImportError(
+                "Imported transactions could not be saved. Please try importing again.",
             );
         } finally {
             setIsImporting(false);
@@ -2025,12 +3081,12 @@ function TransactionsView({
             return;
         }
 
-        const nextTransactions = pendingImport;
+        const nextImport = pendingImport;
         setPendingImport(null);
         setIsImporting(true);
 
         try {
-            await onImport(nextTransactions);
+            await onImport(nextImport.transactions, nextImport.categories);
             setImportError(null);
         } catch {
             setImportError(
@@ -2043,13 +3099,7 @@ function TransactionsView({
 
     return (
         <>
-            <div className="grid gap-4 md:gap-5 lg:grid-cols-[0.75fr_1.25fr]">
-                <TransactionForm
-                    categories={categories}
-                    month={month}
-                    onCancel={onCancelEdit}
-                    onSubmit={onSubmit}
-                />
+            <div>
                 <TransactionTable
                     categories={categories}
                     onDelete={onDelete}
@@ -2088,7 +3138,7 @@ function TransactionsView({
             )}
             {pendingImport && (
                 <ImportConfirmationModal
-                    count={pendingImport.length}
+                    count={pendingImport.transactions.length}
                     itemLabel="transactions"
                     onCancel={() => setPendingImport(null)}
                     onConfirm={confirmImport}
@@ -2128,12 +3178,24 @@ function TransactionForm({
         defaultValues: editing ?? transactionDefaults,
     });
     const type = normalizeTransactionType(form.watch("type") ?? "expense");
+    const selectedCategoryId = form.watch("categoryId");
+    const selectedSubcategory = form.watch("merchant");
     const availableCategories = useMemo(
         () =>
             categories.filter(
                 (category) => normalizeTransactionType(category.type) === type,
             ),
         [categories, type],
+    );
+    const selectedCategory = availableCategories.find(
+        (category) => category.id === selectedCategoryId,
+    );
+    const subcategories = useMemo(
+        () =>
+            selectedCategory
+                ? getSubcategoriesForCategory(selectedCategory)
+                : [],
+        [selectedCategory],
     );
 
     useEffect(() => {
@@ -2156,6 +3218,19 @@ function TransactionForm({
             }
         }
     }, [availableCategories, form]);
+
+    useEffect(() => {
+        const currentSubcategory = form.getValues("merchant");
+
+        if (
+            subcategories.length > 0 &&
+            !subcategories.includes(currentSubcategory)
+        ) {
+            form.setValue("merchant", subcategories[0], {
+                shouldValidate: true,
+            });
+        }
+    }, [form, subcategories]);
 
     const isEditing = Boolean(editing);
 
@@ -2184,8 +3259,8 @@ function TransactionForm({
                         )}
                     >
                         {editing
-                            ? "Update this transaction's amount, source, category, and date."
-                            : "Record a new income or expense with its source, category, and date."}
+                            ? "Update this transaction's amount, subcategory, category, and date."
+                            : "Record a new income or expense with its subcategory, category, and date."}
                     </p>
                 </CardHeader>
                 <CardContent
@@ -2258,8 +3333,34 @@ function TransactionForm({
                     <FieldError
                         message={form.formState.errors.merchant?.message}
                     >
-                        <Label htmlFor="merchant">Source</Label>
-                        <Input id="merchant" {...form.register("merchant")} />
+                        <Label>Subcategory</Label>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                            {subcategories.map((subcategory) => {
+                                const selected =
+                                    selectedSubcategory === subcategory;
+
+                                return (
+                                    <button
+                                        key={subcategory}
+                                        className={cn(
+                                            "h-10 rounded-md border border-border bg-white px-4 text-sm font-medium leading-5 transition-colors md:hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                            selected &&
+                                                "border-primary bg-primary text-primary-foreground md:hover:bg-primary",
+                                        )}
+                                        type="button"
+                                        onClick={() =>
+                                            form.setValue(
+                                                "merchant",
+                                                subcategory,
+                                                { shouldValidate: true },
+                                            )
+                                        }
+                                    >
+                                        {subcategory}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </FieldError>
                     <FieldError message={form.formState.errors.date?.message}>
                         <Label htmlFor="date">Date</Label>
@@ -2273,10 +3374,6 @@ function TransactionForm({
                             }
                         />
                     </FieldError>
-                    <div>
-                        <Label htmlFor="note">Note</Label>
-                        <Input id="note" {...form.register("note")} />
-                    </div>
                 </CardContent>
                 <div
                     className={cn(
@@ -2394,7 +3491,15 @@ function BudgetsView({
 
     return (
         <>
-            <div className="grid gap-4 md:gap-5 lg:grid-cols-[0.75fr_1.25fr]">
+            <div className="space-y-4 md:space-y-5">
+                <MonthlyBudgetSummary
+                    budgets={budgets}
+                    month={month}
+                    transactions={transactions.filter(
+                        (transaction) => transaction.type === "expense",
+                    )}
+                />
+                <div className="grid gap-4 md:gap-5 lg:grid-cols-[0.75fr_1.25fr]">
                 <BudgetForm
                     categories={categories}
                     month={month}
@@ -2429,6 +3534,7 @@ function BudgetsView({
                         />
                     }
                 />
+                </div>
             </div>
             {editing && (
                 <EditModal onClose={onCancelEdit}>
@@ -2451,6 +3557,95 @@ function BudgetsView({
             )}
             {isImporting && <ImportLoadingModal itemLabel="budgets" />}
         </>
+    );
+}
+
+function MonthlyBudgetSummary({
+    budgets,
+    month,
+    transactions,
+}: {
+    budgets: Budget[];
+    month: string;
+    transactions: Transaction[];
+}) {
+    const totalBudget = budgets.reduce((sum, budget) => sum + budget.limit, 0);
+    const totalSpent = transactions.reduce(
+        (sum, transaction) => sum + transaction.amount,
+        0,
+    );
+    const remaining = totalBudget - totalSpent;
+    const isOverBudget = remaining < 0;
+    const usage = percent(totalSpent, totalBudget);
+    const averageExpensePerDay = totalSpent / getDaysInMonth(month);
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Total budget</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                    Overall spending plan for {formatMonthLabel(month)}.
+                </p>
+            </CardHeader>
+            <CardContent className="space-y-5">
+                <div>
+                    <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                        <span className="font-medium">
+                            {formatCurrency(totalSpent)} spent
+                        </span>
+                        <span className="text-muted-foreground">
+                            {formatCurrency(totalBudget)} budget
+                        </span>
+                    </div>
+                    <Progress
+                        indicatorClassName={cn(
+                            isOverBudget && "bg-destructive",
+                        )}
+                        value={usage}
+                    />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-md border border-border bg-white p-3">
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            Total spent
+                        </p>
+                        <p className="mt-1 text-lg font-semibold leading-7">
+                            {formatCurrency(totalSpent)}
+                        </p>
+                    </div>
+                    <div className="rounded-md border border-border bg-white p-3">
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            Total budget
+                        </p>
+                        <p className="mt-1 text-lg font-semibold leading-7">
+                            {formatCurrency(totalBudget)}
+                        </p>
+                    </div>
+                    <div className="rounded-md border border-border bg-white p-3">
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            Remaining budget
+                        </p>
+                        <p
+                            className={cn(
+                                "mt-1 text-lg font-semibold leading-7",
+                                isOverBudget && "text-destructive",
+                            )}
+                        >
+                            {formatCurrency(Math.abs(remaining))}{" "}
+                            {isOverBudget ? "excess" : "remaining"}
+                        </p>
+                    </div>
+                    <div className="rounded-md border border-border bg-white p-3">
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            Average expense per day
+                        </p>
+                        <p className="mt-1 text-lg font-semibold leading-7">
+                            {formatCurrency(averageExpensePerDay)}
+                        </p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
     );
 }
 
@@ -2646,10 +3841,12 @@ function CategoriesView({
 
 function CategoryForm({
     editing,
+    modal = false,
     onCancel,
     onSubmit,
 }: {
     editing?: Category;
+    modal?: boolean;
     onCancel: () => void;
     onSubmit: (values: CategoryFormValues) => void;
 }) {
@@ -2666,10 +3863,11 @@ function CategoryForm({
     const selectedIcon = form.watch("icon");
 
     const isEditing = Boolean(editing);
+    const isModal = isEditing || modal;
 
     return (
         <Card
-            className={cn(isEditing && "overflow-visible rounded-2xl bg-white")}
+            className={cn(isModal && "overflow-visible rounded-2xl bg-white")}
         >
             <form
                 onSubmit={form.handleSubmit((values) => {
@@ -2677,10 +3875,10 @@ function CategoryForm({
                     form.reset();
                 })}
             >
-                <CardHeader className={cn(isEditing && "px-6 pb-2 pt-5")}>
+                <CardHeader className={cn(isModal && "px-6 pb-2 pt-5")}>
                     <CardTitle
                         className={cn(
-                            isEditing && "text-2xl font-medium leading-8",
+                            isModal && "text-2xl font-medium leading-8",
                         )}
                     >
                         {editing ? "Edit category" : "Create category"}
@@ -2688,14 +3886,16 @@ function CategoryForm({
                     <p
                         className={cn(
                             "text-sm text-muted-foreground",
-                            isEditing && "text-base leading-6",
+                            isModal && "text-base leading-6",
                         )}
                     >
-                        Group transactions into useful spending lanes.
+                        {editing
+                            ? "Update the name, type, color, and icon for this category."
+                            : "Choose how this category appears on your home cards and reports."}
                     </p>
                 </CardHeader>
                 <CardContent
-                    className={cn("space-y-4", isEditing && "px-6 pb-6 pt-0")}
+                    className={cn("space-y-4", isModal && "px-6 pb-6 pt-0")}
                 >
                     <FieldError message={form.formState.errors.name?.message}>
                         <Label htmlFor="category-name">Name</Label>
@@ -2755,7 +3955,7 @@ function CategoryForm({
                                         key={choice.value}
                                         aria-label={`Use ${choice.label} icon`}
                                         className={cn(
-                                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition-colors md:hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                             isSelected &&
                                                 "border-[#2563EB] bg-[#E8F0FE] text-[#0B57D0] ring-2 ring-[#2563EB]/20",
                                         )}
@@ -2778,11 +3978,11 @@ function CategoryForm({
                 <div
                     className={cn(
                         "flex justify-end gap-2 px-4 pb-4",
-                        isEditing &&
+                        isModal &&
                             "items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4",
                     )}
                 >
-                    {editing && (
+                    {isModal && (
                         <Button
                             type="button"
                             variant="secondary"
@@ -2793,8 +3993,8 @@ function CategoryForm({
                     )}
                     <div
                         className={cn(
-                            !editing && "flex gap-2",
-                            editing && "ml-auto",
+                            !isModal && "flex gap-2",
+                            isModal && "ml-auto",
                         )}
                     >
                         <Button type="submit">
@@ -3345,15 +4545,25 @@ function CategoryList({
 }
 
 function DatePickerInput({
+    ariaLabel,
+    displayTodayLabel = false,
     id,
     onChange,
+    popoverAlign = "left",
     value,
 }: {
+    ariaLabel?: string;
+    displayTodayLabel?: boolean;
     id?: string;
     onChange: (value: string) => void;
+    popoverAlign?: "left" | "right";
     value: string;
 }) {
     const selectedDate = parseDateValue(value);
+    const selectedLabel =
+        displayTodayLabel && isSameDay(selectedDate, new Date())
+            ? "Today"
+            : formatPickerDate(selectedDate);
     const selectedYear = selectedDate.getFullYear();
     const selectedMonthIndex = selectedDate.getMonth();
     const [isOpen, setIsOpen] = useState(false);
@@ -3398,6 +4608,7 @@ function DatePickerInput({
     return (
         <div className="relative" ref={pickerRef}>
             <button
+                aria-label={ariaLabel}
                 id={id}
                 className={cn(
                     "flex h-10 w-full cursor-pointer items-center gap-3 rounded-md border border-input bg-white px-3 py-2 text-left text-base text-foreground transition-[border-color,box-shadow] duration-150 ease-out focus-visible:border-[#2563EB] focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgba(37,99,235,0.18)] sm:text-sm",
@@ -3414,13 +4625,14 @@ function DatePickerInput({
                     className="h-4 w-4 shrink-0 text-muted-foreground"
                     aria-hidden
                 />
-                <span>{formatPickerDate(selectedDate)}</span>
+                <span>{selectedLabel}</span>
             </button>
 
             {isOpen && (
                 <div
                     className={cn(
-                        "absolute left-0 z-[70] w-full min-w-[312px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
+                        "absolute z-[70] w-full min-w-[312px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
+                        popoverAlign === "right" ? "right-0" : "left-0",
                         popoverSide === "above"
                             ? "bottom-full mb-2"
                             : "top-full mt-2",
@@ -3490,11 +4702,11 @@ function DatePickerInput({
                             return (
                                 <button
                                     className={cn(
-                                        "flex h-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-[#F2F2F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                        "flex h-9 items-center justify-center rounded-md text-sm transition-colors md:hover:bg-[#F2F2F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                         !isCurrentMonth &&
                                             "text-muted-foreground/60",
                                         isSelected &&
-                                            "bg-[#2563EB] text-white hover:bg-[#2563EB]",
+                                            "bg-[#2563EB] text-white md:hover:bg-[#2563EB]",
                                     )}
                                     key={day.toISOString()}
                                     type="button"
@@ -3573,7 +4785,7 @@ function MonthPickerInput({
                 className={cn(
                     "flex h-10 w-full cursor-pointer items-center gap-3 rounded-md border border-input bg-white px-3 py-2 text-left text-base text-foreground transition-[border-color,box-shadow] duration-150 ease-out focus-visible:border-[#2563EB] focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgba(37,99,235,0.18)] sm:text-sm",
                     compact &&
-                        "inline-flex w-auto rounded-full border-transparent bg-[#E8F0FE] px-3 py-1 text-xs font-medium leading-4 text-[#0B57D0] hover:bg-[#DCE8FD] sm:text-xs",
+                        "inline-flex w-auto rounded-full border-transparent bg-[#E8F0FE] px-3 py-1 text-xs font-medium leading-4 text-[#0B57D0] md:hover:bg-[#DCE8FD] sm:text-xs",
                     isOpen &&
                         (compact
                             ? "border-[#2563EB] bg-[#E8F0FE] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]"
@@ -3653,9 +4865,9 @@ function MonthPickerInput({
                             return (
                                 <button
                                     className={cn(
-                                        "h-10 rounded-md text-sm transition-colors hover:bg-[#F2F2F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                        "h-10 rounded-md text-sm transition-colors md:hover:bg-[#F2F2F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                         isSelected &&
-                                            "bg-[#2563EB] text-white hover:bg-[#2563EB]",
+                                            "bg-[#2563EB] text-white md:hover:bg-[#2563EB]",
                                     )}
                                     key={monthDate.toISOString()}
                                     type="button"
