@@ -1,0 +1,649 @@
+"use client";
+
+import { type User } from "@supabase/supabase-js";
+import {
+    BadgeDollarSign,
+    Banknote,
+    BriefcaseBusiness,
+    Calendar,
+    Car,
+    ChevronLeft,
+    ChevronRight,
+    CircleDollarSign,
+    Clapperboard,
+    GraduationCap,
+    HeartPulse,
+    Home,
+    Laptop,
+    Landmark,
+    Minus,
+    PiggyBank,
+    Plus,
+    Receipt,
+    Repeat,
+    ShoppingBag,
+    Smartphone,
+    Utensils,
+    Zap,
+    type LucideIcon,
+} from "lucide-react";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import type { Category, TransactionType } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import {
+    formatPickerDate,
+    getCalendarDays,
+    isSameDay,
+    parseDateValue,
+    parseMonthValue,
+    toDateInputValue,
+    toMonthInputValue,
+} from "@/lib/kwarta/helpers";
+import { Button } from "@/components/ui/button";
+import { Card, CardTitle } from "@/components/ui/card";
+
+export const colorChoices = [
+    "#171717",
+    "#2563EB",
+    "#7C3AED",
+    "#16A34A",
+    "#F59E0B",
+    "#0891B2",
+    "#DC2626",
+    "#DB2777",
+    "#4F46E5",
+];
+
+export const categoryIconChoices = [
+    { value: "home", label: "Home", icon: Home },
+    { value: "utensils", label: "Food", icon: Utensils },
+    { value: "car", label: "Transport", icon: Car },
+    { value: "zap", label: "Utilities", icon: Zap },
+    { value: "heart-pulse", label: "Health", icon: HeartPulse },
+    { value: "shopping-bag", label: "Shopping", icon: ShoppingBag },
+    { value: "repeat", label: "Subscriptions", icon: Repeat },
+    { value: "briefcase", label: "Work", icon: BriefcaseBusiness },
+    { value: "laptop", label: "Freelance", icon: Laptop },
+    { value: "banknote", label: "Cash", icon: Banknote },
+    { value: "landmark", label: "Bank", icon: Landmark },
+    { value: "piggy-bank", label: "Savings", icon: PiggyBank },
+    { value: "receipt", label: "Bills", icon: Receipt },
+    { value: "smartphone", label: "Phone", icon: Smartphone },
+    { value: "graduation-cap", label: "Education", icon: GraduationCap },
+    { value: "clapperboard", label: "Entertainment", icon: Clapperboard },
+    { value: "badge-dollar-sign", label: "Income", icon: BadgeDollarSign },
+] satisfies Array<{ value: string; label: string; icon: LucideIcon }>;
+
+const categoryIconMap = new Map(
+    categoryIconChoices.map((choice) => [choice.value, choice.icon]),
+);
+
+export function DatePickerInput({
+    ariaLabel,
+    displayTodayLabel = false,
+    id,
+    onChange,
+    popoverAlign = "left",
+    value,
+}: {
+    ariaLabel?: string;
+    displayTodayLabel?: boolean;
+    id?: string;
+    onChange: (value: string) => void;
+    popoverAlign?: "left" | "right";
+    value: string;
+}) {
+    const selectedDate = parseDateValue(value);
+    const selectedLabel =
+        displayTodayLabel && isSameDay(selectedDate, new Date())
+            ? "Today"
+            : formatPickerDate(selectedDate);
+    const selectedYear = selectedDate.getFullYear();
+    const selectedMonthIndex = selectedDate.getMonth();
+    const [isOpen, setIsOpen] = useState(false);
+    const [popoverSide, setPopoverSide] = useState<"above" | "below">("below");
+    const [visibleMonth, setVisibleMonth] = useState(
+        new Date(selectedYear, selectedMonthIndex, 1),
+    );
+    const pickerRef = useRef<HTMLDivElement>(null);
+    const days = getCalendarDays(visibleMonth);
+
+    useEffect(() => {
+        setVisibleMonth(new Date(selectedYear, selectedMonthIndex, 1));
+    }, [selectedMonthIndex, selectedYear]);
+
+    useEffect(() => {
+        if (isOpen) {
+            setPopoverSide(getPopoverSide(pickerRef.current, 390));
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        function handlePointerDown(event: PointerEvent) {
+            if (
+                pickerRef.current &&
+                !pickerRef.current.contains(event.target as Node)
+            ) {
+                setIsOpen(false);
+            }
+        }
+
+        document.addEventListener("pointerdown", handlePointerDown);
+
+        return () => {
+            document.removeEventListener("pointerdown", handlePointerDown);
+        };
+    }, [isOpen]);
+
+    function changeMonth(offset: number) {
+        setVisibleMonth(
+            (current) =>
+                new Date(current.getFullYear(), current.getMonth() + offset, 1),
+        );
+    }
+
+    return (
+        <div className="relative" ref={pickerRef}>
+            <Button
+                aria-expanded={isOpen}
+                aria-haspopup="dialog"
+                aria-label={ariaLabel}
+                className="w-full justify-start px-3 text-left font-normal"
+                type="button"
+                variant="secondary"
+                onClick={() => setIsOpen((open) => !open)}
+            >
+                <Calendar className="h-4 w-4" aria-hidden />
+                {selectedLabel}
+            </Button>
+            {isOpen && (
+                <div
+                    className={cn(
+                        "absolute z-[70] w-full min-w-[312px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
+                        popoverAlign === "right" ? "right-0" : "left-0",
+                        popoverSide === "above"
+                            ? "bottom-full mb-2"
+                            : "top-full mt-2",
+                    )}
+                >
+                    <div className="mb-4 flex items-center justify-between">
+                        <p className="text-base font-medium leading-6">
+                            {visibleMonth.toLocaleDateString("en-US", {
+                                month: "long",
+                                year: "numeric",
+                            })}
+                        </p>
+                        <div className="flex gap-1">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => changeMonth(-1)}
+                            >
+                                <ChevronLeft className="h-4 w-4" aria-hidden />
+                                <span className="sr-only">Previous month</span>
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => changeMonth(1)}
+                            >
+                                <ChevronRight
+                                    className="h-4 w-4"
+                                    aria-hidden
+                                />
+                                <span className="sr-only">Next month</span>
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 text-center text-sm">
+                        {["S", "M", "T", "W", "T", "F", "S"].map(
+                            (weekday) => (
+                                <span
+                                    key={weekday}
+                                    className="py-2 text-muted-foreground"
+                                >
+                                    {weekday}
+                                </span>
+                            ),
+                        )}
+                        {days.map((date) => {
+                            const dateValue = toDateInputValue(date);
+                            const isCurrentMonth =
+                                date.getMonth() === visibleMonth.getMonth();
+                            const isSelected = isSameDay(date, selectedDate);
+
+                            return (
+                                <button
+                                    className={cn(
+                                        "h-9 rounded-md text-sm transition-colors md:hover:bg-[#F2F2F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                        !isCurrentMonth &&
+                                            "text-muted-foreground/60",
+                                        isSelected &&
+                                            "bg-[#2563EB] text-white md:hover:bg-[#2563EB]",
+                                    )}
+                                    key={dateValue}
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(dateValue);
+                                        setIsOpen(false);
+                                    }}
+                                >
+                                    {date.getDate()}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+export function MonthPickerInput({
+    ariaLabel,
+    compact = false,
+    id,
+    onChange,
+    value,
+}: {
+    ariaLabel?: string;
+    compact?: boolean;
+    id?: string;
+    onChange: (value: string) => void;
+    value: string;
+}) {
+    const selectedMonth = parseMonthValue(value);
+    const [isOpen, setIsOpen] = useState(false);
+    const [visibleYear, setVisibleYear] = useState(selectedMonth.getFullYear());
+    const [popoverSide, setPopoverSide] = useState<"above" | "below">("below");
+    const pickerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setVisibleYear(selectedMonth.getFullYear());
+    }, [selectedMonth]);
+
+    useEffect(() => {
+        if (isOpen) {
+            setPopoverSide(getPopoverSide(pickerRef.current, 280));
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        function handlePointerDown(event: PointerEvent) {
+            if (
+                pickerRef.current &&
+                !pickerRef.current.contains(event.target as Node)
+            ) {
+                setIsOpen(false);
+            }
+        }
+
+        document.addEventListener("pointerdown", handlePointerDown);
+
+        return () => {
+            document.removeEventListener("pointerdown", handlePointerDown);
+        };
+    }, [isOpen]);
+
+    return (
+        <div className="relative" ref={pickerRef}>
+            <Button
+                aria-expanded={isOpen}
+                aria-haspopup="dialog"
+                aria-label={ariaLabel}
+                className={cn(
+                    "w-full justify-start px-3 text-left font-normal",
+                    compact &&
+                        "rounded-full border-0 bg-[#E8F0FE] text-[#0B57D0] shadow-none md:hover:bg-[#DDEAFF]",
+                )}
+                id={id}
+                type="button"
+                variant={compact ? "ghost" : "secondary"}
+                onClick={() => setIsOpen((open) => !open)}
+            >
+                <Calendar className="h-4 w-4" aria-hidden />
+                {selectedMonth.toLocaleDateString("en-US", {
+                    month: "long",
+                    year: "numeric",
+                })}
+            </Button>
+            {isOpen && (
+                <div
+                    className={cn(
+                        "absolute left-0 z-[70] w-full min-w-[312px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
+                        popoverSide === "above"
+                            ? "bottom-full mb-2"
+                            : "top-full mt-2",
+                    )}
+                >
+                    <div className="mb-4 flex items-center justify-between">
+                        <p className="text-base font-medium leading-6">
+                            {visibleYear}
+                        </p>
+                        <div className="flex gap-1">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                    setVisibleYear((year) => year - 1)
+                                }
+                            >
+                                <ChevronLeft className="h-4 w-4" aria-hidden />
+                                <span className="sr-only">Previous year</span>
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                    setVisibleYear((year) => year + 1)
+                                }
+                            >
+                                <ChevronRight
+                                    className="h-4 w-4"
+                                    aria-hidden
+                                />
+                                <span className="sr-only">Next year</span>
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                        {Array.from({ length: 12 }, (_, monthIndex) => {
+                            const monthDate = new Date(visibleYear, monthIndex, 1);
+                            const isSelected =
+                                selectedMonth.getFullYear() === visibleYear &&
+                                selectedMonth.getMonth() === monthIndex;
+
+                            return (
+                                <button
+                                    className={cn(
+                                        "h-10 rounded-md text-sm transition-colors md:hover:bg-[#F2F2F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                        isSelected &&
+                                            "bg-[#2563EB] text-white md:hover:bg-[#2563EB]",
+                                    )}
+                                    key={monthDate.toISOString()}
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(toMonthInputValue(monthDate));
+                                        setIsOpen(false);
+                                    }}
+                                >
+                                    {monthDate.toLocaleDateString("en-US", {
+                                        month: "short",
+                                    })}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function getPopoverSide(element: HTMLElement | null, estimatedHeight: number) {
+    if (!element) {
+        return "below";
+    }
+
+    const rect = element.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    return spaceBelow < estimatedHeight && spaceAbove > spaceBelow
+        ? "above"
+        : "below";
+}
+
+export function EditModal({
+    children,
+    onClose,
+}: {
+    children: React.ReactNode;
+    onClose: () => void;
+}) {
+    useEffect(() => {
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === "Escape") {
+                onClose();
+            }
+        }
+
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [onClose]);
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-white sm:bg-transparent sm:px-4 sm:pb-6 sm:pt-4 sm:items-center sm:py-6">
+            <button
+                aria-label="Close modal"
+                className="absolute inset-0 hidden cursor-default bg-white/45 backdrop-blur-sm sm:block"
+                type="button"
+                onClick={onClose}
+            />
+            <div
+                className="relative min-h-dvh w-full sm:min-h-0 sm:max-w-[540px] sm:rounded-2xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
+                role="dialog"
+                aria-modal="true"
+            >
+                {children}
+            </div>
+        </div>
+    );
+}
+
+export function ModalBackButton({ onClick }: { onClick: () => void }) {
+    return (
+        <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="-ml-2 mb-3 sm:hidden"
+            onClick={onClick}
+        >
+            <ChevronLeft className="h-5 w-5" aria-hidden />
+            <span className="sr-only">Back</span>
+        </Button>
+    );
+}
+
+export function MetricCard({
+    className,
+    icon,
+    label,
+    value,
+}: {
+    className?: string;
+    icon: "minus" | "plus" | "wallet";
+    label: string;
+    value: string;
+}) {
+    return (
+        <Card className={cn("bg-white p-3 md:p-4", className)}>
+            <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100">
+                {icon === "plus" && <Plus className="h-4 w-4" aria-hidden />}
+                {icon === "minus" && <Minus className="h-4 w-4" aria-hidden />}
+                {icon === "wallet" && (
+                    <CircleDollarSign className="h-4 w-4" aria-hidden />
+                )}
+            </div>
+            <p className="text-sm leading-5 text-muted-foreground">{label}</p>
+            <p className="mt-1 text-lg font-medium leading-6 md:text-xl md:leading-7">
+                {value}
+            </p>
+        </Card>
+    );
+}
+
+export function CategoryIconBadge({ category }: { category: Category }) {
+    const Icon = categoryIconMap.get(category.icon) ?? Receipt;
+
+    return (
+        <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-white"
+            style={{ color: category.color }}
+        >
+            <Icon className="h-4 w-4" aria-hidden />
+        </span>
+    );
+}
+
+export function TransactionIcon({
+    category,
+    type,
+}: {
+    category?: Category;
+    type: TransactionType;
+}) {
+    if (category) {
+        return <CategoryIconBadge category={category} />;
+    }
+
+    return (
+        <span
+            className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                type === "income" ? "bg-[#DCFCE7]" : "bg-[#FEE2E2]",
+            )}
+        >
+            {type === "income" ? (
+                <Plus className="h-4 w-4 text-[#15803D]" aria-hidden />
+            ) : (
+                <Minus className="h-4 w-4 text-[#DC2626]" aria-hidden />
+            )}
+        </span>
+    );
+}
+
+export function ProfileImage({
+    size = "sm",
+    user,
+}: {
+    size?: "xs" | "sm";
+    user: User | null;
+}) {
+    const avatarUrl =
+        typeof user?.user_metadata?.avatar_url === "string"
+            ? user.user_metadata.avatar_url
+            : null;
+    const dimension = size === "xs" ? 20 : 24;
+    const className = size === "xs" ? "h-5 w-5" : "h-6 w-6";
+
+    if (avatarUrl) {
+        return (
+            <Image
+                alt=""
+                className={cn(className, "rounded-full object-cover")}
+                height={dimension}
+                src={avatarUrl}
+                width={dimension}
+            />
+        );
+    }
+
+    return (
+        <span
+            className={cn(
+                "flex items-center justify-center rounded-full bg-neutral-100 text-xs font-medium",
+                className,
+            )}
+        >
+            {getAccountInitial(user)}
+        </span>
+    );
+}
+
+export function getAccountName(user: User | null) {
+    const metadata = user?.user_metadata ?? {};
+    const name =
+        typeof metadata.full_name === "string"
+            ? metadata.full_name
+            : typeof metadata.name === "string"
+              ? metadata.name
+              : null;
+
+    return name || user?.email?.split("@")[0] || "Account";
+}
+
+export function getAccountInitial(user: User | null) {
+    return getAccountName(user).charAt(0).toUpperCase();
+}
+
+export function GoogleLogo({ className }: { className?: string }) {
+    return (
+        <svg className={className} viewBox="0 0 24 24" aria-hidden>
+            <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+            />
+            <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+            />
+            <path
+                fill="#FBBC05"
+                d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.84z"
+            />
+            <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.3 9.14 5.38 12 5.38z"
+            />
+        </svg>
+    );
+}
+
+export function EmptyState({
+    className,
+    description,
+    title,
+}: {
+    className?: string;
+    description: string;
+    title: string;
+}) {
+    return (
+        <div
+            className={cn(
+                "rounded-md border border-dashed p-6 text-center",
+                className,
+            )}
+        >
+            <p className="font-medium leading-6">{title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        </div>
+    );
+}
+
+export function FieldError({
+    children,
+    message,
+}: {
+    children: React.ReactNode;
+    message?: string;
+}) {
+    return (
+        <div>
+            {children}
+            {message && (
+                <p className="mt-1 text-sm leading-5 text-destructive">
+                    {message}
+                </p>
+            )}
+        </div>
+    );
+}

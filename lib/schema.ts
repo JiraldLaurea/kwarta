@@ -26,6 +26,7 @@ export const budgetSchema = z.object({
     categoryId: z.string().min(1, "Choose a category."),
     limit: z.coerce.number().positive("Enter a budget greater than 0."),
     month: z.string().min(1, "Choose a month."),
+    reuseBudget: z.boolean().default(true),
 });
 
 export type AuthFormValues = z.infer<typeof authSchema>;
