@@ -60,8 +60,9 @@ export async function GET(request: Request) {
       amount: Number(transaction.amount),
       categoryId: transaction.categoryId,
       date: transaction.date.toISOString().slice(0, 10),
-      merchant: transaction.merchant,
+      subcategory: transaction.merchant,
       note: transaction.note ?? "",
+      time: transaction.date.toISOString().slice(11, 16),
       type: transaction.type
     }))
   });
@@ -100,8 +101,8 @@ export async function PUT(request: Request) {
           id: transaction.id,
           amount: transaction.amount,
           categoryId: transaction.categoryId,
-          date: new Date(`${transaction.date}T00:00:00.000Z`),
-          merchant: transaction.merchant,
+          date: new Date(`${transaction.date}T${transaction.time}:00.000Z`),
+          merchant: transaction.subcategory,
           note: transaction.note || null,
           type: transaction.type,
           userId

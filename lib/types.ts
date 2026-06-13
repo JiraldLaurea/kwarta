@@ -13,9 +13,10 @@ export type Transaction = {
   type: TransactionType;
   amount: number;
   categoryId: string;
-  merchant: string;
+  subcategory: string;
   note?: string;
   date: string;
+  time: string;
 };
 
 export type Budget = {
@@ -26,3 +27,4 @@ export type Budget = {
 };
 
 export type AuthMode = "login" | "register";
+

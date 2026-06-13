@@ -307,6 +307,48 @@ function getFirstCategoryId(categories: Category[], type: TransactionType) {
     );
 }
 
+function getTransactionFormValues(
+    values: Omit<TransactionFormValues, "time"> & { time?: string },
+    categories: Category[],
+): TransactionFormValues {
+    const type = normalizeTransactionType(values.type);
+    const availableCategories = categories.filter(
+        (category) => normalizeTransactionType(category.type) === type,
+    );
+    const categoryIsValid = availableCategories.some(
+        (category) => category.id === values.categoryId,
+    );
+    const categoryId = categoryIsValid
+        ? values.categoryId
+        : availableCategories[0]?.id ?? "";
+    const category = availableCategories.find((item) => item.id === categoryId);
+    const subcategories = category ? getSubcategoriesForCategory(category) : [];
+    const subcategory = subcategories.includes(values.subcategory)
+        ? values.subcategory
+        : subcategories[0] ?? values.subcategory;
+
+    return {
+        ...values,
+        categoryId,
+        subcategory,
+        note: values.note ?? "",
+        time: normalizeTimeValue(values.time),
+        type,
+    };
+}
+
+function normalizeTimeValue(value?: string) {
+    return value && /^\d{2}:\d{2}$/.test(value) ? value : "00:00";
+}
+
+function getCurrentTimeInputValue() {
+    const date = new Date();
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${hours}:${minutes}`;
+}
+
 function sanitizeDecimalInput(value: string) {
     const numeric = value.replace(/[^\d.]/g, "");
     const [whole, ...decimalParts] = numeric.split(".");
@@ -339,10 +381,19 @@ type TransactionImportResult = {
     transactions: Transaction[];
 };
 
-const transactionBackupRecordSchema = transactionSchema.extend({
-    id: z.string().min(1),
-    note: z.string().optional(),
-});
+const transactionBackupRecordSchema = transactionSchema
+    .extend({
+        id: z.string().min(1),
+        merchant: z.string().optional(),
+        note: z.string().optional(),
+        subcategory: z.string().optional(),
+        time: z.string().optional(),
+    })
+    .transform(({ merchant, ...transaction }) => ({
+        ...transaction,
+        subcategory: transaction.subcategory ?? merchant ?? "",
+        time: normalizeTimeValue(transaction.time),
+    }));
 
 const budgetBackupRecordSchema = z
     .object({
@@ -504,6 +555,7 @@ function parseTransactionBackupPayload(
                 backupCategories,
             ),
             note: transaction.note ?? "",
+            time: normalizeTimeValue(transaction.time),
         })),
     };
 }
@@ -567,6 +619,27 @@ function getDaysInMonth(monthValue: string) {
     const date = parseMonthValue(monthValue);
 
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+}
+
+function getAverageExpenseDayCount(monthValue: string) {
+    const monthDate = parseMonthValue(monthValue);
+    const today = new Date();
+    const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+    const currentMonthStart = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        1,
+    );
+
+    if (monthStart.getTime() === currentMonthStart.getTime()) {
+        return today.getDate();
+    }
+
+    if (monthStart.getTime() < currentMonthStart.getTime()) {
+        return getDaysInMonth(monthValue);
+    }
+
+    return 1;
 }
 
 function parseBudgetBackupPayload(
@@ -1052,7 +1125,7 @@ export function KwartaApp() {
                 </div>
             </header>
 
-            <div className="mx-auto w-full max-w-7xl px-4 pb-28 pt-5 md:px-5 md:py-7">
+            <div className="mx-auto w-full max-w-7xl px-4 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-5 md:px-5 md:py-7">
                 {view === "dashboard" && (
                     <HomeView
                         budgets={monthBudgets}
@@ -1126,6 +1199,9 @@ export function KwartaApp() {
                                                   ...transaction,
                                                   ...values,
                                                   note: values.note || "",
+                                                  time: normalizeTimeValue(
+                                                      values.time,
+                                                  ),
                                               }
                                             : transaction,
                                     ),
@@ -1139,6 +1215,10 @@ export function KwartaApp() {
                                     id: crypto.randomUUID(),
                                     ...values,
                                     note: values.note || "",
+                                    time:
+                                        values.time === "00:00"
+                                            ? getCurrentTimeInputValue()
+                                            : normalizeTimeValue(values.time),
                                 },
                                 ...current,
                             ]);
@@ -1283,8 +1363,9 @@ export function KwartaApp() {
                                 amount,
                                 categoryId: quickAddCategory.id,
                                 date,
-                                merchant: subcategory,
+                                subcategory: subcategory,
                                 note: "",
+                                time: getCurrentTimeInputValue(),
                                 type: quickAddCategory.type,
                             },
                             ...current,
@@ -2280,10 +2361,14 @@ function SortableCategoryCard({
                         {budget && (
                             <div
                                 className={cn(
-                                    "h-full rounded-full bg-neutral-900",
+                                    "h-full rounded-full",
                                     total > budget.limit && "bg-destructive",
                                 )}
                                 style={{
+                                    backgroundColor:
+                                        total > budget.limit
+                                            ? undefined
+                                            : category.color,
                                     width: `${Math.min(
                                         100,
                                         budget.limit > 0
@@ -2444,7 +2529,7 @@ function QuickTransactionModal({
     if (requiresBudget && !budget) {
         return (
             <EditModal onClose={onClose}>
-                <Card className="overflow-hidden rounded-2xl bg-white">
+                <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
                     <form
                         onSubmit={(event) => {
                             event.preventDefault();
@@ -2457,6 +2542,7 @@ function QuickTransactionModal({
                         }}
                     >
                         <CardHeader className="px-6 pb-2 pt-5">
+                            <ModalBackButton onClick={onClose} />
                             <div className="mb-3 flex items-start justify-between gap-3">
                                 <CategoryIconBadge category={category} />
                             </div>
@@ -2486,8 +2572,15 @@ function QuickTransactionModal({
                                     }
                                 />
                             </FieldError>
+                            <Button
+                                className="mt-6 w-full sm:hidden"
+                                type="submit"
+                                disabled={!canSetBudget}
+                            >
+                                Set budget
+                            </Button>
                         </CardContent>
-                        <div className="flex items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4">
+                        <div className="hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
                             <Button
                                 type="button"
                                 variant="secondary"
@@ -2507,7 +2600,7 @@ function QuickTransactionModal({
 
     return (
         <EditModal onClose={onClose}>
-            <Card className="overflow-visible rounded-2xl bg-white">
+            <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border">
                 <form
                     onSubmit={(event) => {
                         event.preventDefault();
@@ -2524,6 +2617,7 @@ function QuickTransactionModal({
                     }}
                 >
                     <CardHeader className="px-6 pb-2 pt-5">
+                        <ModalBackButton onClick={onClose} />
                         <div className="mb-3 flex items-start justify-between gap-3">
                             <CategoryIconBadge category={category} />
                             <div className="w-[164px]">
@@ -2578,8 +2672,16 @@ function QuickTransactionModal({
                                 />
                             </div>
                         </div>
+                        <Button
+                            className="mt-6 w-full sm:hidden"
+                            type="submit"
+                            disabled={!canSubmit}
+                        >
+                            <Plus className="h-4 w-4" aria-hidden />
+                            Add transaction
+                        </Button>
                     </CardContent>
-                    <div className="flex items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4">
+                    <div className="hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
                         <Button
                             type="button"
                             variant="secondary"
@@ -2886,6 +2988,52 @@ function BackupOverflowMenu({
     );
 }
 
+function TransactionBackupActions({
+    error,
+    importInputRef,
+    onExport,
+    onImportClick,
+    onImportFile,
+}: {
+    error: string | null;
+    importInputRef: React.RefObject<HTMLInputElement>;
+    onExport: () => void;
+    onImportClick: () => void;
+    onImportFile: (file: File) => void;
+}) {
+    return (
+        <div className="relative flex gap-2">
+            <Button type="button" variant="secondary" onClick={onImportClick}>
+                <Upload className="h-4 w-4" aria-hidden />
+                Import
+            </Button>
+            <Button type="button" variant="secondary" onClick={onExport}>
+                <Download className="h-4 w-4" aria-hidden />
+                Export
+            </Button>
+            <input
+                ref={importInputRef}
+                className="hidden"
+                type="file"
+                accept="application/json,.json"
+                onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    event.currentTarget.value = "";
+
+                    if (file) {
+                        onImportFile(file);
+                    }
+                }}
+            />
+            {error && (
+                <p className="absolute right-0 top-12 z-10 w-64 text-right text-xs leading-4 text-destructive sm:w-80">
+                    {error}
+                </p>
+            )}
+        </div>
+    );
+}
+
 function ImportConfirmationModal({
     count,
     itemLabel,
@@ -3088,30 +3236,34 @@ function TransactionsView({
 
     return (
         <>
-            <div>
+            <div className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h1 className="text-xl font-medium leading-7">
+                            Transactions
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Edit or remove posted money movement.
+                        </p>
+                    </div>
+                    <TransactionBackupActions
+                        error={importError}
+                        importInputRef={importInputRef}
+                        onExport={() =>
+                            downloadBackupFile(
+                                "transactions",
+                                allTransactions,
+                                categories,
+                            )
+                        }
+                        onImportClick={() => importInputRef.current?.click()}
+                        onImportFile={handleImportFile}
+                    />
+                </div>
                 <TransactionTable
                     categories={categories}
-                    onDelete={onDelete}
                     onEdit={onEdit}
                     transactions={transactions}
-                    backupMenu={
-                        <BackupOverflowMenu
-                            error={importError}
-                            exportLabel="transactions"
-                            importInputRef={importInputRef}
-                            onExport={() =>
-                                downloadBackupFile(
-                                    "transactions",
-                                    allTransactions,
-                                    categories,
-                                )
-                            }
-                            onImportClick={() =>
-                                importInputRef.current?.click()
-                            }
-                            onImportFile={handleImportFile}
-                        />
-                    }
                 />
             </div>
             {editing && (
@@ -3121,6 +3273,10 @@ function TransactionsView({
                         editing={editing}
                         month={month}
                         onCancel={onCancelEdit}
+                        onDelete={() => {
+                            onDelete(editing.id);
+                            onCancelEdit();
+                        }}
                         onSubmit={onSubmit}
                     />
                 </EditModal>
@@ -3143,32 +3299,57 @@ function TransactionForm({
     editing,
     month,
     onCancel,
+    onDelete,
     onSubmit,
 }: {
     categories: Category[];
     editing?: Transaction;
     month: string;
     onCancel: () => void;
+    onDelete?: () => void;
     onSubmit: (values: TransactionFormValues) => void;
 }) {
     const transactionDefaults = useMemo<TransactionFormValues>(
-        () => ({
-            type: "expense",
-            amount: 0,
-            categoryId: getFirstCategoryId(categories, "expense"),
-            merchant: "",
-            note: "",
-            date: getDefaultTransactionDate(month),
-        }),
+        () =>
+            getTransactionFormValues(
+                {
+                    type: "expense",
+                    amount: 0,
+                    categoryId: getFirstCategoryId(categories, "expense"),
+                    subcategory: "",
+                    note: "",
+                    date: getDefaultTransactionDate(month),
+                    time: "00:00",
+                },
+                categories,
+            ),
         [categories, month],
+    );
+    const formDefaults = useMemo<TransactionFormValues>(
+        () =>
+            editing
+                ? getTransactionFormValues(
+                      {
+                          type: editing.type,
+                          amount: editing.amount,
+                          categoryId: editing.categoryId,
+                          subcategory: editing.subcategory,
+                          note: editing.note ?? "",
+                          date: editing.date,
+                          time: editing.time,
+                      },
+                      categories,
+                  )
+                : transactionDefaults,
+        [categories, editing, transactionDefaults],
     );
     const form = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionSchema),
-        defaultValues: editing ?? transactionDefaults,
+        defaultValues: formDefaults,
     });
     const type = normalizeTransactionType(form.watch("type") ?? "expense");
     const selectedCategoryId = form.watch("categoryId");
-    const selectedSubcategory = form.watch("merchant");
+    const selectedSubcategory = form.watch("subcategory");
     const availableCategories = useMemo(
         () =>
             categories.filter(
@@ -3188,8 +3369,8 @@ function TransactionForm({
     );
 
     useEffect(() => {
-        form.reset(editing ?? transactionDefaults);
-    }, [editing, form, transactionDefaults]);
+        form.reset(formDefaults);
+    }, [form, formDefaults]);
 
     useEffect(() => {
         const currentCategoryId = form.getValues("categoryId");
@@ -3209,13 +3390,13 @@ function TransactionForm({
     }, [availableCategories, form]);
 
     useEffect(() => {
-        const currentSubcategory = form.getValues("merchant");
+        const currentSubcategory = form.getValues("subcategory");
 
         if (
             subcategories.length > 0 &&
             !subcategories.includes(currentSubcategory)
         ) {
-            form.setValue("merchant", subcategories[0], {
+            form.setValue("subcategory", subcategories[0], {
                 shouldValidate: true,
             });
         }
@@ -3225,7 +3406,10 @@ function TransactionForm({
 
     return (
         <Card
-            className={cn(isEditing && "overflow-visible rounded-2xl bg-white")}
+            className={cn(
+                isEditing &&
+                    "min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border",
+            )}
         >
             <form
                 onSubmit={form.handleSubmit((values) => {
@@ -3234,6 +3418,7 @@ function TransactionForm({
                 })}
             >
                 <CardHeader className={cn(isEditing && "px-6 pb-2 pt-5")}>
+                    {isEditing && <ModalBackButton onClick={onCancel} />}
                     <CardTitle
                         className={cn(
                             isEditing && "text-2xl font-medium leading-8",
@@ -3320,7 +3505,7 @@ function TransactionForm({
                         />
                     </FieldError>
                     <FieldError
-                        message={form.formState.errors.merchant?.message}
+                        message={form.formState.errors.subcategory?.message}
                     >
                         <Label htmlFor="transaction-subcategory">
                             Subcategory
@@ -3330,7 +3515,7 @@ function TransactionForm({
                                 disabled={subcategories.length === 0}
                                 id="transaction-subcategory"
                                 onValueChange={(value) =>
-                                    form.setValue("merchant", value, {
+                                    form.setValue("subcategory", value, {
                                         shouldValidate: true,
                                     })
                                 }
@@ -3354,12 +3539,29 @@ function TransactionForm({
                             }
                         />
                     </FieldError>
+                    {isEditing && (
+                        <div className="flex items-center gap-2 pt-2 sm:hidden">
+                            {onDelete && (
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    className="flex-1 border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                    onClick={onDelete}
+                                >
+                                    Delete
+                                </Button>
+                            )}
+                            <Button className="flex-1" type="submit">
+                                Save changes
+                            </Button>
+                        </div>
+                    )}
                 </CardContent>
                 <div
                     className={cn(
                         "flex justify-end gap-2 px-4 pb-4",
                         isEditing &&
-                            "items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4",
+                            "hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex",
                     )}
                 >
                     {editing && (
@@ -3373,10 +3575,20 @@ function TransactionForm({
                     )}
                     <div
                         className={cn(
-                            !editing && "flex gap-2",
+                            "flex items-center gap-2",
                             editing && "ml-auto",
                         )}
                     >
+                        {editing && onDelete && (
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                className="border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                onClick={onDelete}
+                            >
+                                Delete
+                            </Button>
+                        )}
                         <Button type="submit">
                             {!editing && (
                                 <Plus className="h-4 w-4" aria-hidden />
@@ -3417,6 +3629,7 @@ function BudgetsView({
 }) {
     const editing = allBudgets.find((budget) => budget.id === editingId);
     const importInputRef = useRef<HTMLInputElement>(null);
+    const [isAddingBudget, setIsAddingBudget] = useState(false);
     const [importError, setImportError] = useState<string | null>(null);
     const [isImporting, setIsImporting] = useState(false);
     const [pendingImport, setPendingImport] = useState<Budget[] | null>(null);
@@ -3472,33 +3685,18 @@ function BudgetsView({
     return (
         <>
             <div className="space-y-4 md:space-y-5">
-                <MonthlyBudgetSummary
-                    budgets={budgets}
-                    month={month}
-                    transactions={transactions.filter(
-                        (transaction) => transaction.type === "expense",
-                    )}
-                />
-                <div className="grid gap-4 md:gap-5 lg:grid-cols-[0.75fr_1.25fr]">
-                <BudgetForm
-                    categories={categories}
-                    month={month}
-                    onCancel={onCancelEdit}
-                    onSubmit={onSubmit}
-                />
-                <BudgetProgressList
-                    actions
-                    budgets={budgets}
-                    categories={categories}
-                    onDelete={onDelete}
-                    onEdit={onEdit}
-                    transactions={transactions.filter(
-                        (transaction) => transaction.type === "expense",
-                    )}
-                    backupMenu={
-                        <BackupOverflowMenu
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h1 className="text-xl font-medium leading-7">
+                            Budgets
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Set monthly limits and track category spending.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 sm:justify-end">
+                        <TransactionBackupActions
                             error={importError}
-                            exportLabel="budgets"
                             importInputRef={importInputRef}
                             onExport={() =>
                                 downloadBackupFile(
@@ -3512,15 +3710,53 @@ function BudgetsView({
                             }
                             onImportFile={handleImportFile}
                         />
-                    }
-                />
+                        <Button
+                            type="button"
+                            onClick={() => setIsAddingBudget(true)}
+                        >
+                            <Plus className="h-4 w-4" aria-hidden />
+                            Add budget
+                        </Button>
+                    </div>
                 </div>
+                <MonthlyBudgetSummary
+                    budgets={budgets}
+                    month={month}
+                    transactions={transactions.filter(
+                        (transaction) => transaction.type === "expense",
+                    )}
+                />
+                <BudgetProgressList
+                    actions
+                    budgets={budgets}
+                    categories={categories}
+                    onDelete={onDelete}
+                    onEdit={onEdit}
+                    transactions={transactions.filter(
+                        (transaction) => transaction.type === "expense",
+                    )}
+                />
             </div>
+            {isAddingBudget && (
+                <EditModal onClose={() => setIsAddingBudget(false)}>
+                    <BudgetForm
+                        categories={categories}
+                        modal
+                        month={month}
+                        onCancel={() => setIsAddingBudget(false)}
+                        onSubmit={(values) => {
+                            onSubmit(values);
+                            setIsAddingBudget(false);
+                        }}
+                    />
+                </EditModal>
+            )}
             {editing && (
                 <EditModal onClose={onCancelEdit}>
                     <BudgetForm
                         categories={categories}
                         editing={editing}
+                        modal
                         month={month}
                         onCancel={onCancelEdit}
                         onSubmit={onSubmit}
@@ -3557,7 +3793,7 @@ function MonthlyBudgetSummary({
     const remaining = totalBudget - totalSpent;
     const isOverBudget = remaining < 0;
     const usage = percent(totalSpent, totalBudget);
-    const averageExpensePerDay = totalSpent / getDaysInMonth(month);
+    const averageExpensePerDay = totalSpent / getAverageExpenseDayCount(month);
 
     return (
         <Card>
@@ -3567,14 +3803,14 @@ function MonthlyBudgetSummary({
                     Overall spending plan for {formatMonthLabel(month)}.
                 </p>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent>
                 <div>
-                    <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                    <div className="mb-2 flex items-center justify-between gap-3">
                         <span className="font-medium">
                             {formatCurrency(totalSpent)} spent
                         </span>
-                        <span className="text-muted-foreground">
-                            {formatCurrency(totalBudget)} budget
+                        <span className="font-medium">
+                            {formatCurrency(totalBudget)} total budget
                         </span>
                     </div>
                     <Progress
@@ -3583,45 +3819,19 @@ function MonthlyBudgetSummary({
                         )}
                         value={usage}
                     />
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-md border border-border bg-white p-3">
-                        <p className="text-sm leading-5 text-muted-foreground">
-                            Total spent
-                        </p>
-                        <p className="mt-1 text-lg font-semibold leading-7">
-                            {formatCurrency(totalSpent)}
-                        </p>
-                    </div>
-                    <div className="rounded-md border border-border bg-white p-3">
-                        <p className="text-sm leading-5 text-muted-foreground">
-                            Total budget
-                        </p>
-                        <p className="mt-1 text-lg font-semibold leading-7">
-                            {formatCurrency(totalBudget)}
-                        </p>
-                    </div>
-                    <div className="rounded-md border border-border bg-white p-3">
-                        <p className="text-sm leading-5 text-muted-foreground">
-                            Remaining budget
-                        </p>
-                        <p
+                    <div className="mt-2 flex items-center justify-between gap-3 text-sm text-muted-foreground leading-5">
+                        <span>
+                            ~{formatCurrency(averageExpensePerDay)} per day
+                        </span>
+                        <span
                             className={cn(
-                                "mt-1 text-lg font-semibold leading-7",
+                                "text-right",
                                 isOverBudget && "text-destructive",
                             )}
                         >
                             {formatCurrency(Math.abs(remaining))}{" "}
                             {isOverBudget ? "excess" : "remaining"}
-                        </p>
-                    </div>
-                    <div className="rounded-md border border-border bg-white p-3">
-                        <p className="text-sm leading-5 text-muted-foreground">
-                            Average expense per day
-                        </p>
-                        <p className="mt-1 text-lg font-semibold leading-7">
-                            {formatCurrency(averageExpensePerDay)}
-                        </p>
+                        </span>
                     </div>
                 </div>
             </CardContent>
@@ -3632,12 +3842,14 @@ function MonthlyBudgetSummary({
 function BudgetForm({
     categories,
     editing,
+    modal = false,
     month,
     onCancel,
     onSubmit,
 }: {
     categories: Category[];
     editing?: Budget;
+    modal?: boolean;
     month: string;
     onCancel: () => void;
     onSubmit: (values: BudgetFormValues) => void;
@@ -3652,10 +3864,14 @@ function BudgetForm({
     });
 
     const isEditing = Boolean(editing);
+    const isModal = modal || isEditing;
 
     return (
         <Card
-            className={cn(isEditing && "overflow-visible rounded-2xl bg-white")}
+            className={cn(
+                isModal &&
+                    "min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border",
+            )}
         >
             <form
                 onSubmit={form.handleSubmit((values) => {
@@ -3663,10 +3879,11 @@ function BudgetForm({
                     form.reset();
                 })}
             >
-                <CardHeader className={cn(isEditing && "px-6 pb-2 pt-6")}>
+                <CardHeader className={cn(isModal && "px-6 pb-2 pt-6")}>
+                    {isModal && <ModalBackButton onClick={onCancel} />}
                     <CardTitle
                         className={cn(
-                            isEditing && "text-2xl font-medium leading-8",
+                            isModal && "text-2xl font-medium leading-8",
                         )}
                     >
                         {editing ? "Edit budget" : "Add monthly budget"}
@@ -3674,14 +3891,14 @@ function BudgetForm({
                     <p
                         className={cn(
                             "text-sm text-muted-foreground",
-                            isEditing && "text-base leading-6",
+                            isModal && "text-base leading-6",
                         )}
                     >
                         Set limits against expense categories.
                     </p>
                 </CardHeader>
                 <CardContent
-                    className={cn("space-y-4", isEditing && "px-6 pb-6 pt-0")}
+                    className={cn("space-y-4", isModal && "px-6 pb-6 pt-0")}
                 >
                     <FieldError
                         message={form.formState.errors.categoryId?.message}
@@ -3728,15 +3945,20 @@ function BudgetForm({
                             }
                         />
                     </FieldError>
+                    {isModal && (
+                        <Button className="mt-2 w-full sm:hidden" type="submit">
+                            {editing ? "Save budget" : "Add budget"}
+                        </Button>
+                    )}
                 </CardContent>
                 <div
                     className={cn(
                         "flex justify-end gap-2 px-4 pb-4",
-                        isEditing &&
-                            "items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4",
+                        isModal &&
+                            "hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex",
                     )}
                 >
-                    {editing && (
+                    {isModal && (
                         <Button
                             type="button"
                             variant="secondary"
@@ -3747,8 +3969,8 @@ function BudgetForm({
                     )}
                     <div
                         className={cn(
-                            !editing && "flex gap-2",
-                            editing && "ml-auto",
+                            !isModal && "flex gap-2",
+                            isModal && "ml-auto",
                         )}
                     >
                         <Button type="submit">
@@ -3847,7 +4069,10 @@ function CategoryForm({
 
     return (
         <Card
-            className={cn(isModal && "overflow-visible rounded-2xl bg-white")}
+            className={cn(
+                isModal &&
+                    "min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border",
+            )}
         >
             <form
                 onSubmit={form.handleSubmit((values) => {
@@ -3856,6 +4081,7 @@ function CategoryForm({
                 })}
             >
                 <CardHeader className={cn(isModal && "px-6 pb-2 pt-5")}>
+                    {isModal && <ModalBackButton onClick={onCancel} />}
                     <CardTitle
                         className={cn(
                             isModal && "text-2xl font-medium leading-8",
@@ -3954,12 +4180,17 @@ function CategoryForm({
                             })}
                         </div>
                     </FieldError>
+                    {isModal && (
+                        <Button className="mt-2 w-full sm:hidden" type="submit">
+                            {editing ? "Save category" : "Add category"}
+                        </Button>
+                    )}
                 </CardContent>
                 <div
                     className={cn(
                         "flex justify-end gap-2 px-4 pb-4",
                         isModal &&
-                            "items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4",
+                            "hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex",
                     )}
                 >
                     {isModal && (
@@ -4172,7 +4403,7 @@ function RecentTransactions({
                                         />
                                         <div className="min-w-0">
                                             <p className="truncate font-medium leading-6">
-                                                {transaction.merchant}
+                                                {transaction.subcategory}
                                             </p>
                                             <p className="text-sm text-muted-foreground">
                                                 {category?.name ??
@@ -4205,256 +4436,293 @@ function RecentTransactions({
 }
 
 function TransactionTable({
-    backupMenu,
     categories,
-    onDelete,
     onEdit,
     transactions,
 }: {
-    backupMenu?: React.ReactNode;
     categories: Category[];
-    onDelete: (id: string) => void;
     onEdit: (transaction: Transaction) => void;
     transactions: Transaction[];
 }) {
+    const groupedTransactions = useMemo(() => {
+        const groups = new Map<string, Transaction[]>();
+
+        transactions
+            .slice()
+            .sort((left, right) => {
+                const dateOrder = right.date.localeCompare(left.date);
+
+                if (dateOrder !== 0) {
+                    return dateOrder;
+                }
+
+                return normalizeTimeValue(right.time).localeCompare(
+                    normalizeTimeValue(left.time),
+                );
+            })
+            .forEach((transaction) => {
+                const group = groups.get(transaction.date) ?? [];
+                group.push(transaction);
+                groups.set(transaction.date, group);
+            });
+
+        return Array.from(groups, ([date, items]) => ({
+            date,
+            transactions: items,
+        }));
+    }, [transactions]);
+
     return (
-        <Card className="flex h-full flex-col">
-            <CardHeader>
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <CardTitle>Transactions</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                            Edit or remove posted money movement.
-                        </p>
-                    </div>
-                    {backupMenu}
-                </div>
-            </CardHeader>
-            <CardContent
-                className={cn(transactions.length === 0 && "flex flex-1")}
-            >
-                {transactions.length === 0 ? (
-                    <EmptyState
-                        className="flex min-h-64 flex-1 flex-col items-center justify-center md:min-h-80"
-                        title="No transactions yet"
-                        description="Use the form to add income or expenses."
-                    />
-                ) : (
-                    <>
-                        <div className="space-y-3 md:hidden">
-                            {transactions.map((transaction) => {
-                                const category = categories.find(
-                                    (item) =>
-                                        item.id === transaction.categoryId,
-                                );
+        <div>
+            {transactions.length === 0 ? (
+                <EmptyState
+                    className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed bg-white md:min-h-80"
+                    title="No transactions yet"
+                    description="Use a category card on Home to add income or expenses."
+                />
+            ) : (
+                <>
+                    <div className="space-y-3 md:hidden">
+                        {groupedTransactions.map((group) => {
+                            const groupTotal =
+                                getTransactionGroupSummary(group.transactions);
 
-                                return (
-                                    <div
-                                        key={transaction.id}
-                                        className="rounded-md border bg-white p-3"
-                                    >
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div className="flex min-w-0 items-center gap-3">
-                                                <TransactionIcon
-                                                    category={category}
-                                                    type={transaction.type}
-                                                />
-                                                <div className="min-w-0">
-                                                    <p className="truncate font-medium leading-6">
-                                                        {transaction.merchant}
-                                                    </p>
-                                                    <p className="text-sm leading-5 text-muted-foreground">
-                                                        {category?.name ??
-                                                            "Uncategorized"}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <p
-                                                className={cn(
-                                                    "shrink-0 self-center text-sm font-medium leading-5",
-                                                    transaction.type ===
-                                                        "income"
-                                                        ? "text-[#15803D]"
-                                                        : "text-[#DC2626]",
-                                                )}
-                                            >
-                                                {transaction.type === "income"
-                                                    ? "+"
-                                                    : "-"}
-                                                {formatCurrency(
-                                                    transaction.amount,
-                                                )}
-                                            </p>
-                                        </div>
-                                        <div className="mt-3 flex items-center justify-between gap-3 border-t pt-3">
-                                            <p className="text-sm leading-5 text-muted-foreground">
-                                                {formatDate(transaction.date)}
-                                            </p>
-                                            <div className="flex gap-1">
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() =>
-                                                        onEdit(transaction)
-                                                    }
-                                                >
-                                                    <Edit3
-                                                        className="h-4 w-4"
-                                                        aria-hidden
-                                                    />
-                                                    <span className="sr-only">
-                                                        Edit transaction
-                                                    </span>
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() =>
-                                                        onDelete(transaction.id)
-                                                    }
-                                                >
-                                                    <Trash2
-                                                        className="h-4 w-4"
-                                                        aria-hidden
-                                                    />
-                                                    <span className="sr-only">
-                                                        Delete transaction
-                                                    </span>
-                                                </Button>
-                                            </div>
-                                        </div>
+                            return (
+                                <section
+                                    key={group.date}
+                                    className="overflow-hidden rounded-md border bg-white"
+                                >
+                                    <TransactionGroupHeader
+                                        date={group.date}
+                                        total={groupTotal}
+                                    />
+                                    <div className="divide-y">
+                                        {group.transactions.map(
+                                            (transaction) => {
+                                                const category =
+                                                    categories.find(
+                                                        (item) =>
+                                                            item.id ===
+                                                            transaction.categoryId,
+                                                    );
+
+                                                return (
+                                                    <button
+                                                        key={transaction.id}
+                                                        className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors md:hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                        type="button"
+                                                        onClick={() =>
+                                                            onEdit(transaction)
+                                                        }
+                                                    >
+                                                        <div className="flex min-w-0 items-center gap-3">
+                                                            <TransactionIcon
+                                                                category={
+                                                                    category
+                                                                }
+                                                                type={
+                                                                    transaction.type
+                                                                }
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <p className="truncate font-medium leading-6">
+                                                                    {
+                                                                        transaction.subcategory
+                                                                    }
+                                                                </p>
+                                                                <p className="text-sm leading-5 text-muted-foreground">
+                                                                    {category?.name ??
+                                                                        "Uncategorized"}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="shrink-0 text-right">
+                                                            <p
+                                                                className={cn(
+                                                                    "text-sm font-medium leading-5",
+                                                                    transaction.type ===
+                                                                        "income"
+                                                                        ? "text-[#15803D]"
+                                                                        : "text-[#DC2626]",
+                                                                )}
+                                                            >
+                                                                {transaction.type ===
+                                                                "income"
+                                                                    ? "+"
+                                                                    : "-"}
+                                                                {formatCurrency(
+                                                                    transaction.amount,
+                                                                )}
+                                                            </p>
+                                                            <p className="mt-1 text-xs leading-4 text-muted-foreground">
+                                                                {formatTime(
+                                                                    transaction.time,
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            },
+                                        )}
                                     </div>
-                                );
-                            })}
-                        </div>
-                        <div className="hidden overflow-x-auto md:block">
-                            <table className="w-full min-w-[680px] text-left text-sm">
-                                <thead className="border-b text-muted-foreground">
-                                    <tr>
-                                        <th className="py-3 font-medium">
-                                            Merchant
-                                        </th>
-                                        <th className="py-3 font-medium">
-                                            Category
-                                        </th>
-                                        <th className="py-3 font-medium">
-                                            Date
-                                        </th>
-                                        <th className="py-3 text-right font-medium">
-                                            Amount
-                                        </th>
-                                        <th className="py-3 text-right font-medium">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {transactions.map((transaction) => {
-                                        const category = categories.find(
-                                            (item) =>
-                                                item.id ===
-                                                transaction.categoryId,
-                                        );
+                                </section>
+                            );
+                        })}
+                    </div>
+                    <div className="hidden space-y-3 md:block">
+                        {groupedTransactions.map((group) => {
+                            const groupTotal =
+                                getTransactionGroupSummary(group.transactions);
 
-                                        return (
-                                            <tr
-                                                key={transaction.id}
-                                                className="border-b last:border-0"
-                                            >
-                                                <td className="py-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <TransactionIcon
-                                                            category={category}
-                                                            type={
-                                                                transaction.type
-                                                            }
-                                                        />
-                                                        <span className="font-medium">
-                                                            {
-                                                                transaction.merchant
-                                                            }
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="py-3">
-                                                    {category?.name ??
-                                                        "Uncategorized"}
-                                                </td>
-                                                <td className="py-3">
-                                                    {formatDate(
-                                                        transaction.date,
-                                                    )}
-                                                </td>
-                                                <td
-                                                    className={cn(
-                                                        "py-3 text-right font-medium",
-                                                        transaction.type ===
-                                                            "income"
-                                                            ? "text-[#15803D]"
-                                                            : "text-[#DC2626]",
-                                                    )}
-                                                >
-                                                    {transaction.type ===
-                                                    "income"
-                                                        ? "+"
-                                                        : "-"}
-                                                    {formatCurrency(
-                                                        transaction.amount,
-                                                    )}
-                                                </td>
-                                                <td className="py-3">
-                                                    <div className="flex justify-end gap-1">
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() =>
-                                                                onEdit(
-                                                                    transaction,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Edit3
-                                                                className="h-4 w-4"
-                                                                aria-hidden
-                                                            />
-                                                            <span className="sr-only">
-                                                                Edit transaction
-                                                            </span>
-                                                        </Button>
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            onClick={() =>
-                                                                onDelete(
-                                                                    transaction.id,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Trash2
-                                                                className="h-4 w-4"
-                                                                aria-hidden
-                                                            />
-                                                            <span className="sr-only">
-                                                                Delete
-                                                                transaction
-                                                            </span>
-                                                        </Button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </>
+                            return (
+                                <section
+                                    key={group.date}
+                                    className="overflow-hidden rounded-md border bg-white"
+                                >
+                                    <TransactionGroupHeader
+                                        date={group.date}
+                                        total={groupTotal}
+                                    />
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full min-w-[680px] text-left text-sm">
+                                            <thead className="border-b text-muted-foreground">
+                                                <tr>
+                                                    <th className="px-4 py-3 font-medium">
+                                                        Subcategory
+                                                    </th>
+                                                    <th className="px-4 py-3 font-medium">
+                                                        Category
+                                                    </th>
+                                                    <th className="px-4 py-3 text-right font-medium">
+                                                        Amount
+                                                    </th>
+                                                    <th className="px-4 py-3 text-right font-medium">
+                                                        Time
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {group.transactions.map(
+                                                    (transaction) => {
+                                                        const category =
+                                                            categories.find(
+                                                                (item) =>
+                                                                    item.id ===
+                                                                    transaction.categoryId,
+                                                            );
+
+                                                        return (
+                                                            <tr
+                                                                key={
+                                                                    transaction.id
+                                                                }
+                                                                className="cursor-pointer border-b transition-colors last:border-0 md:hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                                tabIndex={0}
+                                                                onClick={() =>
+                                                                    onEdit(
+                                                                        transaction,
+                                                                    )
+                                                                }
+                                                                onKeyDown={(
+                                                                    event,
+                                                                ) => {
+                                                                    if (
+                                                                        event.key ===
+                                                                            "Enter" ||
+                                                                        event.key ===
+                                                                            " "
+                                                                    ) {
+                                                                        event.preventDefault();
+                                                                        onEdit(
+                                                                            transaction,
+                                                                        );
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <td className="px-4 py-3">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <TransactionIcon
+                                                                            category={
+                                                                                category
+                                                                            }
+                                                                            type={
+                                                                                transaction.type
+                                                                            }
+                                                                        />
+                                                                        <span className="font-medium">
+                                                                            {
+                                                                                transaction.subcategory
+                                                                            }
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-4 py-3">
+                                                                    {category?.name ??
+                                                                        "Uncategorized"}
+                                                                </td>
+                                                                <td
+                                                                    className={cn(
+                                                                        "px-4 py-3 text-right font-medium",
+                                                                        transaction.type ===
+                                                                            "income"
+                                                                            ? "text-[#15803D]"
+                                                                            : "text-[#DC2626]",
+                                                                    )}
+                                                                >
+                                                                    {transaction.type ===
+                                                                    "income"
+                                                                        ? "+"
+                                                                        : "-"}
+                                                                    {formatCurrency(
+                                                                        transaction.amount,
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-4 py-3 text-right text-muted-foreground">
+                                                                    {formatTime(
+                                                                        transaction.time,
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    },
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
+function TransactionGroupHeader({
+    date,
+    total,
+}: {
+    date: string;
+    total: { amount: number; type: TransactionType };
+}) {
+    return (
+        <div className="flex items-center justify-between gap-3 border-b px-3 py-2 md:px-4 md:py-3">
+            <h3 className="text-sm font-medium leading-5">
+                {formatTransactionGroupDate(date)}
+            </h3>
+            <p
+                className={cn(
+                    "shrink-0 text-right text-sm font-medium leading-5",
+                    total.type === "income"
+                        ? "text-[#15803D]"
+                        : "text-[#DC2626]",
                 )}
-            </CardContent>
-        </Card>
+            >
+                {total.type === "income" ? "+" : "-"}
+                {formatCurrency(total.amount)}
+            </p>
+        </div>
     );
 }
 
@@ -4942,6 +5210,41 @@ function isSameDay(left: Date, right: Date) {
     );
 }
 
+function formatTransactionGroupDate(value: string) {
+    const date = parseDateValue(value);
+
+    return date.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "long",
+        weekday: "long",
+        year: "numeric",
+    });
+}
+
+function getTransactionGroupSummary(transactions: Transaction[]) {
+    const income = transactions
+        .filter((transaction) => transaction.type === "income")
+        .reduce((sum, transaction) => sum + transaction.amount, 0);
+    const expense = transactions
+        .filter((transaction) => transaction.type === "expense")
+        .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+    return income > expense
+        ? { amount: income, type: "income" as TransactionType }
+        : { amount: expense, type: "expense" as TransactionType };
+}
+
+function formatTime(value?: string) {
+    const [hours = "0", minutes = "0"] = normalizeTimeValue(value).split(":");
+    const date = new Date();
+    date.setHours(Number(hours), Number(minutes), 0, 0);
+
+    return date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+    });
+}
+
 function getCalendarDays(month: Date) {
     const firstOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
     const start = new Date(firstOfMonth);
@@ -4976,21 +5279,36 @@ function EditModal({
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto px-4 pb-6 pt-4 sm:items-center sm:py-6">
+        <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-white sm:bg-transparent sm:px-4 sm:pb-6 sm:pt-4 sm:items-center sm:py-6">
             <button
                 aria-label="Close modal"
-                className="absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm"
+                className="absolute inset-0 hidden cursor-default bg-white/45 backdrop-blur-sm sm:block"
                 type="button"
                 onClick={onClose}
             />
             <div
-                className="relative w-full max-w-[540px] rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
+                className="relative min-h-dvh w-full sm:min-h-0 sm:max-w-[540px] sm:rounded-2xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
                 role="dialog"
                 aria-modal="true"
             >
                 {children}
             </div>
         </div>
+    );
+}
+
+function ModalBackButton({ onClick }: { onClick: () => void }) {
+    return (
+        <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="-ml-2 mb-3 sm:hidden"
+            onClick={onClick}
+        >
+            <ChevronLeft className="h-5 w-5" aria-hidden />
+            <span className="sr-only">Back</span>
+        </Button>
     );
 }
 
@@ -5200,3 +5518,4 @@ function FieldError({
         </div>
     );
 }
+
