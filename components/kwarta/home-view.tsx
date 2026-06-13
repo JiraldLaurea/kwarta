@@ -343,6 +343,9 @@ function SortableCategoryCard({
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
+        ["--category-color" as any]: category.color,
+        // backgroundColor: `color-mix(in srgb, ${category.color} 7%, white)`,
+        // borderColor: `color-mix(in srgb, ${category.color} 40%, white)`
     };
     const hasBudgetTracking =
         normalizeTransactionType(category.type) === "expense";
@@ -354,7 +357,7 @@ function SortableCategoryCard({
             {...attributes}
             {...listeners}
             className={cn(
-                `relative rounded-xl border border-border bg-white p-4 text-left transition-[border-color,box-shadow,opacity] md:hover:border-[#2563EB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5`,
+                `relative rounded-2xl border border-border p-4 text-left transition-[border-color,box-shadow,opacity] md:hover:border-[var(--category-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5`,
                 editMode &&
                     "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
                 isDragging && "opacity-20",
@@ -375,9 +378,13 @@ function SortableCategoryCard({
                 }
             }}
         >
-            <div className="mb-4 flex items-start justify-center md:justify-between gap-3">
+            <div className="mb-2 md:mb-4 flex items-start justify-center md:justify-between gap-3">
                 <div className="flex items-center gap-2">
-                    <CategoryIconBadge category={category} />
+                    <CategoryIconBadge
+                        category={category}
+                        className="h-10 w-10"
+                        iconClassName="h-4 w-4"
+                    />
                     {editMode && (
                         <span className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground">
                             <GripVertical className="h-4 w-4" aria-hidden />
@@ -414,7 +421,7 @@ function SortableCategoryCard({
                                 style={{
                                     backgroundColor:
                                         total > budget.limit
-                                            ? undefined
+                                            ? category.color
                                             : category.color,
                                     width: `${Math.min(
                                         100,
@@ -590,10 +597,14 @@ export function QuickTransactionModal({
                             onSetBudget(parsedLimit);
                         }}
                     >
-                        <CardHeader className="px-6 pb-2 pt-5">
+                        <CardHeader className="px-6 pb-2 pt-6">
                             <ModalBackButton onClick={onClose} />
-                            <div className="mb-3 flex items-start justify-between gap-3">
-                                <CategoryIconBadge category={category} />
+                            <div className="flex !m-0 !mb-4">
+                                <CategoryIconBadge
+                                    category={category}
+                                    className="h-10 w-10"
+                                    iconClassName="h-4 w-4"
+                                />
                             </div>
                             <CardTitle className="text-2xl font-medium leading-8">
                                 No Budget Set
@@ -665,10 +676,14 @@ export function QuickTransactionModal({
                         });
                     }}
                 >
-                    <CardHeader className="px-6 pb-2 pt-5">
+                    <CardHeader className="px-6 pb-2 pt-6">
                         <ModalBackButton onClick={onClose} />
-                        <div className="mb-3 flex items-start justify-between gap-3">
-                            <CategoryIconBadge category={category} />
+                        <div className="!m-0 !mb-4 flex items-start justify-between">
+                            <CategoryIconBadge
+                                category={category}
+                                className="h-10 w-10"
+                                iconClassName="h-4 w-4"
+                            />
                             <div className="w-[164px]">
                                 <DatePickerInput
                                     ariaLabel="Select transaction date"

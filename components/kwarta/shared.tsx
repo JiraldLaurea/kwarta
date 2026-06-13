@@ -148,7 +148,7 @@ export function DatePickerInput({
     }
 
     return (
-        <div className="relative mt-2" ref={pickerRef}>
+        <div className="relative" ref={pickerRef}>
             <Button
                 aria-expanded={isOpen}
                 aria-haspopup="dialog"
@@ -194,25 +194,20 @@ export function DatePickerInput({
                                 size="icon"
                                 onClick={() => changeMonth(1)}
                             >
-                                <ChevronRight
-                                    className="h-4 w-4"
-                                    aria-hidden
-                                />
+                                <ChevronRight className="h-4 w-4" aria-hidden />
                                 <span className="sr-only">Next month</span>
                             </Button>
                         </div>
                     </div>
                     <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                        {["S", "M", "T", "W", "T", "F", "S"].map(
-                            (weekday) => (
-                                <span
-                                    key={weekday}
-                                    className="py-2 text-muted-foreground"
-                                >
-                                    {weekday}
-                                </span>
-                            ),
-                        )}
+                        {["S", "M", "T", "W", "T", "F", "S"].map((weekday) => (
+                            <span
+                                key={weekday}
+                                className="py-2 text-muted-foreground"
+                            >
+                                {weekday}
+                            </span>
+                        ))}
                         {days.map((date) => {
                             const dateValue = toDateInputValue(date);
                             const isCurrentMonth =
@@ -353,17 +348,18 @@ export function MonthPickerInput({
                                     setVisibleYear((year) => year + 1)
                                 }
                             >
-                                <ChevronRight
-                                    className="h-4 w-4"
-                                    aria-hidden
-                                />
+                                <ChevronRight className="h-4 w-4" aria-hidden />
                                 <span className="sr-only">Next year</span>
                             </Button>
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                         {Array.from({ length: 12 }, (_, monthIndex) => {
-                            const monthDate = new Date(visibleYear, monthIndex, 1);
+                            const monthDate = new Date(
+                                visibleYear,
+                                monthIndex,
+                                1,
+                            );
                             const isSelected =
                                 selectedYear === visibleYear &&
                                 selectedMonthIndex === monthIndex;
@@ -492,15 +488,26 @@ export function MetricCard({
     );
 }
 
-export function CategoryIconBadge({ category }: { category: Category }) {
+export function CategoryIconBadge({
+    category,
+    className = "",
+    iconClassName = "",
+}: {
+    category: Category;
+    className?: string;
+    iconClassName?: string; // icon
+}) {
     const Icon = categoryIconMap.get(category.icon) ?? Receipt;
 
     return (
         <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-white"
-            style={{ color: category.color }}
+            className={cn(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white",
+                className,
+            )}
+            style={{ color: "white", backgroundColor: category.color }}
         >
-            <Icon className="h-4 w-4" aria-hidden />
+            <Icon className={cn("h-4 w-4", iconClassName)} aria-hidden />
         </span>
     );
 }
