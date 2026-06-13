@@ -261,7 +261,7 @@ function CategoryQuickAddSection({
                         items={categoryIds}
                         strategy={rectSortingStrategy}
                     >
-                        <div className="grid grid-cols-3 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                        <div className="grid grid-cols-3 gap-2 md:gap-3 sm:grid-cols-3 lg:grid-cols-4">
                             {categories.map((category) => (
                                 <SortableCategoryCard
                                     key={category.id}
@@ -354,7 +354,7 @@ function SortableCategoryCard({
             {...attributes}
             {...listeners}
             className={cn(
-                `relative rounded-xl border border-border bg-white p-5 text-left transition-[border-color,box-shadow,opacity] md:hover:border-[#2563EB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5`,
+                `relative rounded-xl border border-border bg-white p-4 text-left transition-[border-color,box-shadow,opacity] md:hover:border-[#2563EB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5`,
                 editMode &&
                     "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
                 isDragging && "opacity-20",
