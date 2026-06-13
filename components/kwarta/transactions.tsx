@@ -248,22 +248,20 @@ export function TransactionForm({
                         <Label htmlFor="transaction-subcategory">
                             Subcategory
                         </Label>
-                        <div className="mt-2">
-                            <Select
-                                disabled={subcategories.length === 0}
-                                id="transaction-subcategory"
-                                onValueChange={(value) =>
-                                    form.setValue("subcategory", value, {
-                                        shouldValidate: true,
-                                    })
-                                }
-                                options={subcategories.map((subcategory) => ({
-                                    label: subcategory,
-                                    value: subcategory,
-                                }))}
-                                value={selectedSubcategory}
-                            />
-                        </div>
+                        <Select
+                            disabled={subcategories.length === 0}
+                            id="transaction-subcategory"
+                            onValueChange={(value) =>
+                                form.setValue("subcategory", value, {
+                                    shouldValidate: true,
+                                })
+                            }
+                            options={subcategories.map((subcategory) => ({
+                                label: subcategory,
+                                value: subcategory,
+                            }))}
+                            value={selectedSubcategory}
+                        />
                     </FieldError>
                     <FieldError message={form.formState.errors.date?.message}>
                         <Label htmlFor="date">Date</Label>

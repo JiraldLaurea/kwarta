@@ -258,7 +258,7 @@ function MonthlyBudgetSummary({
                             )}
                         >
                             {formatCurrency(Math.abs(remaining))}{" "}
-                            {isOverBudget ? "excess" : "remaining"}
+                            {isOverBudget ? "excess" : "left"}
                         </span>
                     </div>
                 </div>

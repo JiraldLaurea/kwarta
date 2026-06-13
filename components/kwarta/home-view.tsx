@@ -18,9 +18,21 @@ import {
     useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, Edit3, Ellipsis, GripVertical, Plus, Trash2 } from "lucide-react";
+import {
+    Check,
+    Edit3,
+    Ellipsis,
+    GripVertical,
+    Plus,
+    Trash2,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Budget, Category, Transaction, TransactionType } from "@/lib/types";
+import type {
+    Budget,
+    Category,
+    Transaction,
+    TransactionType,
+} from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
     formatMonthLabel,
@@ -249,7 +261,7 @@ function CategoryQuickAddSection({
                         items={categoryIds}
                         strategy={rectSortingStrategy}
                     >
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                        <div className="grid grid-cols-3 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                             {categories.map((category) => (
                                 <SortableCategoryCard
                                     key={category.id}
@@ -342,7 +354,7 @@ function SortableCategoryCard({
             {...attributes}
             {...listeners}
             className={cn(
-                "relative rounded-md border border-border bg-white p-3 text-left transition-[border-color,box-shadow,opacity] md:hover:border-[#2563EB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-4",
+                `relative rounded-xl border border-border bg-white p-5 text-left transition-[border-color,box-shadow,opacity] md:hover:border-[#2563EB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5`,
                 editMode &&
                     "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
                 isDragging && "opacity-20",
@@ -363,7 +375,7 @@ function SortableCategoryCard({
                 }
             }}
         >
-            <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="mb-4 flex items-start justify-center md:justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <CategoryIconBadge category={category} />
                     {editMode && (
@@ -373,17 +385,18 @@ function SortableCategoryCard({
                         </span>
                     )}
                 </div>
-                <div className="h-8 w-8 shrink-0">
-                    {editMode && !isOverlay && (
+
+                {editMode && !isOverlay && (
+                    <div className="h-8 w-8 shrink-0">
                         <CategoryCardActionMenu
                             category={category}
                             onDeleteCategory={onDeleteCategory}
                             onEditCategory={onEditCategory}
                         />
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
-            <p className="truncate text-sm font-medium leading-5">
+            <p className="truncate text-center md:text-left text-sm md:text-base font-medium leading-5">
                 {category.name}
             </p>
             {hasBudgetTracking && (
@@ -415,14 +428,14 @@ function SortableCategoryCard({
                     </div>
                 </div>
             )}
-            <div className="mt-3 flex items-end justify-between gap-3">
-                <span className="text-sm font-medium leading-5">
+            <div className="mt-3 flex-col md:flex-row flex md:items-end  items-center md:justify-between gap-3">
+                <span className="text-sm font-medium">
                     {formatCurrency(total)}
                 </span>
                 {hasBudgetTracking && (
                     <span
                         className={cn(
-                            "text-right text-xs font-medium leading-4 text-muted-foreground",
+                            "text-right text-xs leading-4 text-muted-foreground ",
                             budget &&
                                 total > budget.limit &&
                                 "text-destructive",
@@ -431,7 +444,7 @@ function SortableCategoryCard({
                         {budget
                             ? total > budget.limit
                                 ? `${formatCurrency(total - budget.limit)} excess`
-                                : `${formatCurrency(budget.limit - total)} remaining`
+                                : `${formatCurrency(budget.limit - total)} left`
                             : "No budget set"}
                     </span>
                 )}
@@ -735,4 +748,3 @@ export function QuickTransactionModal({
         </EditModal>
     );
 }
-

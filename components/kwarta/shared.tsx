@@ -148,7 +148,7 @@ export function DatePickerInput({
     }
 
     return (
-        <div className="relative" ref={pickerRef}>
+        <div className="relative mt-2" ref={pickerRef}>
             <Button
                 aria-expanded={isOpen}
                 aria-haspopup="dialog"
@@ -260,14 +260,16 @@ export function MonthPickerInput({
     value: string;
 }) {
     const selectedMonth = parseMonthValue(value);
+    const selectedYear = selectedMonth.getFullYear();
+    const selectedMonthIndex = selectedMonth.getMonth();
     const [isOpen, setIsOpen] = useState(false);
-    const [visibleYear, setVisibleYear] = useState(selectedMonth.getFullYear());
+    const [visibleYear, setVisibleYear] = useState(selectedYear);
     const [popoverSide, setPopoverSide] = useState<"above" | "below">("below");
     const pickerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        setVisibleYear(selectedMonth.getFullYear());
-    }, [selectedMonth]);
+        setVisibleYear(selectedYear);
+    }, [selectedYear]);
 
     useEffect(() => {
         if (isOpen) {
@@ -363,8 +365,8 @@ export function MonthPickerInput({
                         {Array.from({ length: 12 }, (_, monthIndex) => {
                             const monthDate = new Date(visibleYear, monthIndex, 1);
                             const isSelected =
-                                selectedMonth.getFullYear() === visibleYear &&
-                                selectedMonth.getMonth() === monthIndex;
+                                selectedYear === visibleYear &&
+                                selectedMonthIndex === monthIndex;
 
                             return (
                                 <button
@@ -637,10 +639,10 @@ export function FieldError({
     message?: string;
 }) {
     return (
-        <div>
+        <div className="space-y-2">
             {children}
             {message && (
-                <p className="mt-1 text-sm leading-5 text-destructive">
+                <p className="!mt-1 text-sm leading-5 text-destructive">
                     {message}
                 </p>
             )}

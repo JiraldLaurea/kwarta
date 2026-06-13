@@ -124,7 +124,6 @@ import {
     toMonthInputValue,
     upsertReusableBudgets,
     withCategoryIcons,
-    withMissingDefaultCategories,
 } from "@/lib/kwarta/helpers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -269,12 +268,7 @@ export function KwartaApp() {
                     return;
                 }
 
-                setCategories(
-                    withMissingDefaultCategories(
-                        workspace.categories,
-                        activeUserId,
-                    ),
-                );
+                setCategories(withCategoryIcons(workspace.categories));
                 setTransactions(workspace.transactions);
                 setBudgets(workspace.budgets);
             } catch {
