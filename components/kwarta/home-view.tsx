@@ -357,7 +357,7 @@ function SortableCategoryCard({
             {...attributes}
             {...listeners}
             className={cn(
-                `relative rounded-2xl border border-border p-4 text-left transition-[border-color,box-shadow,opacity] md:hover:border-[var(--category-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5`,
+                `relative rounded-2xl bg-white border border-border p-4 text-left transition-[border-color,box-shadow,opacity] md:hover:border-[var(--category-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5`,
                 editMode &&
                     "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
                 isDragging && "opacity-20",
