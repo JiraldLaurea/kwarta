@@ -1202,7 +1202,7 @@ function SettingsView({
                 description="Manage app preferences, budget behavior, and account access."
             />
 
-            <div className="max-w-4xl space-y-4 md:space-y-5">
+            <div className="grid gap-4 md:gap-5 lg:grid-cols-2">
                 <Card className="overflow-hidden bg-white">
                     <CardHeader>
                         <CardTitle>General</CardTitle>

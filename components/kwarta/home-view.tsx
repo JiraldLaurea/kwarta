@@ -280,8 +280,8 @@ function CategoryQuickAddSection({
                         <div
                             className={cn(
                                 usesIosStyle
-                                    ? "sm:grid sm:grid-cols-3 sm:gap-2 md:gap-3 lg:grid-cols-4 max-sm:overflow-hidden max-sm:rounded-2xl max-sm:border max-sm:border-border max-sm:bg-white max-sm:divide-y max-sm:divide-border"
-                                    : "grid grid-cols-3 gap-2 md:gap-3 sm:grid-cols-3 lg:grid-cols-4",
+                                    ? "sm:grid sm:grid-cols-3 sm:gap-2 md:grid-cols-4 md:gap-3 lg:grid-cols-6 max-sm:overflow-hidden max-sm:rounded-2xl max-sm:border max-sm:border-border max-sm:bg-white max-sm:divide-y max-sm:divide-border"
+                                    : "grid grid-cols-3 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3 lg:grid-cols-6",
                             )}
                         >
                             {categories.map((category) => (
@@ -397,7 +397,7 @@ function SortableCategoryCard({
             {...attributes}
             {...listeners}
             className={cn(
-                "relative rounded-2xl border border-border bg-white p-4 text-left transition-[border-color,box-shadow,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5 md:hover:border-[var(--category-color)]",
+                "relative rounded-2xl border border-border bg-white p-4 text-left transition-[border-color,box-shadow,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex sm:min-h-[154px] sm:flex-col sm:items-center sm:justify-center sm:text-center md:p-5 md:hover:border-[var(--category-color)]",
                 usesIosStyle
                     ? "max-sm:flex max-sm:min-h-[78px] max-sm:items-center max-sm:gap-3 max-sm:rounded-none max-sm:border-0 max-sm:px-4 max-sm:py-3"
                     : "",
@@ -425,8 +425,8 @@ function SortableCategoryCard({
                 className={cn(
                     "flex items-start gap-3",
                     usesIosStyle
-                        ? "shrink-0 sm:mb-2 sm:justify-center md:mb-4 md:justify-between"
-                        : "mb-2 justify-center md:mb-4 md:justify-between",
+                        ? "shrink-0 sm:mb-4 sm:justify-center"
+                        : "mb-3 justify-center sm:mb-4",
                 )}
             >
                 <div className="flex items-center gap-2">
@@ -461,7 +461,12 @@ function SortableCategoryCard({
                     </div>
                 )}
             </div>
-            <div className={cn(usesIosStyle && "min-w-0 flex-1 sm:min-w-0")}>
+            <div
+                className={cn(
+                    "sm:flex sm:w-full sm:flex-1 sm:flex-col sm:items-center sm:justify-center",
+                    usesIosStyle && "min-w-0 flex-1 sm:min-w-0",
+                )}
+            >
                 <div
                     className={cn(
                         usesIosStyle
@@ -473,8 +478,8 @@ function SortableCategoryCard({
                         className={cn(
                             "truncate font-medium",
                             usesIosStyle
-                                ? "text-sm leading-5 sm:text-center md:text-left md:text-base"
-                                : "text-center text-sm leading-5 md:text-left md:text-base",
+                                ? "text-sm leading-5 sm:text-center md:text-base"
+                                : "text-center text-sm leading-5 md:text-base",
                         )}
                     >
                         {category.name}
@@ -520,7 +525,7 @@ function SortableCategoryCard({
                 {hasBudgetTracking && (
                     <div
                         className={cn(
-                            "mt-3",
+                            "mt-3 w-full",
                             usesIosStyle && "hidden sm:block",
                         )}
                     >
@@ -546,7 +551,7 @@ function SortableCategoryCard({
                 )}
                 <div
                     className={cn(
-                        "mt-3 flex-col items-center gap-3 md:flex-row md:items-end md:justify-between",
+                        "mt-3 flex-col items-center gap-1 text-center",
                         usesIosStyle ? "hidden sm:flex" : "flex",
                     )}
                 >
@@ -556,7 +561,7 @@ function SortableCategoryCard({
                     {hasBudgetTracking && (
                         <span
                             className={cn(
-                                "text-right text-xs leading-4 text-muted-foreground ",
+                                "text-center text-xs leading-4 text-muted-foreground ",
                                 budget &&
                                     total > budget.limit &&
                                     "text-destructive",
