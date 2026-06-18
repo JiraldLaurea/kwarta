@@ -60,6 +60,7 @@ import {
 
 export function HomeView({
     budgets,
+    budgetsEnabled,
     editMode,
     expenseCategories,
     homeItemStyle,
@@ -75,6 +76,7 @@ export function HomeView({
     transactions,
 }: {
     budgets: Budget[];
+    budgetsEnabled: boolean;
     editMode: boolean;
     expenseCategories: Category[];
     homeItemStyle: HomeItemStyle;
@@ -127,6 +129,7 @@ export function HomeView({
             </div>
             <CategoryQuickAddSection
                 budgets={budgets}
+                budgetsEnabled={budgetsEnabled}
                 editMode={editMode}
                 title="Expenses"
                 homeItemStyle={homeItemStyle}
@@ -139,6 +142,7 @@ export function HomeView({
             />
             <CategoryQuickAddSection
                 budgets={budgets}
+                budgetsEnabled={budgetsEnabled}
                 editMode={editMode}
                 title="Income"
                 homeItemStyle={homeItemStyle}
@@ -155,6 +159,7 @@ export function HomeView({
 
 function CategoryQuickAddSection({
     budgets,
+    budgetsEnabled,
     categories,
     editMode,
     homeItemStyle,
@@ -166,6 +171,7 @@ function CategoryQuickAddSection({
     transactions,
 }: {
     budgets: Budget[];
+    budgetsEnabled: boolean;
     categories: Category[];
     editMode: boolean;
     homeItemStyle: HomeItemStyle;
@@ -274,7 +280,7 @@ function CategoryQuickAddSection({
                         <div
                             className={cn(
                                 usesIosStyle
-                                    ? "overflow-hidden rounded-[28px] border border-border bg-white divide-y divide-border sm:grid sm:grid-cols-3 sm:gap-2 sm:divide-y-0 sm:overflow-visible sm:rounded-none sm:border-0 sm:bg-transparent md:gap-3 lg:grid-cols-4"
+                                    ? "sm:grid sm:grid-cols-3 sm:gap-2 md:gap-3 lg:grid-cols-4 max-sm:overflow-hidden max-sm:rounded-2xl max-sm:border max-sm:border-border max-sm:bg-white max-sm:divide-y max-sm:divide-border"
                                     : "grid grid-cols-3 gap-2 md:gap-3 sm:grid-cols-3 lg:grid-cols-4",
                             )}
                         >
@@ -292,6 +298,7 @@ function CategoryQuickAddSection({
                                     budget={budgetsByCategoryId.get(
                                         category.id,
                                     )}
+                                    budgetsEnabled={budgetsEnabled}
                                     total={
                                         totalsByCategoryId.get(category.id) ?? 0
                                     }
@@ -313,6 +320,7 @@ function CategoryQuickAddSection({
                                 budget={budgetsByCategoryId.get(
                                     activeCategory.id,
                                 )}
+                                budgetsEnabled={budgetsEnabled}
                                 total={
                                     totalsByCategoryId.get(activeCategory.id) ??
                                     0
@@ -328,6 +336,7 @@ function CategoryQuickAddSection({
 
 function SortableCategoryCard({
     budget,
+    budgetsEnabled,
     category,
     disabled,
     editMode,
@@ -339,6 +348,7 @@ function SortableCategoryCard({
     total,
 }: {
     budget?: Budget;
+    budgetsEnabled: boolean;
     category: Category;
     disabled: boolean;
     editMode: boolean;
@@ -368,7 +378,7 @@ function SortableCategoryCard({
         // borderColor: `color-mix(in srgb, ${category.color} 40%, white)`
     };
     const hasBudgetTracking =
-        normalizeTransactionType(category.type) === "expense";
+        budgetsEnabled && normalizeTransactionType(category.type) === "expense";
     const usesIosStyle = homeItemStyle === "ios";
     const budgetStatus = budget
         ? total > budget.limit
@@ -387,10 +397,10 @@ function SortableCategoryCard({
             {...attributes}
             {...listeners}
             className={cn(
-                "relative bg-white text-left transition-[border-color,box-shadow,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:border-[var(--category-color)]",
+                "relative rounded-2xl border border-border bg-white p-4 text-left transition-[border-color,box-shadow,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5 md:hover:border-[var(--category-color)]",
                 usesIosStyle
-                    ? "flex min-h-[78px] items-center gap-3 px-4 py-3 sm:block sm:min-h-0 sm:rounded-2xl sm:border sm:border-border sm:p-4 md:p-5"
-                    : "rounded-2xl border border-border p-4 md:p-5",
+                    ? "max-sm:flex max-sm:min-h-[78px] max-sm:items-center max-sm:gap-3 max-sm:rounded-none max-sm:border-0 max-sm:px-4 max-sm:py-3"
+                    : "",
                 editMode &&
                     "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
                 isDragging && "opacity-20",
@@ -569,6 +579,67 @@ function SortableCategoryCard({
 
 export type HomeItemStyle = "ios" | "cards";
 
+function useRightSwipeToClose(onClose: () => void) {
+    const touchStartRef = useRef<{
+        target: EventTarget | null;
+        x: number;
+        y: number;
+    } | null>(null);
+
+    function isInteractiveTarget(target: EventTarget | null) {
+        return (
+            target instanceof HTMLElement &&
+            Boolean(
+                target.closest(
+                    "button,input,select,textarea,[role='button'],[role='combobox'],[data-radix-select-trigger]",
+                ),
+            )
+        );
+    }
+
+    return {
+        onTouchStart(event: React.TouchEvent<HTMLElement>) {
+            if (window.innerWidth >= 640 || event.touches.length !== 1) {
+                touchStartRef.current = null;
+                return;
+            }
+
+            const touch = event.touches[0];
+
+            touchStartRef.current = {
+                target: event.target,
+                x: touch.clientX,
+                y: touch.clientY,
+            };
+        },
+        onTouchEnd(event: React.TouchEvent<HTMLElement>) {
+            const start = touchStartRef.current;
+            touchStartRef.current = null;
+
+            if (!start || window.innerWidth >= 640) {
+                return;
+            }
+
+            if (isInteractiveTarget(start.target)) {
+                return;
+            }
+
+            const touch = event.changedTouches[0];
+            const deltaX = touch.clientX - start.x;
+            const deltaY = touch.clientY - start.y;
+            const startedNearLeftEdge = start.x <= 72;
+            const isRightSwipe = deltaX > 90 && Math.abs(deltaY) < 60;
+
+            if (startedNearLeftEdge && isRightSwipe) {
+                onClose();
+            }
+        },
+        onTouchCancel() {
+            touchStartRef.current = null;
+        },
+    };
+}
+
 function CategoryCardActionMenu({
     category,
     onDeleteCategory,
@@ -607,7 +678,11 @@ function CategoryCardActionMenu({
             <Button
                 aria-expanded={isOpen}
                 aria-haspopup="menu"
-                className="h-8 w-8 rounded-md md:hover:bg-neutral-100"
+                className={cn(
+                    "h-8 w-8 rounded-md border border-transparent md:hover:bg-neutral-100",
+                    isOpen &&
+                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
+                )}
                 type="button"
                 variant="ghost"
                 size="icon"
@@ -666,17 +741,21 @@ function CategoryCardActionMenu({
 
 export function QuickTransactionModal({
     budget,
+    budgetsEnabled,
     category,
     month,
     onClose,
     onSetBudget,
+    onSetReusableBudget,
     onSubmit,
 }: {
     budget?: Budget;
+    budgetsEnabled: boolean;
     category: Category;
     month: string;
     onClose: () => void;
     onSetBudget: (limit: number) => void;
+    onSetReusableBudget: (limit: number) => void;
     onSubmit: (values: {
         amount: number;
         date: string;
@@ -692,20 +771,30 @@ export function QuickTransactionModal({
     const parsedAmount = parseDecimalInput(amount);
     const canSubmit = Number.isFinite(parsedAmount) && parsedAmount > 0;
     const [limit, setLimit] = useState("");
+    const [reuseBudget, setReuseBudget] = useState(true);
     const parsedLimit = parseDecimalInput(limit);
     const canSetBudget = Number.isFinite(parsedLimit) && parsedLimit > 0;
     const requiresBudget =
-        normalizeTransactionType(category.type) === "expense";
+        budgetsEnabled && normalizeTransactionType(category.type) === "expense";
+    const swipeGesture = useRightSwipeToClose(onClose);
 
     if (requiresBudget && !budget) {
         return (
             <EditModal onClose={onClose}>
-                <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
+                <Card
+                    className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border"
+                    {...swipeGesture}
+                >
                     <form
                         onSubmit={(event) => {
                             event.preventDefault();
 
                             if (!canSetBudget) {
+                                return;
+                            }
+
+                            if (reuseBudget) {
+                                onSetReusableBudget(parsedLimit);
                                 return;
                             }
 
@@ -746,6 +835,39 @@ export function QuickTransactionModal({
                                     }
                                 />
                             </FieldError>
+                            <div className="mt-4">
+                                <Label htmlFor="quick-reuse-budget">
+                                    Reuse budget
+                                </Label>
+                                <div className="mt-2 flex items-center gap-3">
+                                    <button
+                                        aria-checked={reuseBudget}
+                                        className={cn(
+                                            "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D99FF]/30",
+                                            reuseBudget
+                                                ? "bg-[#007AFF]"
+                                                : "bg-neutral-300",
+                                        )}
+                                        id="quick-reuse-budget"
+                                        role="switch"
+                                        type="button"
+                                        onClick={() =>
+                                            setReuseBudget((value) => !value)
+                                        }
+                                    >
+                                        <span
+                                            className={cn(
+                                                "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
+                                                reuseBudget && "left-[18px]",
+                                            )}
+                                        />
+                                    </button>
+                                    <p className="text-sm leading-5 text-muted-foreground">
+                                        Reuse this same budget for succeeding
+                                        months.
+                                    </p>
+                                </div>
+                            </div>
                             <Button
                                 className="mt-6 w-full sm:hidden"
                                 type="submit"
@@ -774,7 +896,10 @@ export function QuickTransactionModal({
 
     return (
         <EditModal onClose={onClose}>
-            <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border">
+            <Card
+                className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border"
+                {...swipeGesture}
+            >
                 <form
                     onSubmit={(event) => {
                         event.preventDefault();
@@ -816,7 +941,7 @@ export function QuickTransactionModal({
                             {formatMonthLabel(month)}.
                         </p>
                     </CardHeader>
-                    <CardContent className="space-y-5 px-6 pb-6 pt-0">
+                    <CardContent className="space-y-4 px-6 pb-6 pt-0">
                         <FieldError>
                             <Label htmlFor="quick-amount">Amount</Label>
                             <Input

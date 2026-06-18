@@ -57,7 +57,8 @@ import {
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { useForm } from "react-hook-form";
 import type { IconType } from "react-icons";
 import {
@@ -101,6 +102,12 @@ import {
     type CategoryFormValues,
     type TransactionFormValues,
 } from "@/lib/schema";
+import {
+    downloadBackupFile,
+    parseBudgetBackupPayload,
+    parseTransactionBackupPayload,
+    type TransactionImportResult,
+} from "@/lib/kwarta/backup";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type {
     AuthMode,
@@ -166,6 +173,11 @@ import {
 import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
 import { BudgetsView } from "@/components/kwarta/budgets-view";
 import { CategoryForm } from "@/components/kwarta/categories";
+import {
+    ImportConfirmationModal,
+    ImportLoadingModal,
+    TransactionBackupActions,
+} from "@/components/kwarta/backup-controls";
 
 type View = "dashboard" | "transactions" | "budgets" | "reports" | "settings";
 
@@ -174,6 +186,16 @@ type StoredWorkspace = {
     categories: Category[];
     transactions: Transaction[];
 };
+
+type PendingBackupImport =
+    | {
+          itemLabel: "transactions";
+          result: TransactionImportResult;
+      }
+    | {
+          budgets: Budget[];
+          itemLabel: "budgets";
+      };
 
 async function persistWorkspace(workspace: StoredWorkspace, userId: string) {
     const response = await fetch("/api/workspace", {
@@ -199,6 +221,7 @@ export function KwartaApp() {
     const [view, setView] = useState<View>("dashboard");
     const [homeItemStyle, setHomeItemStyle] =
         useState<HomeItemStyle>("ios");
+    const [budgetsEnabled, setBudgetsEnabled] = useState(true);
     const [selectedMonth, setSelectedMonth] = useState(() =>
         toMonthInputValue(new Date()),
     );
@@ -220,6 +243,18 @@ export function KwartaApp() {
     const [homeEditMode, setHomeEditMode] = useState(false);
     const [categoryPendingDelete, setCategoryPendingDelete] =
         useState<Category | null>(null);
+    const transactionImportInputRef = useRef<HTMLInputElement>(null);
+    const budgetImportInputRef = useRef<HTMLInputElement>(null);
+    const [transactionImportError, setTransactionImportError] = useState<
+        string | null
+    >(null);
+    const [budgetImportError, setBudgetImportError] = useState<string | null>(
+        null,
+    );
+    const [isImportingBackup, setIsImportingBackup] =
+        useState<"transactions" | "budgets" | null>(null);
+    const [pendingBackupImport, setPendingBackupImport] =
+        useState<PendingBackupImport | null>(null);
     const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
     const userId = user?.id ?? null;
@@ -234,6 +269,14 @@ export function KwartaApp() {
             storedHomeItemStyle === "cards"
         ) {
             setHomeItemStyle(storedHomeItemStyle);
+        }
+
+        const storedBudgetsEnabled = window.localStorage.getItem(
+            "kwarta:budgets-enabled",
+        );
+
+        if (storedBudgetsEnabled === "true" || storedBudgetsEnabled === "false") {
+            setBudgetsEnabled(storedBudgetsEnabled === "true");
         }
 
         const params = new URLSearchParams(window.location.search);
@@ -271,6 +314,13 @@ export function KwartaApp() {
     useEffect(() => {
         window.localStorage.setItem("kwarta:home-item-style", homeItemStyle);
     }, [homeItemStyle]);
+
+    useEffect(() => {
+        window.localStorage.setItem(
+            "kwarta:budgets-enabled",
+            String(budgetsEnabled),
+        );
+    }, [budgetsEnabled]);
 
     useEffect(() => {
         if (!isAuthed || !userId) {
@@ -412,6 +462,97 @@ export function KwartaApp() {
             }));
     }, [monthTransactions]);
 
+    async function applyTransactionImport(result: TransactionImportResult) {
+        setCategories(result.categories);
+        setTransactions(result.transactions);
+        setEditingTransactionId(null);
+        setTransactionImportError(null);
+    }
+
+    async function applyBudgetImport(nextBudgets: Budget[]) {
+        setBudgets(nextBudgets);
+        setEditingBudgetId(null);
+        setBudgetImportError(null);
+    }
+
+    async function handleTransactionImportFile(file: File) {
+        setIsImportingBackup("transactions");
+        let nextImport: TransactionImportResult;
+
+        try {
+            nextImport = parseTransactionBackupPayload(
+                JSON.parse(await file.text()),
+                categories,
+            );
+        } catch {
+            setTransactionImportError(
+                "Transactions could not be imported. Check that this is a Kwarta transactions JSON backup.",
+            );
+            setIsImportingBackup(null);
+            return;
+        }
+
+        if (transactions.length > 0) {
+            setPendingBackupImport({
+                itemLabel: "transactions",
+                result: nextImport,
+            });
+            setIsImportingBackup(null);
+            return;
+        }
+
+        await applyTransactionImport(nextImport);
+        setIsImportingBackup(null);
+    }
+
+    async function handleBudgetImportFile(file: File) {
+        setIsImportingBackup("budgets");
+        let nextBudgets: Budget[];
+
+        try {
+            nextBudgets = parseBudgetBackupPayload(
+                JSON.parse(await file.text()),
+                categories,
+            );
+        } catch {
+            setBudgetImportError(
+                "Budgets could not be imported. Check that this is a Kwarta budgets JSON backup.",
+            );
+            setIsImportingBackup(null);
+            return;
+        }
+
+        if (budgets.length > 0) {
+            setPendingBackupImport({
+                budgets: nextBudgets,
+                itemLabel: "budgets",
+            });
+            setIsImportingBackup(null);
+            return;
+        }
+
+        await applyBudgetImport(nextBudgets);
+        setIsImportingBackup(null);
+    }
+
+    async function confirmBackupImport() {
+        if (!pendingBackupImport) {
+            return;
+        }
+
+        const nextImport = pendingBackupImport;
+        setPendingBackupImport(null);
+        setIsImportingBackup(nextImport.itemLabel);
+
+        if (nextImport.itemLabel === "transactions") {
+            await applyTransactionImport(nextImport.result);
+        } else {
+            await applyBudgetImport(nextImport.budgets);
+        }
+
+        setIsImportingBackup(null);
+    }
+
     if (!authReady || (isAuthed && !workspaceReady)) {
         return <AuthLoadingScreen />;
     }
@@ -499,6 +640,7 @@ export function KwartaApp() {
                 {view === "dashboard" && (
                     <HomeView
                         budgets={monthBudgets}
+                        budgetsEnabled={budgetsEnabled}
                         editMode={homeEditMode}
                         expenseCategories={expenseCategories}
                         homeItemStyle={homeItemStyle}
@@ -542,25 +684,6 @@ export function KwartaApp() {
                         onEdit={(transaction) =>
                             setEditingTransactionId(transaction.id)
                         }
-                        onImport={async (
-                            nextTransactions,
-                            nextCategories = categories,
-                        ) => {
-                            if (userId) {
-                                await persistWorkspace(
-                                    {
-                                        budgets,
-                                        categories: nextCategories,
-                                        transactions: nextTransactions,
-                                    },
-                                    userId,
-                                );
-                            }
-
-                            setCategories(nextCategories);
-                            setTransactions(nextTransactions);
-                            setEditingTransactionId(null);
-                        }}
                         onSubmit={(values) => {
                             if (editingTransactionId) {
                                 setTransactions((current) =>
@@ -594,7 +717,6 @@ export function KwartaApp() {
                                 ...current,
                             ]);
                         }}
-                        allTransactions={transactions}
                         transactions={monthTransactions}
                     />
                 )}
@@ -603,6 +725,7 @@ export function KwartaApp() {
                     <BudgetsView
                         allBudgets={budgets}
                         budgets={monthBudgets}
+                        budgetsEnabled={budgetsEnabled}
                         categories={expenseCategories}
                         editingId={editingBudgetId}
                         month={selectedMonth}
@@ -613,21 +736,6 @@ export function KwartaApp() {
                             )
                         }
                         onEdit={(budget) => setEditingBudgetId(budget.id)}
-                        onImport={async (nextBudgets) => {
-                            if (userId) {
-                                await persistWorkspace(
-                                    {
-                                        budgets: nextBudgets,
-                                        categories,
-                                        transactions,
-                                    },
-                                    userId,
-                                );
-                            }
-
-                            setBudgets(nextBudgets);
-                            setEditingBudgetId(null);
-                        }}
                         onSubmit={(values) => {
                             if (editingBudgetId) {
                                 setBudgets((current) =>
@@ -682,6 +790,7 @@ export function KwartaApp() {
 
                         <DashboardView
                             budgets={monthBudgets}
+                            budgetsEnabled={budgetsEnabled}
                             categories={categories}
                             cashflowData={cashflowData}
                             spendingByCategory={spendingByCategory}
@@ -694,14 +803,38 @@ export function KwartaApp() {
                     <SettingsView
                         accountName={accountName}
                         email={user?.email ?? "Account session"}
+                        budgetsEnabled={budgetsEnabled}
+                        budgetImportError={budgetImportError}
                         homeItemStyle={homeItemStyle}
+                        budgetImportInputRef={budgetImportInputRef}
+                        transactionImportError={transactionImportError}
+                        transactionImportInputRef={transactionImportInputRef}
                         user={user}
+                        onBudgetsEnabledChange={setBudgetsEnabled}
+                        onBudgetExport={() =>
+                            downloadBackupFile("budgets", budgets, categories)
+                        }
+                        onBudgetImportClick={() =>
+                            budgetImportInputRef.current?.click()
+                        }
+                        onBudgetImportFile={handleBudgetImportFile}
                         onHomeItemStyleChange={setHomeItemStyle}
                         onSignOut={async () => {
                             await supabase?.auth.signOut();
                             setUser(null);
                             setIsAuthed(false);
                         }}
+                        onTransactionExport={() =>
+                            downloadBackupFile(
+                                "transactions",
+                                transactions,
+                                categories,
+                            )
+                        }
+                        onTransactionImportClick={() =>
+                            transactionImportInputRef.current?.click()
+                        }
+                        onTransactionImportFile={handleTransactionImportFile}
                     />
                 )}
             </div>
@@ -710,6 +843,7 @@ export function KwartaApp() {
                     budget={monthBudgets.find(
                         (budget) => budget.categoryId === quickAddCategory.id,
                     )}
+                    budgetsEnabled={budgetsEnabled}
                     category={quickAddCategory}
                     month={selectedMonth}
                     onClose={() => setQuickAddCategory(null)}
@@ -739,6 +873,17 @@ export function KwartaApp() {
                                 ...current,
                             ];
                         });
+                        setQuickAddCategory(null);
+                    }}
+                    onSetReusableBudget={(limit) => {
+                        setBudgets((current) =>
+                            upsertReusableBudgets(current, {
+                                categoryId: quickAddCategory.id,
+                                limit,
+                                month: selectedMonth,
+                                reuseBudget: true,
+                            }),
+                        );
                         setQuickAddCategory(null);
                     }}
                     onSubmit={({ amount, date, subcategory }) => {
@@ -833,6 +978,21 @@ export function KwartaApp() {
                         setCategoryPendingDelete(null);
                     }}
                 />
+            )}
+            {pendingBackupImport && (
+                <ImportConfirmationModal
+                    count={
+                        pendingBackupImport.itemLabel === "transactions"
+                            ? pendingBackupImport.result.transactions.length
+                            : pendingBackupImport.budgets.length
+                    }
+                    itemLabel={pendingBackupImport.itemLabel}
+                    onCancel={() => setPendingBackupImport(null)}
+                    onConfirm={confirmBackupImport}
+                />
+            )}
+            {isImportingBackup && (
+                <ImportLoadingModal itemLabel={isImportingBackup} />
             )}
             <MobileTabBar
                 activeView={view}
@@ -978,18 +1138,42 @@ function MobileTabBar({
 
 function SettingsView({
     accountName,
+    budgetImportError,
+    budgetImportInputRef,
+    budgetsEnabled,
     email,
     homeItemStyle,
+    transactionImportError,
+    transactionImportInputRef,
     user,
+    onBudgetExport,
+    onBudgetImportClick,
+    onBudgetImportFile,
+    onBudgetsEnabledChange,
     onHomeItemStyleChange,
     onSignOut,
+    onTransactionExport,
+    onTransactionImportClick,
+    onTransactionImportFile,
 }: {
     accountName: string;
+    budgetImportError: string | null;
+    budgetImportInputRef: RefObject<HTMLInputElement>;
+    budgetsEnabled: boolean;
     email: string;
     homeItemStyle: HomeItemStyle;
+    transactionImportError: string | null;
+    transactionImportInputRef: RefObject<HTMLInputElement>;
     user: User | null;
+    onBudgetExport: () => void;
+    onBudgetImportClick: () => void;
+    onBudgetImportFile: (file: File) => void;
+    onBudgetsEnabledChange: (enabled: boolean) => void;
     onHomeItemStyleChange: (style: HomeItemStyle) => void;
     onSignOut: () => void;
+    onTransactionExport: () => void;
+    onTransactionImportClick: () => void;
+    onTransactionImportFile: (file: File) => void;
 }) {
     const options: Array<{
         description: string;
@@ -1015,10 +1199,30 @@ function SettingsView({
         <div className="w-full space-y-5">
             <PageHeader
                 title="Settings"
-                description="Tune Kwarta for the way you like to scan your month."
+                description="Manage app preferences, budget behavior, and account access."
             />
 
-            <div className="grid gap-4 md:gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="max-w-4xl space-y-4 md:space-y-5">
+                <Card className="overflow-hidden bg-white">
+                    <CardHeader>
+                        <CardTitle>General</CardTitle>
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            Control core app behavior and visibility.
+                        </p>
+                    </CardHeader>
+                    <CardContent>
+                        <SettingsSwitch
+                            checked={!budgetsEnabled}
+                            description="Add expenses without setting category budgets, and hide budget progress across Home, Budgets, and Reports."
+                            id="disable-budget-tracking"
+                            label="Disable Budget Tracking"
+                            onChange={(checked) =>
+                                onBudgetsEnabledChange(!checked)
+                            }
+                        />
+                    </CardContent>
+                </Card>
+
                 <Card className="overflow-hidden bg-white">
                     <CardHeader>
                         <CardTitle>Home layout</CardTitle>
@@ -1079,7 +1283,39 @@ function SettingsView({
 
                 <Card className="overflow-hidden bg-white">
                     <CardHeader>
+                        <CardTitle>Backup</CardTitle>
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            Import or export your Kwarta data as JSON backups.
+                        </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <BackupActionRow
+                            description="Posted income and expense entries."
+                            error={transactionImportError}
+                            importInputRef={transactionImportInputRef}
+                            label="Transactions"
+                            onExport={onTransactionExport}
+                            onImportClick={onTransactionImportClick}
+                            onImportFile={onTransactionImportFile}
+                        />
+                        <BackupActionRow
+                            description="Monthly category spending limits."
+                            error={budgetImportError}
+                            importInputRef={budgetImportInputRef}
+                            label="Budgets"
+                            onExport={onBudgetExport}
+                            onImportClick={onBudgetImportClick}
+                            onImportFile={onBudgetImportFile}
+                        />
+                    </CardContent>
+                </Card>
+
+                <Card className="overflow-hidden bg-white">
+                    <CardHeader>
                         <CardTitle>Account</CardTitle>
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            Review your signed-in profile and session access.
+                        </p>
                     </CardHeader>
                     <CardContent className="space-y-5">
                         <div className="flex min-w-0 items-center gap-3">
@@ -1105,6 +1341,85 @@ function SettingsView({
                     </CardContent>
                 </Card>
             </div>
+        </div>
+    );
+}
+
+function SettingsSwitch({
+    checked,
+    description,
+    id,
+    label,
+    onChange,
+}: {
+    checked: boolean;
+    description: string;
+    id: string;
+    label: string;
+    onChange: (checked: boolean) => void;
+}) {
+    return (
+        <div className="flex items-center justify-between gap-6">
+            <div>
+                <Label htmlFor={id}>{label}</Label>
+                <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                    {description}
+                </p>
+            </div>
+            <button
+                aria-checked={checked}
+                className={cn(
+                    "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D99FF]/30",
+                    checked ? "bg-[#007AFF]" : "bg-neutral-300",
+                )}
+                id={id}
+                role="switch"
+                type="button"
+                onClick={() => onChange(!checked)}
+            >
+                <span
+                    className={cn(
+                        "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
+                        checked && "left-[18px]",
+                    )}
+                />
+            </button>
+        </div>
+    );
+}
+
+function BackupActionRow({
+    description,
+    error,
+    importInputRef,
+    label,
+    onExport,
+    onImportClick,
+    onImportFile,
+}: {
+    description: string;
+    error: string | null;
+    importInputRef: RefObject<HTMLInputElement>;
+    label: string;
+    onExport: () => void;
+    onImportClick: () => void;
+    onImportFile: (file: File) => void;
+}) {
+    return (
+        <div className="flex flex-col gap-3 rounded-md border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+                <p className="font-medium leading-5">{label}</p>
+                <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                    {description}
+                </p>
+            </div>
+            <TransactionBackupActions
+                error={error}
+                importInputRef={importInputRef}
+                onExport={onExport}
+                onImportClick={onImportClick}
+                onImportFile={onImportFile}
+            />
         </div>
     );
 }

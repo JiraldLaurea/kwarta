@@ -20,12 +20,14 @@ import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
 
 export function DashboardView({
     budgets,
+    budgetsEnabled,
     categories,
     cashflowData,
     spendingByCategory,
     transactions,
 }: {
     budgets: Budget[];
+    budgetsEnabled: boolean;
     categories: Category[];
     cashflowData: Array<{ date: string; income: number; expense: number }>;
     spendingByCategory: Array<{ name: string; value: number; color: string }>;
@@ -37,11 +39,29 @@ export function DashboardView({
 
     return (
         <div className="grid gap-4 md:gap-5 lg:grid-cols-[1.4fr_0.6fr]">
-            <BudgetProgressList
-                budgets={budgets}
-                categories={categories}
-                transactions={expenses}
-            />
+            {budgetsEnabled ? (
+                <BudgetProgressList
+                    budgets={budgets}
+                    categories={categories}
+                    transactions={expenses}
+                />
+            ) : (
+                <Card className="flex h-full flex-col">
+                    <CardHeader>
+                        <CardTitle>Budget progress</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                            Budget tracking is disabled in Settings.
+                        </p>
+                    </CardHeader>
+                    <CardContent className="flex flex-1">
+                        <EmptyState
+                            className="flex min-h-48 flex-1 flex-col items-center justify-center md:min-h-72"
+                            title="Budgets disabled"
+                            description="Turn budget tracking back on to compare spending against monthly limits."
+                        />
+                    </CardContent>
+                </Card>
+            )}
 
             <Card>
                 <CardHeader>

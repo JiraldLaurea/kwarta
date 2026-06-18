@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Upload, Download } from "lucide-react";
-import { useRef, useState } from "react";
+import { Plus } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { budgetSchema, type BudgetFormValues } from "@/lib/schema";
 import type { Budget, Category, Transaction } from "@/lib/types";
@@ -13,10 +13,6 @@ import {
     handleDecimalInput,
     parseDecimalInput,
 } from "@/lib/kwarta/helpers";
-import {
-    downloadBackupFile,
-    parseBudgetBackupPayload,
-} from "@/lib/kwarta/backup";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,89 +27,53 @@ import {
     MonthPickerInput,
     PageHeader,
 } from "@/components/kwarta/shared";
-import {
-    ImportConfirmationModal,
-    ImportLoadingModal,
-    TransactionBackupActions,
-} from "@/components/kwarta/backup-controls";
 export function BudgetsView({
     allBudgets,
     budgets,
+    budgetsEnabled,
     categories,
     editingId,
     month,
     onCancelEdit,
     onDelete,
     onEdit,
-    onImport,
     onSubmit,
     transactions,
 }: {
     allBudgets: Budget[];
     budgets: Budget[];
+    budgetsEnabled: boolean;
     categories: Category[];
     editingId: string | null;
     month: string;
     onCancelEdit: () => void;
     onDelete: (id: string) => void;
     onEdit: (budget: Budget) => void;
-    onImport: (budgets: Budget[]) => Promise<void>;
     onSubmit: (values: BudgetFormValues) => void;
     transactions: Transaction[];
 }) {
     const editing = allBudgets.find((budget) => budget.id === editingId);
-    const importInputRef = useRef<HTMLInputElement>(null);
     const [isAddingBudget, setIsAddingBudget] = useState(false);
-    const [importError, setImportError] = useState<string | null>(null);
-    const [isImporting, setIsImporting] = useState(false);
-    const [pendingImport, setPendingImport] = useState<Budget[] | null>(null);
 
-    async function handleImportFile(file: File) {
-        setIsImporting(true);
-
-        try {
-            const nextBudgets = parseBudgetBackupPayload(
-                JSON.parse(await file.text()),
-                categories,
-            );
-
-            setImportError(null);
-
-            if (allBudgets.length > 0) {
-                setPendingImport(nextBudgets);
-                setIsImporting(false);
-                return;
-            }
-
-            await onImport(nextBudgets);
-        } catch {
-            setImportError(
-                "Budgets could not be imported. Check that this is a Kwarta budgets JSON backup.",
-            );
-        } finally {
-            setIsImporting(false);
-        }
-    }
-
-    async function confirmImport() {
-        if (!pendingImport) {
-            return;
-        }
-
-        const nextBudgets = pendingImport;
-        setPendingImport(null);
-        setIsImporting(true);
-
-        try {
-            await onImport(nextBudgets);
-            setImportError(null);
-        } catch {
-            setImportError(
-                "Imported budgets could not be saved. Please try importing again.",
-            );
-        } finally {
-            setIsImporting(false);
-        }
+    if (!budgetsEnabled) {
+        return (
+            <div className="space-y-4 md:space-y-5">
+                <PageHeader
+                    title="Budgets"
+                    description="Set monthly limits and track category spending."
+                />
+                <Card className="bg-white">
+                    <CardHeader>
+                        <CardTitle>Budgets are disabled</CardTitle>
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            Turn budgets back on in Settings to set limits,
+                            reuse monthly budgets, and track remaining or excess
+                            spending.
+                        </p>
+                    </CardHeader>
+                </Card>
+            </div>
+        );
     }
 
     return (
@@ -124,21 +84,6 @@ export function BudgetsView({
                     description="Set monthly limits and track category spending."
                     actions={
                         <div className="flex flex-wrap gap-2 sm:justify-end">
-                            <TransactionBackupActions
-                                error={importError}
-                                importInputRef={importInputRef}
-                                onExport={() =>
-                                    downloadBackupFile(
-                                        "budgets",
-                                        allBudgets,
-                                        categories,
-                                    )
-                                }
-                                onImportClick={() =>
-                                    importInputRef.current?.click()
-                                }
-                                onImportFile={handleImportFile}
-                            />
                             <Button
                                 type="button"
                                 onClick={() => setIsAddingBudget(true)}
@@ -193,15 +138,6 @@ export function BudgetsView({
                     />
                 </EditModal>
             )}
-            {pendingImport && (
-                <ImportConfirmationModal
-                    count={pendingImport.length}
-                    itemLabel="budgets"
-                    onCancel={() => setPendingImport(null)}
-                    onConfirm={confirmImport}
-                />
-            )}
-            {isImporting && <ImportLoadingModal itemLabel="budgets" />}
         </>
     );
 }
