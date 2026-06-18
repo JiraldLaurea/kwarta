@@ -431,6 +431,66 @@ function getPopoverSide(element: HTMLElement | null, estimatedHeight: number) {
         : "below";
 }
 
+export function useRightSwipeToClose(onClose: () => void) {
+    const touchStartRef = useRef<{
+        target: EventTarget | null;
+        x: number;
+        y: number;
+    } | null>(null);
+
+    function isInteractiveTarget(target: EventTarget | null) {
+        return (
+            target instanceof HTMLElement &&
+            Boolean(
+                target.closest(
+                    "button,input,select,textarea,[role='button'],[role='combobox'],[data-radix-select-trigger]",
+                ),
+            )
+        );
+    }
+
+    return {
+        onTouchStart(event: React.TouchEvent<HTMLElement>) {
+            if (window.innerWidth >= 640 || event.touches.length !== 1) {
+                touchStartRef.current = null;
+                return;
+            }
+
+            const touch = event.touches[0];
+
+            touchStartRef.current = {
+                target: event.target,
+                x: touch.clientX,
+                y: touch.clientY,
+            };
+        },
+        onTouchEnd(event: React.TouchEvent<HTMLElement>) {
+            const start = touchStartRef.current;
+            touchStartRef.current = null;
+
+            if (!start || window.innerWidth >= 640) {
+                return;
+            }
+
+            if (isInteractiveTarget(start.target)) {
+                return;
+            }
+
+            const touch = event.changedTouches[0];
+            const deltaX = touch.clientX - start.x;
+            const deltaY = touch.clientY - start.y;
+            const isRightSwipe = deltaX > 90 && Math.abs(deltaY) < 60;
+
+            if (isRightSwipe) {
+                onClose();
+            }
+        },
+        onTouchCancel() {
+            touchStartRef.current = null;
+        },
+    };
+}
+
 export function EditModal({
     children,
     onClose,
@@ -438,6 +498,8 @@ export function EditModal({
     children: React.ReactNode;
     onClose: () => void;
 }) {
+    const swipeGesture = useRightSwipeToClose(onClose);
+
     useEffect(() => {
         const scrollY = window.scrollY;
         const previousBodyPosition = document.body.style.position;
@@ -477,7 +539,10 @@ export function EditModal({
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-white sm:bg-transparent sm:px-4 sm:pb-6 sm:pt-4 sm:items-center sm:py-6">
+        <div
+            className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-white sm:bg-transparent sm:px-4 sm:pb-6 sm:pt-4 sm:items-center sm:py-6"
+            {...swipeGesture}
+        >
             <button
                 aria-label="Close modal"
                 className="absolute inset-0 hidden cursor-default bg-white/45 backdrop-blur-sm sm:block"

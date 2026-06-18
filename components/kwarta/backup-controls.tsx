@@ -3,6 +3,7 @@
 import { Download, Upload } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useRightSwipeToClose } from "@/components/kwarta/shared";
 
 export function TransactionBackupActions({
     error,
@@ -18,12 +19,22 @@ export function TransactionBackupActions({
     onImportFile: (file: File) => void;
 }) {
     return (
-        <div className="relative flex gap-2">
-            <Button type="button" variant="secondary" onClick={onImportClick}>
+        <div className="relative grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+            <Button
+                className="w-full justify-center sm:w-auto"
+                type="button"
+                variant="secondary"
+                onClick={onImportClick}
+            >
                 <Upload className="h-4 w-4" aria-hidden />
                 Import
             </Button>
-            <Button type="button" variant="secondary" onClick={onExport}>
+            <Button
+                className="w-full justify-center sm:w-auto"
+                type="button"
+                variant="secondary"
+                onClick={onExport}
+            >
                 <Download className="h-4 w-4" aria-hidden />
                 Export
             </Button>
@@ -61,8 +72,13 @@ export function ImportConfirmationModal({
     onCancel: () => void;
     onConfirm: () => void;
 }) {
+    const swipeGesture = useRightSwipeToClose(onCancel);
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
+            {...swipeGesture}
+        >
             <button
                 aria-label="Cancel import"
                 className="absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm"

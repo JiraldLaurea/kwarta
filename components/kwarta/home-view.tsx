@@ -579,67 +579,6 @@ function SortableCategoryCard({
 
 export type HomeItemStyle = "ios" | "cards";
 
-function useRightSwipeToClose(onClose: () => void) {
-    const touchStartRef = useRef<{
-        target: EventTarget | null;
-        x: number;
-        y: number;
-    } | null>(null);
-
-    function isInteractiveTarget(target: EventTarget | null) {
-        return (
-            target instanceof HTMLElement &&
-            Boolean(
-                target.closest(
-                    "button,input,select,textarea,[role='button'],[role='combobox'],[data-radix-select-trigger]",
-                ),
-            )
-        );
-    }
-
-    return {
-        onTouchStart(event: React.TouchEvent<HTMLElement>) {
-            if (window.innerWidth >= 640 || event.touches.length !== 1) {
-                touchStartRef.current = null;
-                return;
-            }
-
-            const touch = event.touches[0];
-
-            touchStartRef.current = {
-                target: event.target,
-                x: touch.clientX,
-                y: touch.clientY,
-            };
-        },
-        onTouchEnd(event: React.TouchEvent<HTMLElement>) {
-            const start = touchStartRef.current;
-            touchStartRef.current = null;
-
-            if (!start || window.innerWidth >= 640) {
-                return;
-            }
-
-            if (isInteractiveTarget(start.target)) {
-                return;
-            }
-
-            const touch = event.changedTouches[0];
-            const deltaX = touch.clientX - start.x;
-            const deltaY = touch.clientY - start.y;
-            const startedNearLeftEdge = start.x <= 72;
-            const isRightSwipe = deltaX > 90 && Math.abs(deltaY) < 60;
-
-            if (startedNearLeftEdge && isRightSwipe) {
-                onClose();
-            }
-        },
-        onTouchCancel() {
-            touchStartRef.current = null;
-        },
-    };
-}
-
 function CategoryCardActionMenu({
     category,
     onDeleteCategory,
@@ -776,15 +715,11 @@ export function QuickTransactionModal({
     const canSetBudget = Number.isFinite(parsedLimit) && parsedLimit > 0;
     const requiresBudget =
         budgetsEnabled && normalizeTransactionType(category.type) === "expense";
-    const swipeGesture = useRightSwipeToClose(onClose);
 
     if (requiresBudget && !budget) {
         return (
             <EditModal onClose={onClose}>
-                <Card
-                    className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border"
-                    {...swipeGesture}
-                >
+                <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
                     <form
                         onSubmit={(event) => {
                             event.preventDefault();
@@ -896,10 +831,7 @@ export function QuickTransactionModal({
 
     return (
         <EditModal onClose={onClose}>
-            <Card
-                className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border"
-                {...swipeGesture}
-            >
+            <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border">
                 <form
                     onSubmit={(event) => {
                         event.preventDefault();
