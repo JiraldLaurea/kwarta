@@ -173,7 +173,11 @@ export function DatePickerInput({
                 aria-expanded={isOpen}
                 aria-haspopup="dialog"
                 aria-label={ariaLabel}
-                className="w-full justify-start px-3 text-left font-normal"
+                className={cn(
+                    "w-full justify-start px-3 text-left font-normal",
+                    isOpen &&
+                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
+                )}
                 type="button"
                 variant="secondary"
                 onClick={() => setIsOpen((open) => !open)}
@@ -323,6 +327,8 @@ export function MonthPickerInput({
                     "w-full justify-start px-3 text-left font-normal",
                     compact &&
                         "rounded-full border-0 bg-[#E8F0FE] text-[#0B57D0] shadow-none md:hover:bg-[#DDEAFF]",
+                    isOpen &&
+                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
                 )}
                 id={id}
                 type="button"
