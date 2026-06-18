@@ -75,6 +75,26 @@ export const categoryIconChoices = [
     { value: "badge-dollar-sign", label: "Income", icon: BadgeDollarSign },
 ] satisfies Array<{ value: string; label: string; icon: LucideIcon }>;
 
+export function PageHeader({
+    actions,
+    description,
+    title,
+}: {
+    actions?: React.ReactNode;
+    description: string;
+    title: string;
+}) {
+    return (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+                <h1 className="text-xl font-medium leading-7">{title}</h1>
+                <p className="text-sm text-muted-foreground">{description}</p>
+            </div>
+            {actions}
+        </div>
+    );
+}
+
 const categoryIconMap = new Map(
     categoryIconChoices.map((choice) => [choice.value, choice.icon]),
 );
@@ -413,6 +433,30 @@ export function EditModal({
     onClose: () => void;
 }) {
     useEffect(() => {
+        const scrollY = window.scrollY;
+        const previousBodyPosition = document.body.style.position;
+        const previousBodyTop = document.body.style.top;
+        const previousBodyWidth = document.body.style.width;
+        const previousBodyOverflow = document.body.style.overflow;
+        const previousHtmlOverflow = document.documentElement.style.overflow;
+
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+        document.body.style.position = "fixed";
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.width = "100%";
+
+        return () => {
+            document.documentElement.style.overflow = previousHtmlOverflow;
+            document.body.style.overflow = previousBodyOverflow;
+            document.body.style.position = previousBodyPosition;
+            document.body.style.top = previousBodyTop;
+            document.body.style.width = previousBodyWidth;
+            window.scrollTo(0, scrollY);
+        };
+    }, []);
+
+    useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
             if (event.key === "Escape") {
                 onClose();
@@ -543,15 +587,25 @@ export function ProfileImage({
     size = "sm",
     user,
 }: {
-    size?: "xs" | "sm";
+    size?: "xs" | "sm" | "md";
     user: User | null;
 }) {
     const avatarUrl =
         typeof user?.user_metadata?.avatar_url === "string"
             ? user.user_metadata.avatar_url
             : null;
-    const dimension = size === "xs" ? 20 : 24;
-    const className = size === "xs" ? "h-5 w-5" : "h-6 w-6";
+    const dimensions = {
+        xs: 20,
+        sm: 24,
+        md: 40,
+    };
+    const classNames = {
+        xs: "h-5 w-5",
+        sm: "h-6 w-6",
+        md: "h-10 w-10",
+    };
+    const dimension = dimensions[size];
+    const className = classNames[size];
 
     if (avatarUrl) {
         return (

@@ -20,6 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
     Check,
+    ChevronRight,
     Edit3,
     Ellipsis,
     GripVertical,
@@ -61,6 +62,7 @@ export function HomeView({
     budgets,
     editMode,
     expenseCategories,
+    homeItemStyle,
     incomeCategories,
     month,
     onAddCategory,
@@ -75,6 +77,7 @@ export function HomeView({
     budgets: Budget[];
     editMode: boolean;
     expenseCategories: Category[];
+    homeItemStyle: HomeItemStyle;
     incomeCategories: Category[];
     month: string;
     onAddCategory: () => void;
@@ -126,6 +129,7 @@ export function HomeView({
                 budgets={budgets}
                 editMode={editMode}
                 title="Expenses"
+                homeItemStyle={homeItemStyle}
                 categories={expenseCategories}
                 onDeleteCategory={onDeleteCategory}
                 onEditCategory={onEditCategory}
@@ -137,6 +141,7 @@ export function HomeView({
                 budgets={budgets}
                 editMode={editMode}
                 title="Income"
+                homeItemStyle={homeItemStyle}
                 categories={incomeCategories}
                 onDeleteCategory={onDeleteCategory}
                 onEditCategory={onEditCategory}
@@ -152,6 +157,7 @@ function CategoryQuickAddSection({
     budgets,
     categories,
     editMode,
+    homeItemStyle,
     onDeleteCategory,
     onEditCategory,
     onReorderCategory,
@@ -162,6 +168,7 @@ function CategoryQuickAddSection({
     budgets: Budget[];
     categories: Category[];
     editMode: boolean;
+    homeItemStyle: HomeItemStyle;
     onDeleteCategory: (category: Category) => void;
     onEditCategory: (category: Category) => void;
     onReorderCategory: (
@@ -184,6 +191,7 @@ function CategoryQuickAddSection({
         () => categories.map((category) => category.id),
         [categories],
     );
+    const usesIosStyle = homeItemStyle === "ios";
     const totalsByCategoryId = useMemo(() => {
         const totals = new Map<string, number>();
 
@@ -243,7 +251,9 @@ function CategoryQuickAddSection({
 
     return (
         <section>
-            <h2 className="mb-3 text-xl font-medium leading-7">{title}</h2>
+            <h2 className="mb-3 text-lg font-medium leading-6 sm:text-xl sm:leading-7">
+                {title}
+            </h2>
             {categories.length === 0 ? (
                 <EmptyState
                     title={`No ${title.toLowerCase()} categories yet`}
@@ -261,13 +271,20 @@ function CategoryQuickAddSection({
                         items={categoryIds}
                         strategy={rectSortingStrategy}
                     >
-                        <div className="grid grid-cols-3 gap-2 md:gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                        <div
+                            className={cn(
+                                usesIosStyle
+                                    ? "overflow-hidden rounded-[28px] border border-border bg-white divide-y divide-border sm:grid sm:grid-cols-3 sm:gap-2 sm:divide-y-0 sm:overflow-visible sm:rounded-none sm:border-0 sm:bg-transparent md:gap-3 lg:grid-cols-4"
+                                    : "grid grid-cols-3 gap-2 md:gap-3 sm:grid-cols-3 lg:grid-cols-4",
+                            )}
+                        >
                             {categories.map((category) => (
                                 <SortableCategoryCard
                                     key={category.id}
                                     category={category}
                                     disabled={!editMode}
                                     editMode={editMode}
+                                    homeItemStyle={homeItemStyle}
                                     isOverlay={false}
                                     onDeleteCategory={onDeleteCategory}
                                     onEditCategory={onEditCategory}
@@ -288,6 +305,7 @@ function CategoryQuickAddSection({
                                 category={activeCategory}
                                 disabled
                                 editMode={editMode}
+                                homeItemStyle={homeItemStyle}
                                 isOverlay
                                 onDeleteCategory={onDeleteCategory}
                                 onEditCategory={onEditCategory}
@@ -313,6 +331,7 @@ function SortableCategoryCard({
     category,
     disabled,
     editMode,
+    homeItemStyle,
     isOverlay,
     onDeleteCategory,
     onEditCategory,
@@ -323,6 +342,7 @@ function SortableCategoryCard({
     category: Category;
     disabled: boolean;
     editMode: boolean;
+    homeItemStyle: HomeItemStyle;
     isOverlay: boolean;
     onDeleteCategory: (category: Category) => void;
     onEditCategory: (category: Category) => void;
@@ -349,6 +369,16 @@ function SortableCategoryCard({
     };
     const hasBudgetTracking =
         normalizeTransactionType(category.type) === "expense";
+    const usesIosStyle = homeItemStyle === "ios";
+    const budgetStatus = budget
+        ? total > budget.limit
+            ? `${formatCurrency(total - budget.limit)} excess`
+            : `${formatCurrency(budget.limit - total)} left`
+        : "No budget set";
+    const budgetProgressWidth = `${Math.min(
+        100,
+        budget && budget.limit > 0 ? (total / budget.limit) * 100 : 0,
+    )}%`;
 
     return (
         <div
@@ -357,7 +387,10 @@ function SortableCategoryCard({
             {...attributes}
             {...listeners}
             className={cn(
-                `relative rounded-2xl bg-white border border-border p-4 text-left transition-[border-color,box-shadow,opacity] md:hover:border-[var(--category-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:p-5`,
+                "relative bg-white text-left transition-[border-color,box-shadow,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:border-[var(--category-color)]",
+                usesIosStyle
+                    ? "flex min-h-[78px] items-center gap-3 px-4 py-3 sm:block sm:min-h-0 sm:rounded-2xl sm:border sm:border-border sm:p-4 md:p-5"
+                    : "rounded-2xl border border-border p-4 md:p-5",
                 editMode &&
                     "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
                 isDragging && "opacity-20",
@@ -378,12 +411,27 @@ function SortableCategoryCard({
                 }
             }}
         >
-            <div className="mb-2 md:mb-4 flex items-start justify-center md:justify-between gap-3">
+            <div
+                className={cn(
+                    "flex items-start gap-3",
+                    usesIosStyle
+                        ? "shrink-0 sm:mb-2 sm:justify-center md:mb-4 md:justify-between"
+                        : "mb-2 justify-center md:mb-4 md:justify-between",
+                )}
+            >
                 <div className="flex items-center gap-2">
                     <CategoryIconBadge
                         category={category}
-                        className="h-10 w-10"
-                        iconClassName="h-4 w-4"
+                        className={cn(
+                            usesIosStyle
+                                ? "h-11 w-11 sm:h-10 sm:w-10"
+                                : "h-10 w-10",
+                        )}
+                        iconClassName={cn(
+                            usesIosStyle
+                                ? "h-5 w-5 sm:h-4 sm:w-4"
+                                : "h-4 w-4",
+                        )}
                     />
                     {editMode && (
                         <span className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground">
@@ -403,62 +451,123 @@ function SortableCategoryCard({
                     </div>
                 )}
             </div>
-            <p className="truncate text-center md:text-left text-sm md:text-base font-medium leading-5">
-                {category.name}
-            </p>
-            {hasBudgetTracking && (
-                <div className="mt-3">
-                    <div
-                        aria-label={`${category.name} budget progress`}
-                        className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
-                    >
-                        {budget && (
-                            <div
-                                className={cn(
-                                    "h-full rounded-full",
-                                    total > budget.limit && "bg-destructive",
-                                )}
-                                style={{
-                                    backgroundColor:
-                                        total > budget.limit
-                                            ? category.color
-                                            : category.color,
-                                    width: `${Math.min(
-                                        100,
-                                        budget.limit > 0
-                                            ? (total / budget.limit) * 100
-                                            : 0,
-                                    )}%`,
-                                }}
-                            />
-                        )}
-                    </div>
-                </div>
-            )}
-            <div className="mt-3 flex-col md:flex-row flex md:items-end  items-center md:justify-between gap-3">
-                <span className="text-sm font-medium">
-                    {formatCurrency(total)}
-                </span>
-                {hasBudgetTracking && (
-                    <span
+            <div className={cn(usesIosStyle && "min-w-0 flex-1 sm:min-w-0")}>
+                <div
+                    className={cn(
+                        usesIosStyle
+                            ? "flex min-w-0 items-center justify-between gap-3 sm:block"
+                            : "block",
+                    )}
+                >
+                    <p
                         className={cn(
-                            "text-right text-xs leading-4 text-muted-foreground ",
-                            budget &&
-                                total > budget.limit &&
-                                "text-destructive",
+                            "truncate font-medium",
+                            usesIosStyle
+                                ? "text-sm leading-5 sm:text-center md:text-left md:text-base"
+                                : "text-center text-sm leading-5 md:text-left md:text-base",
                         )}
                     >
-                        {budget
-                            ? total > budget.limit
-                                ? `${formatCurrency(total - budget.limit)} excess`
-                                : `${formatCurrency(budget.limit - total)} left`
-                            : "No budget set"}
-                    </span>
+                        {category.name}
+                    </p>
+                    {usesIosStyle && (
+                        <span className="shrink-0 text-sm font-medium leading-5 sm:hidden">
+                            {formatCurrency(total)}
+                        </span>
+                    )}
+                </div>
+                {usesIosStyle && hasBudgetTracking && (
+                    <div className="mt-2 sm:hidden">
+                        <div
+                            aria-label={`${category.name} budget progress`}
+                            className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
+                        >
+                            {budget && (
+                                <div
+                                    className={cn(
+                                        "h-full rounded-full",
+                                        total > budget.limit &&
+                                            "bg-destructive",
+                                    )}
+                                    style={{
+                                        backgroundColor: category.color,
+                                        width: budgetProgressWidth,
+                                    }}
+                                />
+                            )}
+                        </div>
+                        <p
+                            className={cn(
+                                "mt-1 text-xs leading-4 text-muted-foreground",
+                                budget &&
+                                    total > budget.limit &&
+                                    "text-destructive",
+                            )}
+                        >
+                            {budgetStatus}
+                        </p>
+                    </div>
                 )}
+                {hasBudgetTracking && (
+                    <div
+                        className={cn(
+                            "mt-3",
+                            usesIosStyle && "hidden sm:block",
+                        )}
+                    >
+                        <div
+                            aria-label={`${category.name} budget progress`}
+                            className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
+                        >
+                            {budget && (
+                                <div
+                                    className={cn(
+                                        "h-full rounded-full",
+                                        total > budget.limit &&
+                                            "bg-destructive",
+                                    )}
+                                    style={{
+                                        backgroundColor: category.color,
+                                        width: budgetProgressWidth,
+                                    }}
+                                />
+                            )}
+                        </div>
+                    </div>
+                )}
+                <div
+                    className={cn(
+                        "mt-3 flex-col items-center gap-3 md:flex-row md:items-end md:justify-between",
+                        usesIosStyle ? "hidden sm:flex" : "flex",
+                    )}
+                >
+                    <span className="text-sm font-medium">
+                        {formatCurrency(total)}
+                    </span>
+                    {hasBudgetTracking && (
+                        <span
+                            className={cn(
+                                "text-right text-xs leading-4 text-muted-foreground ",
+                                budget &&
+                                    total > budget.limit &&
+                                    "text-destructive",
+                            )}
+                        >
+                            {budgetStatus}
+                        </span>
+                    )}
+                </div>
             </div>
+            {usesIosStyle && !editMode && (
+                <ChevronRight
+                    className="h-5 w-5 shrink-0 text-muted-foreground/60 sm:hidden"
+                    aria-hidden
+                />
+            )}
         </div>
     );
 }
+
+export type HomeItemStyle = "ios" | "cards";
 
 function CategoryCardActionMenu({
     category,
@@ -504,9 +613,15 @@ function CategoryCardActionMenu({
                 size="icon"
                 onClick={(event) => {
                     event.stopPropagation();
+                    if (event.detail === 0) {
+                        setIsOpen((open) => !open);
+                    }
+                }}
+                onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
                     setIsOpen((open) => !open);
                 }}
-                onPointerDown={(event) => event.stopPropagation()}
             >
                 <Ellipsis className="h-5 w-5" aria-hidden />
                 <span className="sr-only">Open {category.name} menu</span>
@@ -620,7 +735,6 @@ export function QuickTransactionModal({
                                     Limit
                                 </Label>
                                 <Input
-                                    autoFocus
                                     id="quick-budget-limit"
                                     inputMode="decimal"
                                     onInput={handleDecimalInput}
@@ -706,7 +820,6 @@ export function QuickTransactionModal({
                         <FieldError>
                             <Label htmlFor="quick-amount">Amount</Label>
                             <Input
-                                autoFocus
                                 id="quick-amount"
                                 inputMode="decimal"
                                 onInput={handleDecimalInput}

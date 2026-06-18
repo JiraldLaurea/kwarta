@@ -22,7 +22,6 @@ import { CSS } from "@dnd-kit/utilities";
 import {
     Calendar,
     Check,
-    ChevronDown,
     ChevronLeft,
     ChevronRight,
     CircleDollarSign,
@@ -37,6 +36,8 @@ import {
     Home,
     Laptop,
     Landmark,
+    LayoutGrid,
+    List,
     PiggyBank,
     Download,
     Edit3,
@@ -56,12 +57,26 @@ import {
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import type { IconType } from "react-icons";
+import {
+    IoBarChart,
+    IoBarChartOutline,
+    IoHome,
+    IoHomeOutline,
+    IoReceipt,
+    IoReceiptOutline,
+    IoSettings,
+    IoSettingsOutline,
+    IoWallet,
+    IoWalletOutline,
+} from "react-icons/io5";
 import {
     DashboardView,
 } from "@/components/kwarta/dashboard-view";
 import {
+    type HomeItemStyle,
     HomeView,
     QuickTransactionModal,
 } from "@/components/kwarta/home-view";
@@ -141,6 +156,7 @@ import {
     MetricCard,
     ModalBackButton,
     MonthPickerInput,
+    PageHeader,
     ProfileImage,
     TransactionIcon,
     categoryIconChoices,
@@ -151,7 +167,7 @@ import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
 import { BudgetsView } from "@/components/kwarta/budgets-view";
 import { CategoryForm } from "@/components/kwarta/categories";
 
-type View = "dashboard" | "transactions" | "budgets" | "reports";
+type View = "dashboard" | "transactions" | "budgets" | "reports" | "settings";
 
 type StoredWorkspace = {
     budgets: Budget[];
@@ -180,9 +196,9 @@ export function KwartaApp() {
     const [authError, setAuthError] = useState<string | null>(null);
     const [authMode, setAuthMode] = useState<AuthMode>("login");
     const [user, setUser] = useState<User | null>(null);
-    const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-    const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
     const [view, setView] = useState<View>("dashboard");
+    const [homeItemStyle, setHomeItemStyle] =
+        useState<HomeItemStyle>("ios");
     const [selectedMonth, setSelectedMonth] = useState(() =>
         toMonthInputValue(new Date()),
     );
@@ -204,12 +220,22 @@ export function KwartaApp() {
     const [homeEditMode, setHomeEditMode] = useState(false);
     const [categoryPendingDelete, setCategoryPendingDelete] =
         useState<Category | null>(null);
-    const accountMenuRef = useRef<HTMLDivElement>(null);
     const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
     const userId = user?.id ?? null;
 
     useEffect(() => {
+        const storedHomeItemStyle = window.localStorage.getItem(
+            "kwarta:home-item-style",
+        );
+
+        if (
+            storedHomeItemStyle === "ios" ||
+            storedHomeItemStyle === "cards"
+        ) {
+            setHomeItemStyle(storedHomeItemStyle);
+        }
+
         const params = new URLSearchParams(window.location.search);
         const urlAuthError = params.get("auth_error");
 
@@ -241,6 +267,10 @@ export function KwartaApp() {
             subscription.unsubscribe();
         };
     }, [supabase]);
+
+    useEffect(() => {
+        window.localStorage.setItem("kwarta:home-item-style", homeItemStyle);
+    }, [homeItemStyle]);
 
     useEffect(() => {
         if (!isAuthed || !userId) {
@@ -315,27 +345,6 @@ export function KwartaApp() {
             window.clearTimeout(timeout);
         };
     }, [budgets, categories, transactions, userId, workspaceReady]);
-
-    useEffect(() => {
-        if (!accountMenuOpen) {
-            return;
-        }
-
-        function handlePointerDown(event: PointerEvent) {
-            if (
-                accountMenuRef.current &&
-                !accountMenuRef.current.contains(event.target as Node)
-            ) {
-                setAccountMenuOpen(false);
-            }
-        }
-
-        document.addEventListener("pointerdown", handlePointerDown);
-
-        return () => {
-            document.removeEventListener("pointerdown", handlePointerDown);
-        };
-    }, [accountMenuOpen]);
 
     const monthTransactions = useMemo(
         () =>
@@ -472,7 +481,6 @@ export function KwartaApp() {
                         type="button"
                         onClick={() => {
                             setView("dashboard");
-                            setMobileMoreOpen(false);
                         }}
                     >
                         <LogoMark size={36} />
@@ -483,57 +491,6 @@ export function KwartaApp() {
 
                     <nav className="hidden items-center gap-2 md:flex">
                         <NavItems activeView={view} onSelect={setView} />
-                        <div className="relative" ref={accountMenuRef}>
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                onClick={() =>
-                                    setAccountMenuOpen((open) => !open)
-                                }
-                            >
-                                <ProfileImage user={user} size="xs" />
-                                <span className="max-w-28 truncate">
-                                    {accountName}
-                                </span>
-                                <ChevronDown
-                                    className="h-3.5 w-3.5"
-                                    aria-hidden
-                                />
-                            </Button>
-                            {accountMenuOpen && (
-                                <div className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-                                    <div className="p-4">
-                                        <p className="max-w-full truncate text-base font-medium leading-6">
-                                            {accountName}
-                                        </p>
-                                        <p className="max-w-full truncate text-sm leading-5 text-muted-foreground">
-                                            {user?.email ?? "Account session"}
-                                        </p>
-                                    </div>
-                                    <div className="h-px bg-border" />
-                                    <div className="px-2 py-2">
-                                        <Button
-                                            className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-sm font-normal md:hover:bg-neutral-100"
-                                            type="button"
-                                            variant="ghost"
-                                            onClick={async () => {
-                                                await supabase?.auth.signOut();
-                                                setAccountMenuOpen(false);
-                                                setUser(null);
-                                                setIsAuthed(false);
-                                            }}
-                                        >
-                                            <span>Log Out</span>
-                                            <LogOut
-                                                className="h-4 w-4"
-                                                aria-hidden
-                                            />
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
                     </nav>
                 </div>
             </header>
@@ -544,6 +501,7 @@ export function KwartaApp() {
                         budgets={monthBudgets}
                         editMode={homeEditMode}
                         expenseCategories={expenseCategories}
+                        homeItemStyle={homeItemStyle}
                         incomeCategories={incomeCategories}
                         month={selectedMonth}
                         onAddCategory={() => setHomeCategoryFormOpen(true)}
@@ -731,6 +689,21 @@ export function KwartaApp() {
                         />
                     </div>
                 )}
+
+                {view === "settings" && (
+                    <SettingsView
+                        accountName={accountName}
+                        email={user?.email ?? "Account session"}
+                        homeItemStyle={homeItemStyle}
+                        user={user}
+                        onHomeItemStyleChange={setHomeItemStyle}
+                        onSignOut={async () => {
+                            await supabase?.auth.signOut();
+                            setUser(null);
+                            setIsAuthed(false);
+                        }}
+                    />
+                )}
             </div>
             {quickAddCategory && (
                 <QuickTransactionModal
@@ -861,26 +834,10 @@ export function KwartaApp() {
                     }}
                 />
             )}
-            {mobileMoreOpen && (
-                <MobileMoreSheet
-                    accountName={accountName}
-                    email={user?.email ?? "Account session"}
-                    onClose={() => setMobileMoreOpen(false)}
-                    onSignOut={async () => {
-                        await supabase?.auth.signOut();
-                        setMobileMoreOpen(false);
-                        setUser(null);
-                        setIsAuthed(false);
-                    }}
-                />
-            )}
             <MobileTabBar
                 activeView={view}
-                moreOpen={mobileMoreOpen}
-                onMore={() => setMobileMoreOpen((open) => !open)}
                 onSelect={(nextView) => {
                     setView(nextView);
-                    setMobileMoreOpen(false);
                 }}
             />
         </main>
@@ -921,6 +878,7 @@ function NavItems({
         { label: "Transactions", view: "transactions" },
         { label: "Budgets", view: "budgets" },
         { label: "Reports", view: "reports" },
+        { label: "Settings", view: "settings" },
     ];
 
     return (
@@ -946,31 +904,55 @@ function NavItems({
 
 function MobileTabBar({
     activeView,
-    moreOpen,
-    onMore,
     onSelect,
 }: {
     activeView: View;
-    moreOpen: boolean;
-    onMore: () => void;
     onSelect: (view: View) => void;
 }) {
     const items: Array<{
-        icon: MobileTabIconName;
+        icon: IconType;
+        activeIcon: IconType;
         label: string;
         view: View;
     }> = [
-        { icon: "dashboard", label: "Home", view: "dashboard" },
-        { icon: "transactions", label: "Transactions", view: "transactions" },
-        { icon: "budgets", label: "Budgets", view: "budgets" },
-        { icon: "reports", label: "Reports", view: "reports" },
+        {
+            icon: IoHomeOutline,
+            activeIcon: IoHome,
+            label: "Home",
+            view: "dashboard",
+        },
+        {
+            icon: IoReceiptOutline,
+            activeIcon: IoReceipt,
+            label: "Transactions",
+            view: "transactions",
+        },
+        {
+            icon: IoWalletOutline,
+            activeIcon: IoWallet,
+            label: "Budgets",
+            view: "budgets",
+        },
+        {
+            icon: IoBarChartOutline,
+            activeIcon: IoBarChart,
+            label: "Reports",
+            view: "reports",
+        },
+        {
+            icon: IoSettingsOutline,
+            activeIcon: IoSettings,
+            label: "Settings",
+            view: "settings",
+        },
     ];
 
     return (
         <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-white/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] backdrop-blur-md md:hidden">
             <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
                 {items.map((item) => {
-                    const active = activeView === item.view && !moreOpen;
+                    const active = activeView === item.view;
+                    const Icon = active ? item.activeIcon : item.icon;
 
                     return (
                         <button
@@ -982,296 +964,148 @@ function MobileTabBar({
                             type="button"
                             onClick={() => onSelect(item.view)}
                         >
-                            <MobileTabIcon active={active} name={item.icon} />
+                            <Icon className="h-6 w-6" aria-hidden />
                             <span className="max-w-full truncate">
                                 {item.label}
                             </span>
                         </button>
                     );
                 })}
-                <button
-                    className={cn(
-                        "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-[#9CA3AF] transition-colors",
-                        moreOpen && "text-primary",
-                    )}
-                    type="button"
-                    onClick={onMore}
-                >
-                    <MobileTabIcon active={moreOpen} name="more" />
-                    <span>More</span>
-                </button>
             </div>
         </nav>
     );
 }
 
-type MobileTabIconName =
-    | "dashboard"
-    | "transactions"
-    | "budgets"
-    | "reports"
-    | "more";
-
-function MobileTabIcon({
-    active,
-    name,
-}: {
-    active: boolean;
-    name: MobileTabIconName;
-}) {
-    const commonProps = {
-        "aria-hidden": true,
-        className: "h-6 w-6",
-        fill: "none",
-        viewBox: "0 0 24 24",
-        xmlns: "http://www.w3.org/2000/svg",
-    };
-    const strokeProps = {
-        stroke: "currentColor",
-        strokeLinecap: "round" as const,
-        strokeLinejoin: "round" as const,
-        strokeWidth: 1.9,
-    };
-
-    if (name === "dashboard") {
-        return (
-            <svg {...commonProps}>
-                {active ? (
-                    <>
-                        <rect
-                            height="7"
-                            rx="1.5"
-                            fill="currentColor"
-                            width="7"
-                            x="4"
-                            y="4"
-                        />
-                        <rect
-                            height="7"
-                            rx="1.5"
-                            fill="currentColor"
-                            width="7"
-                            x="13"
-                            y="4"
-                        />
-                        <rect
-                            height="7"
-                            rx="1.5"
-                            fill="currentColor"
-                            width="7"
-                            x="4"
-                            y="13"
-                        />
-                        <rect
-                            height="7"
-                            rx="1.5"
-                            fill="currentColor"
-                            width="7"
-                            x="13"
-                            y="13"
-                        />
-                    </>
-                ) : (
-                    <>
-                        <rect
-                            height="7"
-                            rx="1.5"
-                            {...strokeProps}
-                            width="7"
-                            x="4"
-                            y="4"
-                        />
-                        <rect
-                            height="7"
-                            rx="1.5"
-                            {...strokeProps}
-                            width="7"
-                            x="13"
-                            y="4"
-                        />
-                        <rect
-                            height="7"
-                            rx="1.5"
-                            {...strokeProps}
-                            width="7"
-                            x="4"
-                            y="13"
-                        />
-                        <rect
-                            height="7"
-                            rx="1.5"
-                            {...strokeProps}
-                            width="7"
-                            x="13"
-                            y="13"
-                        />
-                    </>
-                )}
-            </svg>
-        );
-    }
-
-    if (name === "transactions") {
-        return (
-            <svg {...commonProps}>
-                {active ? (
-                    <>
-                        <path
-                            d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V20l-3-1.75L12 20l-3-1.75L6 20V4.75Z"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M9 8h6M9 12h6M9 16h3.5"
-                            stroke="#FFFFFF"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="1.6"
-                        />
-                    </>
-                ) : (
-                    <>
-                        <path
-                            d="M6 4.75A1.75 1.75 0 0 1 7.75 3h8.5A1.75 1.75 0 0 1 18 4.75V20l-3-1.75L12 20l-3-1.75L6 20V4.75Z"
-                            {...strokeProps}
-                        />
-                        <path d="M9 8h6M9 12h6M9 16h3.5" {...strokeProps} />
-                    </>
-                )}
-            </svg>
-        );
-    }
-
-    if (name === "budgets") {
-        return (
-            <svg {...commonProps}>
-                {active ? (
-                    <>
-                        <path
-                            d="M4 7.25A2.25 2.25 0 0 1 6.25 5h10.5A2.25 2.25 0 0 1 19 7.25V8H6.25A2.25 2.25 0 0 1 4 5.75v0"
-                            fill="currentColor"
-                        />
-                        <path
-                            d="M4 8h15.25A1.75 1.75 0 0 1 21 9.75v7.5A2.75 2.75 0 0 1 18.25 20H5.75A2.75 2.75 0 0 1 3 17.25v-10"
-                            fill="currentColor"
-                        />
-                        <circle cx="17.5" cy="14.5" fill="#FFFFFF" r="1.5" />
-                    </>
-                ) : (
-                    <>
-                        <path
-                            d="M4 7.25A2.25 2.25 0 0 1 6.25 5h10.5A2.25 2.25 0 0 1 19 7.25V8H6.25A2.25 2.25 0 0 1 4 5.75v0"
-                            {...strokeProps}
-                        />
-                        <path
-                            d="M4 8h15.25A1.75 1.75 0 0 1 21 9.75v7.5A2.75 2.75 0 0 1 18.25 20H5.75A2.75 2.75 0 0 1 3 17.25v-10"
-                            {...strokeProps}
-                        />
-                        <circle cx="17.5" cy="14.5" r="1.5" {...strokeProps} />
-                    </>
-                )}
-            </svg>
-        );
-    }
-
-    if (name === "reports") {
-        return (
-            <svg {...commonProps}>
-                {active ? (
-                    <>
-                        <rect
-                            height="14"
-                            rx="2"
-                            fill="currentColor"
-                            width="16"
-                            x="4"
-                            y="5"
-                        />
-                        <path
-                            d="M8 15v-3M12 15V9M16 15v-5"
-                            stroke="#FFFFFF"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="1.7"
-                        />
-                    </>
-                ) : (
-                    <>
-                        <rect
-                            height="14"
-                            rx="2"
-                            width="16"
-                            x="4"
-                            y="5"
-                            {...strokeProps}
-                        />
-                        <path d="M8 15v-3M12 15V9M16 15v-5" {...strokeProps} />
-                    </>
-                )}
-            </svg>
-        );
-    }
-
-    return (
-        <svg {...commonProps}>
-            {active ? (
-                <>
-                    <circle cx="7" cy="12" fill="currentColor" r="1.75" />
-                    <circle cx="12" cy="12" fill="currentColor" r="1.75" />
-                    <circle cx="17" cy="12" fill="currentColor" r="1.75" />
-                </>
-            ) : (
-                <>
-                    <circle cx="7" cy="12" r="1.75" {...strokeProps} />
-                    <circle cx="12" cy="12" r="1.75" {...strokeProps} />
-                    <circle cx="17" cy="12" r="1.75" {...strokeProps} />
-                </>
-            )}
-        </svg>
-    );
-}
-
-function MobileMoreSheet({
+function SettingsView({
     accountName,
     email,
-    onClose,
+    homeItemStyle,
+    user,
+    onHomeItemStyleChange,
     onSignOut,
 }: {
     accountName: string;
     email: string;
-    onClose: () => void;
+    homeItemStyle: HomeItemStyle;
+    user: User | null;
+    onHomeItemStyleChange: (style: HomeItemStyle) => void;
     onSignOut: () => void;
 }) {
+    const options: Array<{
+        description: string;
+        icon: LucideIcon;
+        label: string;
+        value: HomeItemStyle;
+    }> = [
+        {
+            description: "Grouped rows on small screens",
+            icon: List,
+            label: "iOS list",
+            value: "ios",
+        },
+        {
+            description: "Compact cards on every screen",
+            icon: LayoutGrid,
+            label: "Cards",
+            value: "cards",
+        },
+    ];
+
     return (
-        <>
-            <button
-                aria-label="Close more menu"
-                className="fixed inset-x-0 bottom-0 top-0 z-40 cursor-default bg-white/45 backdrop-blur-sm md:hidden"
-                type="button"
-                onClick={onClose}
+        <div className="w-full space-y-5">
+            <PageHeader
+                title="Settings"
+                description="Tune Kwarta for the way you like to scan your month."
             />
-            <section className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 mx-auto max-w-lg overflow-hidden rounded-xl border border-border bg-white shadow-[0_18px_60px_rgba(0,0,0,0.14)] md:hidden">
-                <div className="px-4 py-4">
-                    <p className="truncate font-medium leading-5">
-                        {accountName}
-                    </p>
-                    <p className="truncate text-sm leading-4 text-muted-foreground">
-                        {email}
-                    </p>
-                </div>
-                <div className="h-px bg-border" />
-                <div className="px-2 py-2">
-                    <Button
-                        className="h-10 w-full cursor-pointer justify-between rounded-md px-3 text-sm font-normal md:hover:bg-neutral-100"
-                        type="button"
-                        variant="ghost"
-                        onClick={onSignOut}
-                    >
-                        <span>Log Out</span>
-                        <LogOut className="h-3.5 w-3.5" aria-hidden />
-                    </Button>
-                </div>
-            </section>
-        </>
+
+            <div className="grid gap-4 md:gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+                <Card className="overflow-hidden bg-white">
+                    <CardHeader>
+                        <CardTitle>Home layout</CardTitle>
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            Choose how category items appear on small screens.
+                        </p>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        {options.map((option) => {
+                            const Icon = option.icon;
+                            const selected = homeItemStyle === option.value;
+
+                            return (
+                                <button
+                                    key={option.value}
+                                    className={cn(
+                                        "flex min-h-[70px] w-full items-center gap-3 rounded-md border border-border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-neutral-50",
+                                        selected &&
+                                            "border-primary bg-neutral-50",
+                                    )}
+                                    type="button"
+                                    aria-pressed={selected}
+                                    onClick={() =>
+                                        onHomeItemStyleChange(option.value)
+                                    }
+                                >
+                                    <span
+                                        className={cn(
+                                            "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-white text-muted-foreground",
+                                            selected &&
+                                                "border-primary text-primary",
+                                        )}
+                                    >
+                                        <Icon
+                                            className="h-5 w-5"
+                                            aria-hidden
+                                        />
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block font-medium leading-5">
+                                            {option.label}
+                                        </span>
+                                        <span className="mt-1 block text-sm leading-5 text-muted-foreground">
+                                            {option.description}
+                                        </span>
+                                    </span>
+                                    {selected && (
+                                        <Check
+                                            className="h-5 w-5 shrink-0 text-primary"
+                                            aria-hidden
+                                        />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </CardContent>
+                </Card>
+
+                <Card className="overflow-hidden bg-white">
+                    <CardHeader>
+                        <CardTitle>Account</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-5">
+                        <div className="flex min-w-0 items-center gap-3">
+                            <ProfileImage user={user} size="md" />
+                            <div className="min-w-0">
+                                <p className="truncate font-medium leading-5">
+                                    {accountName}
+                                </p>
+                                <p className="mt-1 truncate text-sm leading-5 text-muted-foreground">
+                                    {email}
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            className="w-full justify-between"
+                            type="button"
+                            variant="secondary"
+                            onClick={onSignOut}
+                        >
+                            <span>Log Out</span>
+                            <LogOut className="h-4 w-4" aria-hidden />
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
     );
 }
 

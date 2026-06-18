@@ -24,7 +24,13 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select } from "@/components/ui/select";
 import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
-import { EditModal, FieldError, ModalBackButton, MonthPickerInput } from "@/components/kwarta/shared";
+import {
+    EditModal,
+    FieldError,
+    ModalBackButton,
+    MonthPickerInput,
+    PageHeader,
+} from "@/components/kwarta/shared";
 import {
     ImportConfirmationModal,
     ImportLoadingModal,
@@ -113,40 +119,36 @@ export function BudgetsView({
     return (
         <>
             <div className="space-y-4 md:space-y-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <h1 className="text-xl font-medium leading-7">
-                            Budgets
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Set monthly limits and track category spending.
-                        </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2 sm:justify-end">
-                        <TransactionBackupActions
-                            error={importError}
-                            importInputRef={importInputRef}
-                            onExport={() =>
-                                downloadBackupFile(
-                                    "budgets",
-                                    allBudgets,
-                                    categories,
-                                )
-                            }
-                            onImportClick={() =>
-                                importInputRef.current?.click()
-                            }
-                            onImportFile={handleImportFile}
-                        />
-                        <Button
-                            type="button"
-                            onClick={() => setIsAddingBudget(true)}
-                        >
-                            <Plus className="h-4 w-4" aria-hidden />
-                            Add budget
-                        </Button>
-                    </div>
-                </div>
+                <PageHeader
+                    title="Budgets"
+                    description="Set monthly limits and track category spending."
+                    actions={
+                        <div className="flex flex-wrap gap-2 sm:justify-end">
+                            <TransactionBackupActions
+                                error={importError}
+                                importInputRef={importInputRef}
+                                onExport={() =>
+                                    downloadBackupFile(
+                                        "budgets",
+                                        allBudgets,
+                                        categories,
+                                    )
+                                }
+                                onImportClick={() =>
+                                    importInputRef.current?.click()
+                                }
+                                onImportFile={handleImportFile}
+                            />
+                            <Button
+                                type="button"
+                                onClick={() => setIsAddingBudget(true)}
+                            >
+                                <Plus className="h-4 w-4" aria-hidden />
+                                Add budget
+                            </Button>
+                        </div>
+                    }
+                />
                 <MonthlyBudgetSummary
                     budgets={budgets}
                     month={month}

@@ -13,7 +13,7 @@ import {
     ImportLoadingModal,
     TransactionBackupActions,
 } from "@/components/kwarta/backup-controls";
-import { EditModal } from "@/components/kwarta/shared";
+import { EditModal, PageHeader } from "@/components/kwarta/shared";
 import { TransactionForm, TransactionTable } from "@/components/kwarta/transactions";
 export function TransactionsView({
     allTransactions,
@@ -110,29 +110,27 @@ export function TransactionsView({
     return (
         <>
             <div className="space-y-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                        <h1 className="text-xl font-medium leading-7">
-                            Transactions
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Edit or remove posted money movement.
-                        </p>
-                    </div>
-                    <TransactionBackupActions
-                        error={importError}
-                        importInputRef={importInputRef}
-                        onExport={() =>
-                            downloadBackupFile(
-                                "transactions",
-                                allTransactions,
-                                categories,
-                            )
-                        }
-                        onImportClick={() => importInputRef.current?.click()}
-                        onImportFile={handleImportFile}
-                    />
-                </div>
+                <PageHeader
+                    title="Transactions"
+                    description="Edit or remove posted money movement."
+                    actions={
+                        <TransactionBackupActions
+                            error={importError}
+                            importInputRef={importInputRef}
+                            onExport={() =>
+                                downloadBackupFile(
+                                    "transactions",
+                                    allTransactions,
+                                    categories,
+                                )
+                            }
+                            onImportClick={() =>
+                                importInputRef.current?.click()
+                            }
+                            onImportFile={handleImportFile}
+                        />
+                    }
+                />
                 <TransactionTable
                     categories={categories}
                     onEdit={onEdit}
