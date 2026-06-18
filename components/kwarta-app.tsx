@@ -1184,7 +1184,7 @@ function SettingsView({
         {
             description: "Grouped rows on small screens",
             icon: List,
-            label: "iOS list",
+            label: "List",
             value: "ios",
         },
         {
@@ -1213,7 +1213,7 @@ function SettingsView({
                     <CardContent>
                         <SettingsSwitch
                             checked={!budgetsEnabled}
-                            description="Add expenses without setting category budgets, and hide budget progress across Home, Budgets, and Reports."
+                            description="Add expenses without setting category budgets."
                             id="disable-budget-tracking"
                             label="Disable Budget Tracking"
                             onChange={(checked) =>
@@ -1252,8 +1252,7 @@ function SettingsView({
                                     <span
                                         className={cn(
                                             "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-white text-muted-foreground",
-                                            selected &&
-                                                "border-primary text-primary",
+                                            selected && "text-primary",
                                         )}
                                     >
                                         <Icon
@@ -1262,7 +1261,7 @@ function SettingsView({
                                         />
                                     </span>
                                     <span className="min-w-0 flex-1">
-                                        <span className="block font-medium leading-5">
+                                        <span className="block text-sm font-medium leading-5">
                                             {option.label}
                                         </span>
                                         <span className="mt-1 block text-sm leading-5 text-muted-foreground">
@@ -1408,7 +1407,7 @@ function BackupActionRow({
     return (
         <div className="flex flex-col gap-3 rounded-md border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-                <p className="font-medium leading-5">{label}</p>
+                <p className="text-sm font-medium leading-5">{label}</p>
                 <p className="mt-1 text-sm leading-5 text-muted-foreground">
                     {description}
                 </p>
