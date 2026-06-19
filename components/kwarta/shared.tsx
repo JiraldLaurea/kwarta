@@ -662,25 +662,15 @@ export function EditModal({
         mobileViewport &&
             layoutViewportHeightRef.current - mobileViewport.height > 120,
     );
-    const mobileModalHeight = mobileViewport
-        ? isKeyboardViewport
-            ? mobileViewport.height
-            : `calc(${mobileViewport.height}px - ${MOBILE_NAV_OFFSET})`
-        : undefined;
-    const mobileMaxHeight = mobileViewport
-        ? isKeyboardViewport
-            ? mobileViewport.height - 12
-            : `calc(${mobileViewport.height}px - ${MOBILE_NAV_OFFSET} - 0.75rem)`
-        : undefined;
 
     return (
         <div
-            className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] top-0 z-40 flex items-end justify-center sm:inset-0 sm:z-[60] sm:items-center sm:px-4 sm:py-6"
+            className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:px-4 sm:py-6"
             style={
                 mobileViewport
                     ? {
                           bottom: "auto",
-                          height: mobileModalHeight,
+                          height: mobileViewport.height,
                           top: mobileViewport.offsetTop,
                       }
                     : undefined
@@ -689,7 +679,7 @@ export function EditModal({
             <button
                 aria-label="Close modal"
                 className={cn(
-                    "absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm transition-opacity duration-200 sm:duration-150",
+                    "absolute inset-0 cursor-default bg-white/20 backdrop-blur-sm transition-opacity duration-200 sm:bg-white/45 sm:duration-150",
                     isVisible ? "opacity-100" : "opacity-0",
                 )}
                 style={
@@ -714,7 +704,8 @@ export function EditModal({
                         ? {
                               ...(mobileViewport
                                   ? {
-                                        maxHeight: mobileMaxHeight,
+                                        maxHeight:
+                                            mobileViewport.height - 12,
                                         minHeight: isKeyboardViewport
                                             ? "auto"
                                             : Math.min(
