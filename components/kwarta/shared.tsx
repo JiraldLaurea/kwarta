@@ -43,8 +43,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 
-const MOBILE_NAV_OFFSET = "calc(4.5rem + env(safe-area-inset-bottom))";
-
 export const colorChoices = [
     "#171717",
     "#2563EB",
@@ -546,12 +544,7 @@ export function EditModal({
     onClose: () => void;
 }) {
     const [isVisible, setIsVisible] = useState(false);
-    const [mobileViewport, setMobileViewport] = useState<{
-        height: number;
-        offsetTop: number;
-    } | null>(null);
     const closingRef = useRef(false);
-    const layoutViewportHeightRef = useRef(0);
 
     const requestClose = useCallback(() => {
         if (closingRef.current) {
@@ -590,42 +583,6 @@ export function EditModal({
     }, [onOpenComplete]);
 
     useEffect(() => {
-        const visualViewport = window.visualViewport;
-
-        function syncViewport() {
-            if (window.innerWidth >= 640) {
-                setMobileViewport(null);
-                return;
-            }
-
-            layoutViewportHeightRef.current = Math.max(
-                layoutViewportHeightRef.current,
-                window.innerHeight,
-            );
-            setMobileViewport({
-                height: visualViewport?.height ?? window.innerHeight,
-                offsetTop: visualViewport?.offsetTop ?? 0,
-            });
-        }
-
-        syncViewport();
-        window.addEventListener("resize", syncViewport);
-        visualViewport?.addEventListener("resize", syncViewport);
-        visualViewport?.addEventListener("scroll", syncViewport);
-
-        return () => {
-            window.removeEventListener("resize", syncViewport);
-            visualViewport?.removeEventListener("resize", syncViewport);
-            visualViewport?.removeEventListener("scroll", syncViewport);
-        };
-    }, []);
-
-    useEffect(() => {
-        const scrollY = window.scrollY;
-        const isMobileModal = window.innerWidth < 640;
-        const previousBodyPosition = document.body.style.position;
-        const previousBodyTop = document.body.style.top;
-        const previousBodyWidth = document.body.style.width;
         const previousBodyOverflow = document.body.style.overflow;
         const previousBodyOverscrollBehavior =
             document.body.style.overscrollBehavior;
@@ -633,31 +590,13 @@ export function EditModal({
 
         document.documentElement.style.overflow = "hidden";
         document.body.style.overflow = "hidden";
-
-        if (isMobileModal) {
-            document.body.style.overscrollBehavior = "none";
-
-            return () => {
-                document.documentElement.style.overflow = previousHtmlOverflow;
-                document.body.style.overflow = previousBodyOverflow;
-                document.body.style.overscrollBehavior =
-                    previousBodyOverscrollBehavior;
-            };
-        }
-
-        document.body.style.position = "fixed";
-        document.body.style.top = `-${scrollY}px`;
-        document.body.style.width = "100%";
+        document.body.style.overscrollBehavior = "none";
 
         return () => {
             document.documentElement.style.overflow = previousHtmlOverflow;
             document.body.style.overflow = previousBodyOverflow;
             document.body.style.overscrollBehavior =
                 previousBodyOverscrollBehavior;
-            document.body.style.position = previousBodyPosition;
-            document.body.style.top = previousBodyTop;
-            document.body.style.width = previousBodyWidth;
-            window.scrollTo(0, scrollY);
         };
     }, []);
 
@@ -675,24 +614,8 @@ export function EditModal({
         };
     }, [requestClose]);
 
-    const isKeyboardViewport = Boolean(
-        mobileViewport &&
-            layoutViewportHeightRef.current - mobileViewport.height > 120,
-    );
-
     return (
-        <div
-            className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:px-4 sm:py-6"
-            style={
-                mobileViewport
-                    ? {
-                          bottom: "auto",
-                          height: mobileViewport.height,
-                          top: mobileViewport.offsetTop,
-                      }
-                    : undefined
-            }
-        >
+        <div className="fixed inset-0 z-[60] flex items-stretch justify-center overflow-hidden sm:items-center sm:px-4 sm:py-6">
             <button
                 aria-label="Close modal"
                 className={cn(
@@ -709,7 +632,7 @@ export function EditModal({
             />
             <div
                 className={cn(
-                    "relative flex min-h-[75dvh] max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.12)] transition-[transform,opacity] duration-200 ease-out sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:border sm:border-border sm:duration-150 sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
+                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white transition-[transform,opacity] duration-200 ease-out sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:border sm:border-border sm:duration-150 sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
                     isVisible
                         ? "translate-y-0 opacity-100"
                         : "translate-y-full opacity-100 sm:translate-y-0 sm:opacity-0",
@@ -717,30 +640,9 @@ export function EditModal({
                     className,
                 )}
                 style={
-                    mobileViewport || isDragging
+                    isDragging
                         ? {
-                              ...(mobileViewport
-                                  ? {
-                                        height: isKeyboardViewport
-                                            ? mobileViewport.height
-                                            : undefined,
-                                        maxHeight: isKeyboardViewport
-                                            ? mobileViewport.height
-                                            : mobileViewport.height - 12,
-                                        minHeight: isKeyboardViewport
-                                            ? mobileViewport.height
-                                            : Math.min(
-                                                  layoutViewportHeightRef.current *
-                                                      0.75,
-                                                  mobileViewport.height - 12,
-                                              ),
-                                    }
-                                  : {}),
-                              ...(isDragging
-                                  ? {
-                                        transform: `translateY(${dragOffset}px)`,
-                                    }
-                                  : {}),
+                              transform: `translateY(${dragOffset}px)`,
                           }
                         : undefined
                 }
@@ -761,11 +663,8 @@ export function EditModal({
                 onTouchMove={onTouchMove}
                 onTouchStart={onTouchStart}
             >
-                <div className="flex h-6 shrink-0 items-center justify-center sm:hidden">
-                    <span className="h-1 w-10 rounded-full bg-neutral-300" />
-                </div>
                 <div
-                    className="min-h-0 flex-1 overflow-y-auto sm:overflow-visible [&>*]:!border-0 max-sm:[&>*]:!min-h-0 max-sm:[&>*]:!rounded-none"
+                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain sm:overflow-visible [&>*]:!border-0 max-sm:[&>*]:!min-h-0 max-sm:[&>*]:!rounded-none"
                     data-bottom-sheet-scroll
                 >
                     {children}
