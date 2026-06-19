@@ -764,6 +764,7 @@ export function QuickTransactionModal({
                                     Limit
                                 </Label>
                                 <Input
+                                    autoFocus
                                     id="quick-budget-limit"
                                     inputMode="decimal"
                                     onInput={handleDecimalInput}
@@ -882,6 +883,7 @@ export function QuickTransactionModal({
                         <FieldError>
                             <Label htmlFor="quick-amount">Amount</Label>
                             <Input
+                                autoFocus
                                 id="quick-amount"
                                 inputMode="decimal"
                                 onInput={handleDecimalInput}

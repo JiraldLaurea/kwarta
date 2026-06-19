@@ -46,3 +46,12 @@ select {
   fill: #525252;
   font-size: 12px;
 }
+
+@keyframes kwarta-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}

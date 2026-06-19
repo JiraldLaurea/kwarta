@@ -57,13 +57,14 @@ export function Select({
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
         <SelectPrimitive.Content
-          className="z-[80] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-border bg-white p-2 shadow-sm"
-          avoidCollisions={false}
+          className="z-[80] max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-border bg-white p-2 shadow-sm"
+          avoidCollisions
+          collisionPadding={12}
           position="popper"
           side="bottom"
           sideOffset={6}
         >
-          <SelectPrimitive.Viewport>
+          <SelectPrimitive.Viewport className="max-h-[var(--radix-select-content-available-height)] overflow-y-auto">
             {options.map((option) => (
               <SelectPrimitive.Item
                 className="relative flex h-10 cursor-pointer select-none items-center rounded-md px-3 pr-8 text-sm leading-5 text-foreground outline-none md:hover:bg-neutral-100 focus:bg-neutral-100 data-[disabled]:pointer-events-none data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50"

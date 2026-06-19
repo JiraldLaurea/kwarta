@@ -28,7 +28,7 @@ import {
     type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Category, TransactionType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
@@ -431,9 +431,10 @@ function getPopoverSide(element: HTMLElement | null, estimatedHeight: number) {
         : "below";
 }
 
-export function useRightSwipeToClose(onClose: () => void) {
+export function useSwipeDownToClose(onClose: () => void) {
+    const [dragOffset, setDragOffset] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
     const touchStartRef = useRef<{
-        target: EventTarget | null;
         x: number;
         y: number;
     } | null>(null);
@@ -456,13 +457,48 @@ export function useRightSwipeToClose(onClose: () => void) {
                 return;
             }
 
+            if (isInteractiveTarget(event.target)) {
+                touchStartRef.current = null;
+                return;
+            }
+
+            const scrollContainer =
+                event.target instanceof HTMLElement
+                    ? event.target.closest<HTMLElement>(
+                          "[data-bottom-sheet-scroll]",
+                      )
+                    : null;
+
+            if (scrollContainer && scrollContainer.scrollTop > 0) {
+                touchStartRef.current = null;
+                return;
+            }
+
             const touch = event.touches[0];
 
             touchStartRef.current = {
-                target: event.target,
                 x: touch.clientX,
                 y: touch.clientY,
             };
+        },
+        onTouchMove(event: React.TouchEvent<HTMLElement>) {
+            const start = touchStartRef.current;
+
+            if (!start || window.innerWidth >= 640) {
+                return;
+            }
+
+            const touch = event.touches[0];
+            const deltaY = touch.clientY - start.y;
+            const deltaX = touch.clientX - start.x;
+
+            if (deltaY <= 0 || Math.abs(deltaX) > deltaY) {
+                return;
+            }
+
+            event.preventDefault();
+            setIsDragging(true);
+            setDragOffset(deltaY);
         },
         onTouchEnd(event: React.TouchEvent<HTMLElement>) {
             const start = touchStartRef.current;
@@ -472,33 +508,65 @@ export function useRightSwipeToClose(onClose: () => void) {
                 return;
             }
 
-            if (isInteractiveTarget(start.target)) {
+            const touch = event.changedTouches[0];
+            const deltaY = touch.clientY - start.y;
+            const deltaX = touch.clientX - start.x;
+            const isDownSwipe = deltaY > 90 && Math.abs(deltaX) < deltaY;
+
+            if (isDownSwipe) {
+                setIsDragging(false);
+                onClose();
                 return;
             }
 
-            const touch = event.changedTouches[0];
-            const deltaX = touch.clientX - start.x;
-            const deltaY = touch.clientY - start.y;
-            const isRightSwipe = deltaX > 90 && Math.abs(deltaY) < 60;
-
-            if (isRightSwipe) {
-                onClose();
-            }
+            setIsDragging(false);
+            setDragOffset(0);
         },
         onTouchCancel() {
             touchStartRef.current = null;
+            setIsDragging(false);
+            setDragOffset(0);
         },
+        dragOffset,
+        isDragging,
     };
 }
 
 export function EditModal({
     children,
+    className,
     onClose,
 }: {
     children: React.ReactNode;
+    className?: string;
     onClose: () => void;
 }) {
-    const swipeGesture = useRightSwipeToClose(onClose);
+    const [isVisible, setIsVisible] = useState(false);
+    const closingRef = useRef(false);
+
+    const requestClose = useCallback(() => {
+        if (closingRef.current) {
+            return;
+        }
+
+        closingRef.current = true;
+        setIsVisible(false);
+        window.setTimeout(onClose, 220);
+    }, [onClose]);
+    const {
+        dragOffset,
+        isDragging,
+        onTouchCancel,
+        onTouchEnd,
+        onTouchMove,
+        onTouchStart,
+    } = useSwipeDownToClose(requestClose);
+
+    useEffect(() => {
+        const frame = window.requestAnimationFrame(() => setIsVisible(true));
+
+        return () => window.cancelAnimationFrame(frame);
+    }, []);
 
     useEffect(() => {
         const scrollY = window.scrollY;
@@ -527,7 +595,7 @@ export function EditModal({
     useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
             if (event.key === "Escape") {
-                onClose();
+                requestClose();
             }
         }
 
@@ -536,43 +604,59 @@ export function EditModal({
         return () => {
             document.removeEventListener("keydown", handleKeyDown);
         };
-    }, [onClose]);
+    }, [requestClose]);
 
     return (
-        <div
-            className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-white sm:bg-transparent sm:px-4 sm:pb-6 sm:pt-4 sm:items-center sm:py-6"
-            {...swipeGesture}
-        >
+        <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:px-4 sm:py-6">
             <button
                 aria-label="Close modal"
-                className="absolute inset-0 hidden cursor-default bg-white/45 backdrop-blur-sm sm:block"
+                className={cn(
+                    "absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm transition-opacity duration-200",
+                    isVisible ? "opacity-100" : "opacity-0",
+                )}
+                style={
+                    isDragging
+                        ? { opacity: Math.max(0, 1 - dragOffset / 400) }
+                        : undefined
+                }
                 type="button"
-                onClick={onClose}
+                onClick={requestClose}
             />
             <div
-                className="relative min-h-dvh w-full sm:min-h-0 sm:max-w-[540px] sm:rounded-2xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
+                className={cn(
+                    "relative flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.12)] transition-transform duration-200 ease-out sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
+                    isVisible ? "translate-y-0" : "translate-y-full sm:translate-y-6",
+                    isDragging && "transition-none",
+                    className,
+                )}
+                style={
+                    isDragging
+                        ? { transform: `translateY(${dragOffset}px)` }
+                        : undefined
+                }
                 role="dialog"
                 aria-modal="true"
+                onTouchCancel={onTouchCancel}
+                onTouchEnd={onTouchEnd}
+                onTouchMove={onTouchMove}
+                onTouchStart={onTouchStart}
             >
-                {children}
+                <div className="flex h-6 shrink-0 items-center justify-center sm:hidden">
+                    <span className="h-1 w-10 rounded-full bg-neutral-300" />
+                </div>
+                <div
+                    className="min-h-0 flex-1 overflow-y-auto sm:overflow-visible max-sm:[&>*]:!min-h-0 max-sm:[&>*]:!rounded-none max-sm:[&>*]:!border-0"
+                    data-bottom-sheet-scroll
+                >
+                    {children}
+                </div>
             </div>
         </div>
     );
 }
 
-export function ModalBackButton({ onClick }: { onClick: () => void }) {
-    return (
-        <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="-ml-2 mb-3 sm:hidden"
-            onClick={onClick}
-        >
-            <ChevronLeft className="h-5 w-5" aria-hidden />
-            <span className="sr-only">Back</span>
-        </Button>
-    );
+export function ModalBackButton(_props: { onClick: () => void }) {
+    return null;
 }
 
 export function MetricCard({

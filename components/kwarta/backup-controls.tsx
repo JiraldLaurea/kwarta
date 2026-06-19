@@ -3,7 +3,7 @@
 import { Download, Upload } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useRightSwipeToClose } from "@/components/kwarta/shared";
+import { EditModal } from "@/components/kwarta/shared";
 
 export function TransactionBackupActions({
     error,
@@ -72,20 +72,9 @@ export function ImportConfirmationModal({
     onCancel: () => void;
     onConfirm: () => void;
 }) {
-    const swipeGesture = useRightSwipeToClose(onCancel);
-
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
-            {...swipeGesture}
-        >
-            <button
-                aria-label="Cancel import"
-                className="absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm"
-                type="button"
-                onClick={onCancel}
-            />
-            <Card className="relative w-full max-w-[380px] overflow-hidden rounded-2xl bg-white">
+        <EditModal className="sm:max-w-[380px]" onClose={onCancel}>
+            <Card className="w-full overflow-hidden bg-white">
                 <div className="px-6 pb-6 pt-5">
                     <CardTitle className="text-2xl font-medium leading-8">
                         Replace {itemLabel}?
@@ -108,7 +97,7 @@ export function ImportConfirmationModal({
                     </Button>
                 </div>
             </Card>
-        </div>
+        </EditModal>
     );
 }
 
@@ -118,14 +107,18 @@ export function ImportLoadingModal({
     itemLabel: "transactions" | "budgets";
 }) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:px-4 sm:py-6">
             <div className="absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm" />
             <Card
-                className="relative w-full max-w-[360px] rounded-2xl bg-white p-6 text-center shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
+                className="relative w-full animate-[kwarta-sheet-in_220ms_ease-out] rounded-b-none rounded-t-2xl bg-white p-6 text-center shadow-[0_-12px_40px_rgba(0,0,0,0.12)] sm:max-w-[360px] sm:rounded-2xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
                 role="dialog"
                 aria-modal="true"
                 aria-live="polite"
             >
+                <span
+                    className="mx-auto mb-5 block h-1 w-10 rounded-full bg-neutral-300 sm:hidden"
+                    aria-hidden
+                />
                 <span
                     className="mx-auto flex h-10 w-10 animate-spin rounded-full border-2 border-neutral-200 border-t-foreground"
                     aria-hidden
