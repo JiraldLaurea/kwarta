@@ -704,10 +704,11 @@ export function EditModal({
                         ? {
                               ...(mobileViewport
                                   ? {
-                                        maxHeight:
-                                            mobileViewport.height - 12,
+                                        maxHeight: isKeyboardViewport
+                                            ? mobileViewport.height
+                                            : mobileViewport.height - 12,
                                         minHeight: isKeyboardViewport
-                                            ? "auto"
+                                            ? mobileViewport.height
                                             : Math.min(
                                                   layoutViewportHeightRef.current *
                                                       0.75,
