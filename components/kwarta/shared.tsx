@@ -622,14 +622,29 @@ export function EditModal({
 
     useEffect(() => {
         const scrollY = window.scrollY;
+        const isMobileModal = window.innerWidth < 640;
         const previousBodyPosition = document.body.style.position;
         const previousBodyTop = document.body.style.top;
         const previousBodyWidth = document.body.style.width;
         const previousBodyOverflow = document.body.style.overflow;
+        const previousBodyOverscrollBehavior =
+            document.body.style.overscrollBehavior;
         const previousHtmlOverflow = document.documentElement.style.overflow;
 
         document.documentElement.style.overflow = "hidden";
         document.body.style.overflow = "hidden";
+
+        if (isMobileModal) {
+            document.body.style.overscrollBehavior = "none";
+
+            return () => {
+                document.documentElement.style.overflow = previousHtmlOverflow;
+                document.body.style.overflow = previousBodyOverflow;
+                document.body.style.overscrollBehavior =
+                    previousBodyOverscrollBehavior;
+            };
+        }
+
         document.body.style.position = "fixed";
         document.body.style.top = `-${scrollY}px`;
         document.body.style.width = "100%";
@@ -637,6 +652,8 @@ export function EditModal({
         return () => {
             document.documentElement.style.overflow = previousHtmlOverflow;
             document.body.style.overflow = previousBodyOverflow;
+            document.body.style.overscrollBehavior =
+                previousBodyOverscrollBehavior;
             document.body.style.position = previousBodyPosition;
             document.body.style.top = previousBodyTop;
             document.body.style.width = previousBodyWidth;
@@ -704,6 +721,9 @@ export function EditModal({
                         ? {
                               ...(mobileViewport
                                   ? {
+                                        height: isKeyboardViewport
+                                            ? mobileViewport.height
+                                            : undefined,
                                         maxHeight: isKeyboardViewport
                                             ? mobileViewport.height
                                             : mobileViewport.height - 12,
