@@ -565,20 +565,13 @@ export function EditModal({
     } = useSwipeDownToClose(requestClose);
 
     useEffect(() => {
-        let openTimer: number | undefined;
         const frame = window.requestAnimationFrame(() => {
             setIsVisible(true);
-            openTimer = window.setTimeout(
-                () => onOpenComplete?.(),
-                window.innerWidth >= 640 ? 150 : 220,
-            );
+            onOpenComplete?.();
         });
 
         return () => {
             window.cancelAnimationFrame(frame);
-            if (openTimer) {
-                window.clearTimeout(openTimer);
-            }
         };
     }, [onOpenComplete]);
 
@@ -632,7 +625,7 @@ export function EditModal({
             />
             <div
                 className={cn(
-                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white transition-[transform,opacity] duration-200 ease-out sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:border sm:border-border sm:duration-150 sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
+                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.12)] transition-[transform,opacity] duration-200 ease-out sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:border sm:border-border sm:duration-150 sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
                     isVisible
                         ? "translate-y-0 opacity-100"
                         : "translate-y-full opacity-100 sm:translate-y-0 sm:opacity-0",
@@ -663,6 +656,9 @@ export function EditModal({
                 onTouchMove={onTouchMove}
                 onTouchStart={onTouchStart}
             >
+                <div className="flex h-6 shrink-0 items-center justify-center sm:hidden">
+                    <span className="h-1 w-10 rounded-full bg-neutral-300" />
+                </div>
                 <div
                     className="min-h-0 flex-1 overflow-y-auto overscroll-contain sm:overflow-visible [&>*]:!border-0 max-sm:[&>*]:!min-h-0 max-sm:[&>*]:!rounded-none"
                     data-bottom-sheet-scroll
