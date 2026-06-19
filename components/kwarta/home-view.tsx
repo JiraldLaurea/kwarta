@@ -27,7 +27,7 @@ import {
     Plus,
     Trash2,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
     Budget,
     Category,
@@ -720,6 +720,12 @@ export function QuickTransactionModal({
     const canSetBudget = Number.isFinite(parsedLimit) && parsedLimit > 0;
     const requiresBudget =
         budgetsEnabled && normalizeTransactionType(category.type) === "expense";
+    const focusPrimaryInput = useCallback(
+        (input: HTMLInputElement | null) => {
+            input?.focus({ preventScroll: true });
+        },
+        [],
+    );
 
     if (requiresBudget && !budget) {
         return (
@@ -764,11 +770,11 @@ export function QuickTransactionModal({
                                     Limit
                                 </Label>
                                 <Input
-                                    autoFocus
                                     id="quick-budget-limit"
                                     inputMode="decimal"
                                     onInput={handleDecimalInput}
                                     pattern="[0-9]*[.]?[0-9]*"
+                                    ref={focusPrimaryInput}
                                     type="text"
                                     value={limit}
                                     onChange={(event) =>
@@ -884,11 +890,11 @@ export function QuickTransactionModal({
                         <FieldError>
                             <Label htmlFor="quick-amount">Amount</Label>
                             <Input
-                                autoFocus
                                 id="quick-amount"
                                 inputMode="decimal"
                                 onInput={handleDecimalInput}
                                 pattern="[0-9]*[.]?[0-9]*"
+                                ref={focusPrimaryInput}
                                 type="text"
                                 value={amount}
                                 onChange={(event) =>
