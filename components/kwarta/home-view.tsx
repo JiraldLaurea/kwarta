@@ -735,10 +735,12 @@ export function QuickTransactionModal({
         }
 
         const timeout = window.setTimeout(() => {
-            primaryInputRef.current?.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-            });
+            const input = primaryInputRef.current;
+
+            if (input && document.activeElement === input) {
+                input.blur();
+                input.focus();
+            }
         }, 220);
 
         return () => window.clearTimeout(timeout);
