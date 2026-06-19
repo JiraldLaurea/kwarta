@@ -535,10 +535,12 @@ export function useSwipeDownToClose(onClose: () => void) {
 export function EditModal({
     children,
     className,
+    onOpenComplete,
     onClose,
 }: {
     children: React.ReactNode;
     className?: string;
+    onOpenComplete?: () => void;
     onClose: () => void;
 }) {
     const [isVisible, setIsVisible] = useState(false);
@@ -568,10 +570,22 @@ export function EditModal({
     } = useSwipeDownToClose(requestClose);
 
     useEffect(() => {
-        const frame = window.requestAnimationFrame(() => setIsVisible(true));
+        let openTimer: number | undefined;
+        const frame = window.requestAnimationFrame(() => {
+            setIsVisible(true);
+            openTimer = window.setTimeout(
+                () => onOpenComplete?.(),
+                window.innerWidth >= 640 ? 150 : 220,
+            );
+        });
 
-        return () => window.cancelAnimationFrame(frame);
-    }, []);
+        return () => {
+            window.cancelAnimationFrame(frame);
+            if (openTimer) {
+                window.clearTimeout(openTimer);
+            }
+        };
+    }, [onOpenComplete]);
 
     useEffect(() => {
         const visualViewport = window.visualViewport;
@@ -642,6 +656,10 @@ export function EditModal({
         };
     }, [requestClose]);
 
+    const isKeyboardViewport =
+        mobileViewport &&
+        layoutViewportHeightRef.current - mobileViewport.height > 120;
+
     return (
         <div
             className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:px-4 sm:py-6"
@@ -685,11 +703,13 @@ export function EditModal({
                                   ? {
                                         maxHeight:
                                             mobileViewport.height - 12,
-                                        minHeight: Math.min(
-                                            layoutViewportHeightRef.current *
-                                                0.75,
-                                            mobileViewport.height - 12,
-                                        ),
+                                        minHeight: isKeyboardViewport
+                                            ? "auto"
+                                            : Math.min(
+                                                  layoutViewportHeightRef.current *
+                                                      0.75,
+                                                  mobileViewport.height - 12,
+                                              ),
                                     }
                                   : {}),
                               ...(isDragging

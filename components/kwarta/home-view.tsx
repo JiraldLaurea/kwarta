@@ -721,17 +721,13 @@ export function QuickTransactionModal({
     const requiresBudget =
         budgetsEnabled && normalizeTransactionType(category.type) === "expense";
     const primaryInputRef = useRef<HTMLInputElement | null>(null);
-    const focusPrimaryInput = useCallback(
-        (input: HTMLInputElement | null) => {
-            primaryInputRef.current = input;
-            input?.focus({ preventScroll: true });
-        },
-        [],
-    );
+    const handleOpenComplete = useCallback(() => {
+        primaryInputRef.current?.focus({ preventScroll: true });
+    }, []);
 
     if (requiresBudget && !budget) {
         return (
-            <EditModal onClose={onClose}>
+            <EditModal onClose={onClose} onOpenComplete={handleOpenComplete}>
                 <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
                     <form
                         onSubmit={(event) => {
@@ -776,7 +772,7 @@ export function QuickTransactionModal({
                                     inputMode="decimal"
                                     onInput={handleDecimalInput}
                                     pattern="[0-9]*[.]?[0-9]*"
-                                    ref={focusPrimaryInput}
+                                    ref={primaryInputRef}
                                     type="text"
                                     value={limit}
                                     onChange={(event) =>
@@ -845,7 +841,7 @@ export function QuickTransactionModal({
     }
 
     return (
-        <EditModal onClose={onClose}>
+        <EditModal onClose={onClose} onOpenComplete={handleOpenComplete}>
             <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border">
                 <form
                     onSubmit={(event) => {
@@ -896,7 +892,7 @@ export function QuickTransactionModal({
                                 inputMode="decimal"
                                 onInput={handleDecimalInput}
                                 pattern="[0-9]*[.]?[0-9]*"
-                                ref={focusPrimaryInput}
+                                ref={primaryInputRef}
                                 type="text"
                                 value={amount}
                                 onChange={(event) =>
