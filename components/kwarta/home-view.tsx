@@ -721,8 +721,27 @@ export function QuickTransactionModal({
     const requiresBudget =
         budgetsEnabled && normalizeTransactionType(category.type) === "expense";
     const primaryInputRef = useRef<HTMLInputElement | null>(null);
+    const focusPrimaryInput = useCallback((input: HTMLInputElement | null) => {
+        primaryInputRef.current = input;
+
+        if (input && window.innerWidth < 640) {
+            input.focus({ preventScroll: true });
+        }
+    }, []);
     const handleOpenComplete = useCallback(() => {
-        primaryInputRef.current?.focus({ preventScroll: true });
+        const input = primaryInputRef.current;
+
+        if (!input) {
+            return;
+        }
+
+        if (document.activeElement !== input) {
+            input.focus({ preventScroll: true });
+        }
+
+        if (window.innerWidth < 640) {
+            input.scrollIntoView({ block: "center", inline: "nearest" });
+        }
     }, []);
 
     if (requiresBudget && !budget) {
@@ -772,7 +791,7 @@ export function QuickTransactionModal({
                                     inputMode="decimal"
                                     onInput={handleDecimalInput}
                                     pattern="[0-9]*[.]?[0-9]*"
-                                    ref={primaryInputRef}
+                                    ref={focusPrimaryInput}
                                     type="text"
                                     value={limit}
                                     onChange={(event) =>
@@ -892,7 +911,7 @@ export function QuickTransactionModal({
                                 inputMode="decimal"
                                 onInput={handleDecimalInput}
                                 pattern="[0-9]*[.]?[0-9]*"
-                                ref={primaryInputRef}
+                                ref={focusPrimaryInput}
                                 type="text"
                                 value={amount}
                                 onChange={(event) =>
