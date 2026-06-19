@@ -27,7 +27,7 @@ import {
     Plus,
     Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
     Budget,
     Category,
@@ -720,12 +720,16 @@ export function QuickTransactionModal({
     const canSetBudget = Number.isFinite(parsedLimit) && parsedLimit > 0;
     const requiresBudget =
         budgetsEnabled && normalizeTransactionType(category.type) === "expense";
-    const focusPrimaryInput = useCallback(
-        (input: HTMLInputElement | null) => {
-            input?.focus({ preventScroll: true });
-        },
-        [],
-    );
+    const primaryInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const focusDelay = window.innerWidth >= 640 ? 170 : 220;
+        const timeout = window.setTimeout(() => {
+            primaryInputRef.current?.focus();
+        }, focusDelay);
+
+        return () => window.clearTimeout(timeout);
+    }, []);
 
     if (requiresBudget && !budget) {
         return (
@@ -774,7 +778,7 @@ export function QuickTransactionModal({
                                     inputMode="decimal"
                                     onInput={handleDecimalInput}
                                     pattern="[0-9]*[.]?[0-9]*"
-                                    ref={focusPrimaryInput}
+                                    ref={primaryInputRef}
                                     type="text"
                                     value={limit}
                                     onChange={(event) =>
@@ -894,7 +898,7 @@ export function QuickTransactionModal({
                                 inputMode="decimal"
                                 onInput={handleDecimalInput}
                                 pattern="[0-9]*[.]?[0-9]*"
-                                ref={focusPrimaryInput}
+                                ref={primaryInputRef}
                                 type="text"
                                 value={amount}
                                 onChange={(event) =>
