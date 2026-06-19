@@ -544,7 +544,9 @@ export function EditModal({
     onClose: () => void;
 }) {
     const [isVisible, setIsVisible] = useState(false);
+    const [isMobileInputFocused, setIsMobileInputFocused] = useState(false);
     const closingRef = useRef(false);
+    const dialogRef = useRef<HTMLDivElement>(null);
 
     const requestClose = useCallback(() => {
         if (closingRef.current) {
@@ -607,6 +609,81 @@ export function EditModal({
         };
     }, [requestClose]);
 
+    useEffect(() => {
+        const dialog = dialogRef.current;
+        let focusTimer: number | undefined;
+
+        if (!dialog) {
+            return;
+        }
+
+        function isMobile() {
+            return window.innerWidth < 640;
+        }
+
+        function isTextInputTarget(target: EventTarget | Element | null) {
+            if (!(target instanceof HTMLElement)) {
+                return false;
+            }
+
+            if (target instanceof HTMLTextAreaElement) {
+                return true;
+            }
+
+            if (target instanceof HTMLInputElement) {
+                return ![
+                    "button",
+                    "checkbox",
+                    "color",
+                    "file",
+                    "hidden",
+                    "image",
+                    "radio",
+                    "range",
+                    "reset",
+                    "submit",
+                ].includes(target.type);
+            }
+
+            return target.isContentEditable;
+        }
+
+        function syncInputFocus() {
+            setIsMobileInputFocused(
+                isMobile() && isTextInputTarget(document.activeElement),
+            );
+        }
+
+        function handleFocusIn(event: FocusEvent) {
+            setIsMobileInputFocused(
+                isMobile() && isTextInputTarget(event.target),
+            );
+        }
+
+        function handleFocusOut() {
+            if (focusTimer) {
+                window.clearTimeout(focusTimer);
+            }
+
+            focusTimer = window.setTimeout(syncInputFocus, 0);
+        }
+
+        dialog.addEventListener("focusin", handleFocusIn);
+        dialog.addEventListener("focusout", handleFocusOut);
+        window.addEventListener("resize", syncInputFocus);
+        syncInputFocus();
+
+        return () => {
+            if (focusTimer) {
+                window.clearTimeout(focusTimer);
+            }
+
+            dialog.removeEventListener("focusin", handleFocusIn);
+            dialog.removeEventListener("focusout", handleFocusOut);
+            window.removeEventListener("resize", syncInputFocus);
+        };
+    }, []);
+
     return (
         <div className="fixed inset-0 z-[60] flex items-stretch justify-center overflow-hidden sm:items-center sm:px-4 sm:py-6">
             <button
@@ -624,6 +701,7 @@ export function EditModal({
                 onClick={requestClose}
             />
             <div
+                ref={dialogRef}
                 className={cn(
                     "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.12)] transition-[transform,opacity] duration-200 ease-out sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:border sm:border-border sm:duration-150 sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
                     isVisible
@@ -662,6 +740,16 @@ export function EditModal({
                 <div
                     className="min-h-0 flex-1 overflow-y-auto overscroll-contain sm:overflow-visible [&>*]:!border-0 max-sm:[&>*]:!min-h-0 max-sm:[&>*]:!rounded-none"
                     data-bottom-sheet-scroll
+                    style={
+                        isMobileInputFocused
+                            ? { overflowY: "hidden" }
+                            : undefined
+                    }
+                    onTouchMove={(event) => {
+                        if (isMobileInputFocused) {
+                            event.preventDefault();
+                        }
+                    }}
                 >
                     {children}
                 </div>
