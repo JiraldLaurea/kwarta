@@ -8,6 +8,8 @@ import {
     PointerSensor,
     type DragEndEvent,
     type DragStartEvent,
+    type DraggableAttributes,
+    type DraggableSyntheticListeners,
     useSensor,
     useSensors,
 } from "@dnd-kit/core";
@@ -19,7 +21,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-    Check,
     ChevronRight,
     Edit3,
     Ellipsis,
@@ -27,20 +28,32 @@ import {
     Plus,
     Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    forwardRef,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type CSSProperties,
+} from "react";
+import { createPortal } from "react-dom";
 import type {
     Budget,
     Category,
     Transaction,
     TransactionType,
 } from "@/lib/types";
+import type { CategoryFormValues } from "@/lib/schema";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
     formatMonthLabel,
+    getUniqueCategoryId,
     getSubcategoriesForCategory,
     handleDecimalInput,
     normalizeTransactionType,
     parseDecimalInput,
+    reorderCategoriesByType,
     toDateInputValue,
 } from "@/lib/kwarta/helpers";
 import { Button } from "@/components/ui/button";
@@ -55,38 +68,28 @@ import {
     EmptyState,
     FieldError,
     ModalBackButton,
-    MonthPickerInput,
 } from "@/components/kwarta/shared";
+import { CategoryForm } from "@/components/kwarta/categories";
 
 export function HomeView({
     budgets,
     budgetsEnabled,
-    editMode,
     expenseCategories,
     homeItemStyle,
     incomeCategories,
-    month,
-    onAddCategory,
     onDeleteCategory,
     onEditCategory,
-    onEditModeChange,
-    onMonthChange,
     onReorderCategory,
     onSelectCategory,
     transactions,
 }: {
     budgets: Budget[];
     budgetsEnabled: boolean;
-    editMode: boolean;
     expenseCategories: Category[];
     homeItemStyle: HomeItemStyle;
     incomeCategories: Category[];
-    month: string;
-    onAddCategory: () => void;
     onDeleteCategory: (category: Category) => void;
     onEditCategory: (category: Category) => void;
-    onEditModeChange: (editMode: boolean) => void;
-    onMonthChange: (month: string) => void;
     onReorderCategory: (
         type: TransactionType,
         fromId: string,
@@ -97,40 +100,10 @@ export function HomeView({
 }) {
     return (
         <div className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <MonthPickerInput
-                    ariaLabel="Select home month"
-                    compact
-                    value={month}
-                    onChange={onMonthChange}
-                />
-                <div className="flex gap-2">
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={onAddCategory}
-                    >
-                        <Plus className="h-4 w-4" aria-hidden />
-                        Add
-                    </Button>
-                    <Button
-                        type="button"
-                        variant={editMode ? "default" : "secondary"}
-                        onClick={() => onEditModeChange(!editMode)}
-                    >
-                        {editMode ? (
-                            <Check className="h-4 w-4" aria-hidden />
-                        ) : (
-                            <Edit3 className="h-4 w-4" aria-hidden />
-                        )}
-                        {editMode ? "Done" : "Edit"}
-                    </Button>
-                </div>
-            </div>
             <CategoryQuickAddSection
                 budgets={budgets}
                 budgetsEnabled={budgetsEnabled}
-                editMode={editMode}
+                editMode={false}
                 title="Expenses"
                 homeItemStyle={homeItemStyle}
                 categories={expenseCategories}
@@ -143,7 +116,7 @@ export function HomeView({
             <CategoryQuickAddSection
                 budgets={budgets}
                 budgetsEnabled={budgetsEnabled}
-                editMode={editMode}
+                editMode={false}
                 title="Income"
                 homeItemStyle={homeItemStyle}
                 categories={incomeCategories}
@@ -584,6 +557,494 @@ function SortableCategoryCard({
 
 export type HomeItemStyle = "ios" | "cards";
 
+export function ManageCategoriesModal({
+    expenseCategories,
+    incomeCategories,
+    onClose,
+    onSaveCategories,
+}: {
+    expenseCategories: Category[];
+    incomeCategories: Category[];
+    onClose: () => void;
+    onSaveCategories: (categories: Category[]) => void;
+}) {
+    const [draftExpenseCategories, setDraftExpenseCategories] =
+        useState(expenseCategories);
+    const [draftIncomeCategories, setDraftIncomeCategories] =
+        useState(incomeCategories);
+    const [categoryFormMode, setCategoryFormMode] = useState<
+        "create" | "edit" | null
+    >(null);
+    const [editingCategory, setEditingCategory] = useState<Category | null>(
+        null,
+    );
+    const [categoryPendingDelete, setCategoryPendingDelete] =
+        useState<Category | null>(null);
+
+    useEffect(() => {
+        setDraftExpenseCategories(expenseCategories);
+    }, [expenseCategories]);
+
+    useEffect(() => {
+        setDraftIncomeCategories(incomeCategories);
+    }, [incomeCategories]);
+
+    const handleReorderCategory = (
+        type: TransactionType,
+        fromId: string,
+        toId: string,
+    ) => {
+        const updateDraft = (current: Category[]) =>
+            reorderCategoriesByType(current, type, fromId, toId);
+
+        if (type === "income") {
+            setDraftIncomeCategories(updateDraft);
+            return;
+        }
+
+        setDraftExpenseCategories(updateDraft);
+    };
+
+    const updateDraftCategory = (category: Category) => {
+        const categoryType = normalizeTransactionType(category.type);
+        const removeCategory = (current: Category[]) =>
+            current.filter((item) => item.id !== category.id);
+
+        setDraftExpenseCategories((current) => {
+            const next = removeCategory(current);
+
+            if (categoryType !== "expense") {
+                return next;
+            }
+
+            const existingIndex = current.findIndex(
+                (item) => item.id === category.id,
+            );
+            const insertIndex = existingIndex >= 0 ? existingIndex : 0;
+
+            next.splice(insertIndex, 0, category);
+            return next;
+        });
+        setDraftIncomeCategories((current) => {
+            const next = removeCategory(current);
+
+            if (categoryType !== "income") {
+                return next;
+            }
+
+            const existingIndex = current.findIndex(
+                (item) => item.id === category.id,
+            );
+            const insertIndex = existingIndex >= 0 ? existingIndex : 0;
+
+            next.splice(insertIndex, 0, category);
+            return next;
+        });
+    };
+
+    const handleCategorySubmit = (values: CategoryFormValues) => {
+        const draftCategories = [
+            ...draftExpenseCategories,
+            ...draftIncomeCategories,
+        ];
+        const category =
+            categoryFormMode === "edit" && editingCategory
+                ? { ...editingCategory, ...values }
+                : {
+                      id: getUniqueCategoryId(values.name, draftCategories),
+                      ...values,
+                  };
+
+        updateDraftCategory(category);
+        setCategoryFormMode(null);
+        setEditingCategory(null);
+    };
+
+    const handleDeleteCategory = () => {
+        if (!categoryPendingDelete) {
+            return;
+        }
+
+        const categoryId = categoryPendingDelete.id;
+
+        setDraftExpenseCategories((current) =>
+            current.filter((category) => category.id !== categoryId),
+        );
+        setDraftIncomeCategories((current) =>
+            current.filter((category) => category.id !== categoryId),
+        );
+        setCategoryPendingDelete(null);
+    };
+
+    const handleSaveChanges = () => {
+        onSaveCategories([
+            ...draftExpenseCategories,
+            ...draftIncomeCategories,
+        ]);
+        onClose();
+    };
+
+    return (
+        <EditModal onClose={onClose}>
+            <Card className="flex min-h-dvh w-full min-w-0 flex-col rounded-none border-0 bg-white sm:max-h-[calc(100dvh-3rem)] sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
+                <CardHeader className="shrink-0 px-6 pb-4 pt-5">
+                    <ModalBackButton onClick={onClose} />
+                    <CardTitle className="text-2xl font-medium leading-8">
+                        Manage categories
+                    </CardTitle>
+                    <p className="text-base leading-6 text-muted-foreground">
+                        Arrange, edit, or remove your income and expense
+                        categories.
+                    </p>
+                </CardHeader>
+                <CardContent className="min-h-0 min-w-0 flex-1 space-y-6 overflow-y-auto px-6 pb-6 pt-0">
+                    <div className="pt-1">
+                        <Button
+                            className="w-full sm:w-auto"
+                            type="button"
+                            onClick={() => {
+                                setEditingCategory(null);
+                                setCategoryFormMode("create");
+                            }}
+                        >
+                            <Plus className="h-4 w-4" aria-hidden />
+                            Add category
+                        </Button>
+                    </div>
+                    <ManageCategorySection
+                        title="Expenses"
+                        categories={draftExpenseCategories}
+                        onDeleteCategory={setCategoryPendingDelete}
+                        onEditCategory={(category) => {
+                            setEditingCategory(category);
+                            setCategoryFormMode("edit");
+                        }}
+                        onReorderCategory={handleReorderCategory}
+                    />
+                    <ManageCategorySection
+                        title="Income"
+                        categories={draftIncomeCategories}
+                        onDeleteCategory={setCategoryPendingDelete}
+                        onEditCategory={(category) => {
+                            setEditingCategory(category);
+                            setCategoryFormMode("edit");
+                        }}
+                        onReorderCategory={handleReorderCategory}
+                    />
+                </CardContent>
+                <div className="shrink-0 border-t border-border bg-neutral-50 px-5 py-4 sm:hidden">
+                    <Button
+                        className="w-full"
+                        type="button"
+                        onClick={handleSaveChanges}
+                    >
+                        Save changes
+                    </Button>
+                </div>
+                <div className="hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
+                    <Button
+                        data-modal-close
+                        type="button"
+                        variant="secondary"
+                    >
+                        Cancel
+                    </Button>
+                    <Button type="button" onClick={handleSaveChanges}>
+                        Save changes
+                    </Button>
+                </div>
+            </Card>
+            {categoryFormMode && (
+                <EditModal
+                    onClose={() => {
+                        setCategoryFormMode(null);
+                        setEditingCategory(null);
+                    }}
+                >
+                    <CategoryForm
+                        editing={
+                            categoryFormMode === "edit"
+                                ? editingCategory ?? undefined
+                                : undefined
+                        }
+                        modal
+                        onCancel={() => {
+                            setCategoryFormMode(null);
+                            setEditingCategory(null);
+                        }}
+                        onSubmit={handleCategorySubmit}
+                    />
+                </EditModal>
+            )}
+            {categoryPendingDelete && (
+                <EditModal onClose={() => setCategoryPendingDelete(null)}>
+                    <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
+                        <CardHeader className="px-6 pb-5 pt-6">
+                            <ModalBackButton
+                                onClick={() => setCategoryPendingDelete(null)}
+                            />
+                            <CardTitle className="text-2xl font-medium leading-8">
+                                Delete {categoryPendingDelete.name}?
+                            </CardTitle>
+                            <p className="text-base leading-7 text-muted-foreground">
+                                This will remove the card, its transactions, and
+                                any budgets linked to this category when you
+                                save changes.
+                            </p>
+                        </CardHeader>
+                        <CardContent className="px-6 pb-6 pt-0 sm:hidden">
+                            <Button
+                                className="w-full border-destructive bg-white text-destructive hover:bg-white"
+                                type="button"
+                                variant="secondary"
+                                onClick={handleDeleteCategory}
+                            >
+                                Delete card
+                            </Button>
+                        </CardContent>
+                        <div className="hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => setCategoryPendingDelete(null)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                className="border-destructive bg-white text-destructive hover:bg-white"
+                                type="button"
+                                variant="secondary"
+                                onClick={handleDeleteCategory}
+                            >
+                                Delete card
+                            </Button>
+                        </div>
+                    </Card>
+                </EditModal>
+            )}
+        </EditModal>
+    );
+}
+
+function ManageCategorySection({
+    categories,
+    onDeleteCategory,
+    onEditCategory,
+    onReorderCategory,
+    title,
+}: {
+    categories: Category[];
+    onDeleteCategory: (category: Category) => void;
+    onEditCategory: (category: Category) => void;
+    onReorderCategory: (
+        type: TransactionType,
+        fromId: string,
+        toId: string,
+    ) => void;
+    title: string;
+}) {
+    const [activeCategory, setActiveCategory] = useState<Category | null>(null);
+    const [activeCategoryWidth, setActiveCategoryWidth] = useState<
+        number | null
+    >(null);
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        }),
+    );
+    const categoryIds = useMemo(
+        () => categories.map((category) => category.id),
+        [categories],
+    );
+    const dragOverlay = (
+        <DragOverlay adjustScale={false} dropAnimation={null}>
+            {activeCategory ? (
+                <ManageCategoryRowView
+                    category={activeCategory}
+                    isOverlay
+                    style={{
+                        width: activeCategoryWidth ?? undefined,
+                    }}
+                />
+            ) : null}
+        </DragOverlay>
+    );
+    const shouldPortalDragOverlay =
+        typeof document !== "undefined" &&
+        typeof window !== "undefined" &&
+        window.innerWidth >= 640;
+
+    const handleDragStart = (event: DragStartEvent) => {
+        const category = categories.find(
+            (item) => item.id === String(event.active.id),
+        );
+        setActiveCategory(category ?? null);
+        setActiveCategoryWidth(event.active.rect.current.initial?.width ?? null);
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const activeId = String(event.active.id);
+        const overId = event.over ? String(event.over.id) : null;
+
+        if (overId && activeId !== overId) {
+            onReorderCategory(
+                normalizeTransactionType(categories[0]?.type ?? "expense"),
+                activeId,
+                overId,
+            );
+        }
+
+        setActiveCategory(null);
+        setActiveCategoryWidth(null);
+    };
+
+    return (
+        <section className="min-w-0">
+            <h3 className="mb-2 text-sm font-medium leading-5 text-muted-foreground">
+                {title}
+            </h3>
+            {categories.length === 0 ? (
+                <EmptyState
+                    title={`No ${title.toLowerCase()} categories yet`}
+                    description="Add categories to organize your transactions."
+                />
+            ) : (
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragCancel={() => {
+                        setActiveCategory(null);
+                        setActiveCategoryWidth(null);
+                    }}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext
+                        items={categoryIds}
+                        strategy={rectSortingStrategy}
+                    >
+                        <div className="min-w-0 rounded-md border border-border bg-white">
+                            {categories.map((category) => (
+                                <SortableManageCategoryRow
+                                    key={category.id}
+                                    category={category}
+                                    onDeleteCategory={onDeleteCategory}
+                                    onEditCategory={onEditCategory}
+                                />
+                            ))}
+                        </div>
+                    </SortableContext>
+                    {shouldPortalDragOverlay
+                        ? createPortal(dragOverlay, document.body)
+                        : dragOverlay}
+                </DndContext>
+            )}
+        </section>
+    );
+}
+
+function SortableManageCategoryRow({
+    category,
+    onDeleteCategory,
+    onEditCategory,
+}: {
+    category: Category;
+    onDeleteCategory: (category: Category) => void;
+    onEditCategory: (category: Category) => void;
+}) {
+    const {
+        attributes,
+        isDragging,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+    } = useSortable({
+        id: category.id,
+    });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    return (
+        <ManageCategoryRowView
+            ref={setNodeRef}
+            category={category}
+            dragAttributes={attributes}
+            dragListeners={listeners}
+            isDragging={isDragging}
+            onDeleteCategory={onDeleteCategory}
+            onEditCategory={onEditCategory}
+            style={style}
+        />
+    );
+}
+
+const ManageCategoryRowView = forwardRef<
+    HTMLDivElement,
+    {
+        category: Category;
+        dragAttributes?: DraggableAttributes;
+        dragListeners?: DraggableSyntheticListeners;
+        isDragging?: boolean;
+        isOverlay?: boolean;
+        onDeleteCategory?: (category: Category) => void;
+        onEditCategory?: (category: Category) => void;
+        style?: CSSProperties;
+    }
+>(function ManageCategoryRowView(
+    {
+        category,
+        dragAttributes,
+        dragListeners,
+        isDragging = false,
+        isOverlay = false,
+        onDeleteCategory,
+        onEditCategory,
+        style,
+    },
+    ref,
+) {
+    return (
+        <div
+            ref={ref}
+            style={style}
+            className={cn(
+                "flex min-h-[64px] items-center gap-3 border-b border-border bg-white px-3 py-2 transition-[box-shadow,opacity,transform] first:rounded-t-md last:rounded-b-md last:border-b-0",
+                isDragging && "opacity-20",
+                isOverlay &&
+                    "rounded-md border border-border shadow-[0_18px_45px_rgba(37,99,235,0.2)]",
+            )}
+        >
+            <span
+                className="flex h-9 w-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md border border-dashed border-border text-muted-foreground active:cursor-grabbing"
+                {...dragAttributes}
+                {...dragListeners}
+            >
+                <GripVertical className="h-4 w-4" aria-hidden />
+                <span className="sr-only">Drag to reorder</span>
+            </span>
+            <CategoryIconBadge
+                category={category}
+                className="h-10 w-10"
+                iconClassName="h-4 w-4"
+            />
+            <p className="min-w-0 flex-1 truncate text-sm font-medium leading-5">
+                {category.name}
+            </p>
+            {!isOverlay && onDeleteCategory && onEditCategory && (
+                <CategoryCardActionMenu
+                    category={category}
+                    onDeleteCategory={onDeleteCategory}
+                    onEditCategory={onEditCategory}
+                />
+            )}
+        </div>
+    );
+});
+
 function CategoryCardActionMenu({
     category,
     onDeleteCategory,
@@ -594,6 +1055,11 @@ function CategoryCardActionMenu({
     onEditCategory: (category: Category) => void;
 }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [menuPosition, setMenuPosition] = useState<{
+        left: number;
+        top: number;
+    } | null>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -601,25 +1067,61 @@ function CategoryCardActionMenu({
             return;
         }
 
-        function handlePointerDown(event: PointerEvent) {
-            if (
-                menuRef.current &&
-                !menuRef.current.contains(event.target as Node)
-            ) {
-                setIsOpen(false);
+        function updateMenuPosition() {
+            const rect = buttonRef.current?.getBoundingClientRect();
+
+            if (!rect) {
+                return;
             }
+
+            const menuWidth = 176;
+            const menuHeight = 112;
+            const gap = 8;
+            const left = Math.min(
+                Math.max(gap, rect.right - menuWidth),
+                window.innerWidth - menuWidth - gap,
+            );
+            const opensAbove =
+                rect.bottom + gap + menuHeight > window.innerHeight &&
+                rect.top > menuHeight + gap;
+
+            setMenuPosition({
+                left,
+                top: opensAbove
+                    ? Math.max(gap, rect.top - menuHeight - gap)
+                    : rect.bottom + gap,
+            });
         }
 
+        function handlePointerDown(event: PointerEvent) {
+            const target = event.target as Node;
+
+            if (
+                buttonRef.current?.contains(target) ||
+                menuRef.current?.contains(target)
+            ) {
+                return;
+            }
+
+            setIsOpen(false);
+        }
+
+        updateMenuPosition();
         document.addEventListener("pointerdown", handlePointerDown);
+        window.addEventListener("resize", updateMenuPosition);
+        window.addEventListener("scroll", updateMenuPosition, true);
 
         return () => {
             document.removeEventListener("pointerdown", handlePointerDown);
+            window.removeEventListener("resize", updateMenuPosition);
+            window.removeEventListener("scroll", updateMenuPosition, true);
         };
     }, [isOpen]);
 
     return (
-        <div className="relative z-20" ref={menuRef}>
+        <div className="relative z-20">
             <Button
+                ref={buttonRef}
                 aria-expanded={isOpen}
                 aria-haspopup="menu"
                 className={cn(
@@ -645,10 +1147,17 @@ function CategoryCardActionMenu({
                 <Ellipsis className="h-5 w-5" aria-hidden />
                 <span className="sr-only">Open {category.name} menu</span>
             </Button>
-            {isOpen && (
+            {isOpen &&
+                menuPosition &&
+                createPortal(
                 <div
-                    className="absolute right-0 top-9 z-30 w-44 overflow-hidden rounded-lg border border-border bg-white p-2 shadow-[0_18px_50px_rgba(0,0,0,0.12)]"
+                    ref={menuRef}
+                    className="fixed z-[90] w-44 overflow-hidden rounded-lg border border-border bg-white p-2 shadow-[0_18px_50px_rgba(0,0,0,0.12)]"
                     role="menu"
+                    style={{
+                        left: menuPosition.left,
+                        top: menuPosition.top,
+                    }}
                     onPointerDown={(event) => event.stopPropagation()}
                 >
                     <button
@@ -677,8 +1186,9 @@ function CategoryCardActionMenu({
                         <Trash2 className="h-4 w-4" aria-hidden />
                         Delete
                     </button>
-                </div>
-            )}
+                </div>,
+                    document.body,
+                )}
         </div>
     );
 }
@@ -739,7 +1249,11 @@ export function QuickTransactionModal({
 
     if (requiresBudget && !budget) {
         return (
-            <EditModal onClose={onClose} onOpenComplete={handleOpenComplete}>
+            <EditModal
+                mobileMotion="right"
+                onClose={onClose}
+                onOpenComplete={handleOpenComplete}
+            >
                 <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
                     <form
                         onSubmit={(event) => {
@@ -853,7 +1367,11 @@ export function QuickTransactionModal({
     }
 
     return (
-        <EditModal onClose={onClose} onOpenComplete={handleOpenComplete}>
+        <EditModal
+            mobileMotion="right"
+            onClose={onClose}
+            onOpenComplete={handleOpenComplete}
+        >
             <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border">
                 <form
                     onSubmit={(event) => {

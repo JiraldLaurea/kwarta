@@ -79,6 +79,7 @@ import {
 import {
     type HomeItemStyle,
     HomeView,
+    ManageCategoriesModal,
     QuickTransactionModal,
 } from "@/components/kwarta/home-view";
 import {
@@ -240,7 +241,7 @@ export function KwartaApp() {
         null,
     );
     const [homeCategoryFormOpen, setHomeCategoryFormOpen] = useState(false);
-    const [homeEditMode, setHomeEditMode] = useState(false);
+    const [manageCategoriesOpen, setManageCategoriesOpen] = useState(false);
     const [categoryPendingDelete, setCategoryPendingDelete] =
         useState<Category | null>(null);
     const transactionImportInputRef = useRef<HTMLInputElement>(null);
@@ -617,18 +618,13 @@ export function KwartaApp() {
         <main className="min-h-screen bg-neutral-50">
             <header className="sticky top-0 z-30 border-b bg-white">
                 <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-4">
-                    <button
-                        className="flex items-center gap-2 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        type="button"
-                        onClick={() => {
-                            setView("dashboard");
-                        }}
-                    >
-                        <LogoMark size={36} />
-                        <span className="text-lg font-semibold leading-6">
-                            Kwarta
-                        </span>
-                    </button>
+                    <div className="w-[180px]">
+                        <MonthPickerInput
+                            ariaLabel="Select month"
+                            value={selectedMonth}
+                            onChange={setSelectedMonth}
+                        />
+                    </div>
 
                     <nav className="hidden items-center gap-2 md:flex">
                         <NavItems activeView={view} onSelect={setView} />
@@ -641,18 +637,13 @@ export function KwartaApp() {
                     <HomeView
                         budgets={monthBudgets}
                         budgetsEnabled={budgetsEnabled}
-                        editMode={homeEditMode}
                         expenseCategories={expenseCategories}
                         homeItemStyle={homeItemStyle}
                         incomeCategories={incomeCategories}
-                        month={selectedMonth}
-                        onAddCategory={() => setHomeCategoryFormOpen(true)}
                         onDeleteCategory={setCategoryPendingDelete}
                         onEditCategory={(category) =>
                             setEditingCategoryId(category.id)
                         }
-                        onEditModeChange={setHomeEditMode}
-                        onMonthChange={setSelectedMonth}
                         onReorderCategory={(type, fromId, toId) =>
                             setCategories((current) =>
                                 reorderCategoriesByType(
@@ -810,6 +801,7 @@ export function KwartaApp() {
                         transactionImportError={transactionImportError}
                         transactionImportInputRef={transactionImportInputRef}
                         user={user}
+                        onManageCategories={() => setManageCategoriesOpen(true)}
                         onBudgetsEnabledChange={setBudgetsEnabled}
                         onBudgetExport={() =>
                             downloadBackupFile("budgets", budgets, categories)
@@ -904,6 +896,30 @@ export function KwartaApp() {
                     }}
                 />
             )}
+            {manageCategoriesOpen && (
+                <ManageCategoriesModal
+                    expenseCategories={expenseCategories}
+                    incomeCategories={incomeCategories}
+                    onClose={() => setManageCategoriesOpen(false)}
+                    onSaveCategories={(nextCategories) => {
+                        const nextCategoryIds = new Set(
+                            nextCategories.map((category) => category.id),
+                        );
+
+                        setCategories(nextCategories);
+                        setTransactions((current) =>
+                            current.filter((transaction) =>
+                                nextCategoryIds.has(transaction.categoryId),
+                            ),
+                        );
+                        setBudgets((current) =>
+                            current.filter((budget) =>
+                                nextCategoryIds.has(budget.categoryId),
+                            ),
+                        );
+                    }}
+                />
+            )}
             {homeCategoryFormOpen && (
                 <EditModal onClose={() => setHomeCategoryFormOpen(false)}>
                     <CategoryForm
@@ -925,8 +941,7 @@ export function KwartaApp() {
                     />
                 </EditModal>
             )}
-            {view === "dashboard" &&
-                editingCategoryId &&
+            {editingCategoryId &&
                 categories.find(
                     (category) => category.id === editingCategoryId,
                 ) && (
@@ -1151,6 +1166,7 @@ function SettingsView({
     onBudgetImportFile,
     onBudgetsEnabledChange,
     onHomeItemStyleChange,
+    onManageCategories,
     onSignOut,
     onTransactionExport,
     onTransactionImportClick,
@@ -1170,6 +1186,7 @@ function SettingsView({
     onBudgetImportFile: (file: File) => void;
     onBudgetsEnabledChange: (enabled: boolean) => void;
     onHomeItemStyleChange: (style: HomeItemStyle) => void;
+    onManageCategories: () => void;
     onSignOut: () => void;
     onTransactionExport: () => void;
     onTransactionImportClick: () => void;
@@ -1220,6 +1237,20 @@ function SettingsView({
                                 onBudgetsEnabledChange(!checked)
                             }
                         />
+                        <div className="mt-5 border-t border-border pt-5">
+                            <Button
+                                className="w-full justify-between"
+                                type="button"
+                                variant="secondary"
+                                onClick={onManageCategories}
+                            >
+                                <span>Manage categories</span>
+                                <ChevronRight
+                                    className="h-4 w-4"
+                                    aria-hidden
+                                />
+                            </Button>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -1317,6 +1348,15 @@ function SettingsView({
                         </p>
                     </CardHeader>
                     <CardContent className="space-y-5">
+                        <div className="flex items-center gap-3 rounded-md border border-border bg-neutral-50 p-3">
+                            <LogoMark size={40} />
+                            <div>
+                                <p className="font-medium leading-5">Kwarta</p>
+                                <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                                    Personal budget workspace
+                                </p>
+                            </div>
+                        </div>
                         <div className="flex min-w-0 items-center gap-3">
                             <ProfileImage user={user} size="md" />
                             <div className="min-w-0">
