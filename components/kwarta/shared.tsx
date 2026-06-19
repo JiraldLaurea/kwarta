@@ -687,6 +687,12 @@ export function EditModal({
                 type="button"
                 onClick={requestClose}
             />
+            {isKeyboardViewport ? (
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-white sm:hidden"
+                />
+            ) : null}
             <div
                 className={cn(
                     "relative flex min-h-[75dvh] max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.12)] transition-[transform,opacity] duration-200 ease-out sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:border sm:border-border sm:duration-150 sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
