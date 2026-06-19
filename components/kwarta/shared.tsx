@@ -542,7 +542,12 @@ export function EditModal({
     onClose: () => void;
 }) {
     const [isVisible, setIsVisible] = useState(false);
+    const [mobileViewport, setMobileViewport] = useState<{
+        height: number;
+        offsetTop: number;
+    } | null>(null);
     const closingRef = useRef(false);
+    const layoutViewportHeightRef = useRef(0);
 
     const requestClose = useCallback(() => {
         if (closingRef.current) {
@@ -566,6 +571,37 @@ export function EditModal({
         const frame = window.requestAnimationFrame(() => setIsVisible(true));
 
         return () => window.cancelAnimationFrame(frame);
+    }, []);
+
+    useEffect(() => {
+        const visualViewport = window.visualViewport;
+
+        function syncViewport() {
+            if (window.innerWidth >= 640) {
+                setMobileViewport(null);
+                return;
+            }
+
+            layoutViewportHeightRef.current = Math.max(
+                layoutViewportHeightRef.current,
+                window.innerHeight,
+            );
+            setMobileViewport({
+                height: visualViewport?.height ?? window.innerHeight,
+                offsetTop: visualViewport?.offsetTop ?? 0,
+            });
+        }
+
+        syncViewport();
+        window.addEventListener("resize", syncViewport);
+        visualViewport?.addEventListener("resize", syncViewport);
+        visualViewport?.addEventListener("scroll", syncViewport);
+
+        return () => {
+            window.removeEventListener("resize", syncViewport);
+            visualViewport?.removeEventListener("resize", syncViewport);
+            visualViewport?.removeEventListener("scroll", syncViewport);
+        };
     }, []);
 
     useEffect(() => {
@@ -607,7 +643,18 @@ export function EditModal({
     }, [requestClose]);
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:px-4 sm:py-6">
+        <div
+            className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center sm:px-4 sm:py-6"
+            style={
+                mobileViewport
+                    ? {
+                          bottom: "auto",
+                          height: mobileViewport.height,
+                          top: mobileViewport.offsetTop,
+                      }
+                    : undefined
+            }
+        >
             <button
                 aria-label="Close modal"
                 className={cn(
@@ -632,8 +679,25 @@ export function EditModal({
                     className,
                 )}
                 style={
-                    isDragging
-                        ? { transform: `translateY(${dragOffset}px)` }
+                    mobileViewport || isDragging
+                        ? {
+                              ...(mobileViewport
+                                  ? {
+                                        maxHeight:
+                                            mobileViewport.height - 12,
+                                        minHeight: Math.min(
+                                            layoutViewportHeightRef.current *
+                                                0.75,
+                                            mobileViewport.height - 12,
+                                        ),
+                                    }
+                                  : {}),
+                              ...(isDragging
+                                  ? {
+                                        transform: `translateY(${dragOffset}px)`,
+                                    }
+                                  : {}),
+                          }
                         : undefined
                 }
                 role="dialog"

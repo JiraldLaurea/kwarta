@@ -729,23 +729,6 @@ export function QuickTransactionModal({
         [],
     );
 
-    useEffect(() => {
-        if (window.innerWidth >= 640) {
-            return;
-        }
-
-        const timeout = window.setTimeout(() => {
-            const input = primaryInputRef.current;
-
-            if (input && document.activeElement === input) {
-                input.blur();
-                input.focus();
-            }
-        }, 220);
-
-        return () => window.clearTimeout(timeout);
-    }, []);
-
     if (requiresBudget && !budget) {
         return (
             <EditModal onClose={onClose}>
