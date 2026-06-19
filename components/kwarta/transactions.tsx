@@ -302,6 +302,7 @@ export function TransactionForm({
                 >
                     {editing && (
                         <Button
+                            data-modal-close
                             type="button"
                             variant="secondary"
                             onClick={onCancel}

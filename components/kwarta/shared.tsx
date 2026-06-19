@@ -551,7 +551,7 @@ export function EditModal({
 
         closingRef.current = true;
         setIsVisible(false);
-        window.setTimeout(onClose, 220);
+        window.setTimeout(onClose, window.innerWidth >= 640 ? 150 : 220);
     }, [onClose]);
     const {
         dragOffset,
@@ -611,7 +611,7 @@ export function EditModal({
             <button
                 aria-label="Close modal"
                 className={cn(
-                    "absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm transition-opacity duration-200",
+                    "absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm transition-opacity duration-200 sm:duration-150",
                     isVisible ? "opacity-100" : "opacity-0",
                 )}
                 style={
@@ -624,8 +624,10 @@ export function EditModal({
             />
             <div
                 className={cn(
-                    "relative flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.12)] transition-transform duration-200 ease-out sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
-                    isVisible ? "translate-y-0" : "translate-y-full sm:translate-y-6",
+                    "relative flex min-h-[75dvh] max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.12)] transition-[transform,opacity] duration-200 ease-out sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:border sm:border-border sm:duration-150 sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
+                    isVisible
+                        ? "translate-y-0 opacity-100"
+                        : "translate-y-full opacity-100 sm:translate-y-0 sm:opacity-0",
                     isDragging && "transition-none",
                     className,
                 )}
@@ -636,6 +638,16 @@ export function EditModal({
                 }
                 role="dialog"
                 aria-modal="true"
+                onClickCapture={(event) => {
+                    if (
+                        event.target instanceof HTMLElement &&
+                        event.target.closest("[data-modal-close]")
+                    ) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        requestClose();
+                    }
+                }}
                 onTouchCancel={onTouchCancel}
                 onTouchEnd={onTouchEnd}
                 onTouchMove={onTouchMove}
@@ -645,7 +657,7 @@ export function EditModal({
                     <span className="h-1 w-10 rounded-full bg-neutral-300" />
                 </div>
                 <div
-                    className="min-h-0 flex-1 overflow-y-auto sm:overflow-visible max-sm:[&>*]:!min-h-0 max-sm:[&>*]:!rounded-none max-sm:[&>*]:!border-0"
+                    className="min-h-0 flex-1 overflow-y-auto sm:overflow-visible [&>*]:!border-0 max-sm:[&>*]:!min-h-0 max-sm:[&>*]:!rounded-none"
                     data-bottom-sheet-scroll
                 >
                     {children}

@@ -86,6 +86,7 @@ export function ImportConfirmationModal({
                 </div>
                 <div className="flex items-center justify-between border-t border-border bg-neutral-50 px-5 py-4">
                     <Button
+                        data-modal-close
                         type="button"
                         variant="secondary"
                         onClick={onCancel}

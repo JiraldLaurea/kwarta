@@ -819,6 +819,7 @@ export function QuickTransactionModal({
                         </CardContent>
                         <div className="hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
                             <Button
+                                data-modal-close
                                 type="button"
                                 variant="secondary"
                                 onClick={onClose}
@@ -924,6 +925,7 @@ export function QuickTransactionModal({
                     </CardContent>
                     <div className="hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
                         <Button
+                            data-modal-close
                             type="button"
                             variant="secondary"
                             onClick={onClose}

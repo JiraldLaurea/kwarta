@@ -1602,6 +1602,7 @@ function DeleteCategoryConfirmationModal({
                 </div>
                 <div className="hidden items-center justify-between border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
                     <Button
+                        data-modal-close
                         type="button"
                         variant="secondary"
                         onClick={onCancel}
