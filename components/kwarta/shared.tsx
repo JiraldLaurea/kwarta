@@ -134,12 +134,6 @@ export function DatePickerInput({
     }, [selectedMonthIndex, selectedYear]);
 
     useEffect(() => {
-        if (isOpen) {
-            setPopoverSide(getPopoverSide(pickerRef.current, 390));
-        }
-    }, [isOpen]);
-
-    useEffect(() => {
         if (!isOpen) {
             return;
         }
@@ -167,6 +161,14 @@ export function DatePickerInput({
         );
     }
 
+    function togglePicker() {
+        if (!isOpen) {
+            setPopoverSide(getPopoverSide(pickerRef.current, 390));
+        }
+
+        setIsOpen((open) => !open);
+    }
+
     return (
         <div className="relative" ref={pickerRef}>
             <Button
@@ -180,7 +182,7 @@ export function DatePickerInput({
                 )}
                 type="button"
                 variant="secondary"
-                onClick={() => setIsOpen((open) => !open)}
+                onClick={togglePicker}
             >
                 <Calendar className="h-4 w-4" aria-hidden />
                 {selectedLabel}
@@ -291,12 +293,6 @@ export function MonthPickerInput({
     }, [selectedYear]);
 
     useEffect(() => {
-        if (isOpen) {
-            setPopoverSide(getPopoverSide(pickerRef.current, 280));
-        }
-    }, [isOpen]);
-
-    useEffect(() => {
         if (!isOpen) {
             return;
         }
@@ -317,6 +313,14 @@ export function MonthPickerInput({
         };
     }, [isOpen]);
 
+    function togglePicker() {
+        if (!isOpen) {
+            setPopoverSide(getPopoverSide(pickerRef.current, 280));
+        }
+
+        setIsOpen((open) => !open);
+    }
+
     return (
         <div className="relative" ref={pickerRef}>
             <Button
@@ -333,7 +337,7 @@ export function MonthPickerInput({
                 id={id}
                 type="button"
                 variant={compact ? "ghost" : "secondary"}
-                onClick={() => setIsOpen((open) => !open)}
+                onClick={togglePicker}
             >
                 <Calendar className="h-4 w-4" aria-hidden />
                 {selectedMonth.toLocaleDateString("en-US", {
@@ -431,9 +435,15 @@ function getPopoverSide(element: HTMLElement | null, estimatedHeight: number) {
         : "below";
 }
 
-export function useSwipeDownToClose(onClose: () => void) {
+type MobileModalMotion = "bottom" | "right";
+
+export function useSwipeToClose(
+    onClose: () => void,
+    motion: MobileModalMotion = "bottom",
+) {
     const [dragOffset, setDragOffset] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
+    const [isSwipeDismissing, setIsSwipeDismissing] = useState(false);
     const touchStartRef = useRef<{
         x: number;
         y: number;
@@ -469,7 +479,11 @@ export function useSwipeDownToClose(onClose: () => void) {
                       )
                     : null;
 
-            if (scrollContainer && scrollContainer.scrollTop > 0) {
+            if (
+                motion === "bottom" &&
+                scrollContainer &&
+                scrollContainer.scrollTop > 0
+            ) {
                 touchStartRef.current = null;
                 return;
             }
@@ -491,14 +505,16 @@ export function useSwipeDownToClose(onClose: () => void) {
             const touch = event.touches[0];
             const deltaY = touch.clientY - start.y;
             const deltaX = touch.clientX - start.x;
+            const primaryDelta = motion === "right" ? deltaX : deltaY;
+            const crossDelta = motion === "right" ? deltaY : deltaX;
 
-            if (deltaY <= 0 || Math.abs(deltaX) > deltaY) {
+            if (primaryDelta <= 0 || Math.abs(crossDelta) > primaryDelta) {
                 return;
             }
 
             event.preventDefault();
             setIsDragging(true);
-            setDragOffset(deltaY);
+            setDragOffset(primaryDelta);
         },
         onTouchEnd(event: React.TouchEvent<HTMLElement>) {
             const start = touchStartRef.current;
@@ -511,11 +527,18 @@ export function useSwipeDownToClose(onClose: () => void) {
             const touch = event.changedTouches[0];
             const deltaY = touch.clientY - start.y;
             const deltaX = touch.clientX - start.x;
-            const isDownSwipe = deltaY > 90 && Math.abs(deltaX) < deltaY;
+            const primaryDelta = motion === "right" ? deltaX : deltaY;
+            const crossDelta = motion === "right" ? deltaY : deltaX;
+            const isCloseSwipe =
+                primaryDelta > 90 && Math.abs(crossDelta) < primaryDelta;
 
-            if (isDownSwipe) {
+            if (isCloseSwipe) {
                 setIsDragging(false);
-                onClose();
+                setIsSwipeDismissing(true);
+                setDragOffset(
+                    motion === "right" ? window.innerWidth : window.innerHeight,
+                );
+                window.setTimeout(onClose, 180);
                 return;
             }
 
@@ -525,21 +548,25 @@ export function useSwipeDownToClose(onClose: () => void) {
         onTouchCancel() {
             touchStartRef.current = null;
             setIsDragging(false);
+            setIsSwipeDismissing(false);
             setDragOffset(0);
         },
         dragOffset,
         isDragging,
+        isSwipeDismissing,
     };
 }
 
 export function EditModal({
     children,
     className,
+    mobileMotion = "right",
     onOpenComplete,
     onClose,
 }: {
     children: React.ReactNode;
     className?: string;
+    mobileMotion?: MobileModalMotion;
     onOpenComplete?: () => void;
     onClose: () => void;
 }) {
@@ -564,7 +591,8 @@ export function EditModal({
         onTouchEnd,
         onTouchMove,
         onTouchStart,
-    } = useSwipeDownToClose(requestClose);
+        isSwipeDismissing,
+    } = useSwipeToClose(requestClose, mobileMotion);
 
     useEffect(() => {
         const frame = window.requestAnimationFrame(() => {
@@ -703,17 +731,23 @@ export function EditModal({
             <div
                 ref={dialogRef}
                 className={cn(
-                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.12)] transition-[transform,opacity] duration-200 ease-out sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:border sm:border-border sm:duration-150 sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
+                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.12)] transition-[transform,opacity] duration-200 ease-out sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:border sm:border-border sm:duration-150 sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
+                    mobileMotion === "bottom" && "rounded-t-2xl",
                     isVisible
                         ? "translate-y-0 opacity-100"
-                        : "translate-y-full opacity-100 sm:translate-y-0 sm:opacity-0",
-                    isDragging && "transition-none",
+                        : mobileMotion === "right"
+                          ? "translate-x-full opacity-100 sm:translate-x-0 sm:opacity-0"
+                          : "translate-y-full opacity-100 sm:translate-y-0 sm:opacity-0",
+                    isDragging && !isSwipeDismissing && "transition-none",
                     className,
                 )}
                 style={
-                    isDragging
+                    isDragging || isSwipeDismissing
                         ? {
-                              transform: `translateY(${dragOffset}px)`,
+                              transform:
+                                  mobileMotion === "right"
+                                      ? `translateX(${dragOffset}px)`
+                                      : `translateY(${dragOffset}px)`,
                           }
                         : undefined
                 }
@@ -721,7 +755,7 @@ export function EditModal({
                 aria-modal="true"
                 onClickCapture={(event) => {
                     if (
-                        event.target instanceof HTMLElement &&
+                        event.target instanceof Element &&
                         event.target.closest("[data-modal-close]")
                     ) {
                         event.preventDefault();
@@ -734,9 +768,11 @@ export function EditModal({
                 onTouchMove={onTouchMove}
                 onTouchStart={onTouchStart}
             >
-                <div className="flex h-6 shrink-0 items-center justify-center sm:hidden">
-                    <span className="h-1 w-10 rounded-full bg-neutral-300" />
-                </div>
+                {mobileMotion === "bottom" && (
+                    <div className="flex h-6 shrink-0 items-center justify-center sm:hidden">
+                        <span className="h-1 w-10 rounded-full bg-neutral-300" />
+                    </div>
+                )}
                 <div
                     className="min-h-0 flex-1 overflow-y-auto overscroll-contain sm:overflow-visible [&>*]:!border-0 max-sm:[&>*]:!min-h-0 max-sm:[&>*]:!rounded-none"
                     data-bottom-sheet-scroll
@@ -759,7 +795,18 @@ export function EditModal({
 }
 
 export function ModalBackButton(_props: { onClick: () => void }) {
-    return null;
+    return (
+        <Button
+            data-modal-close
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="-ml-2 mb-3 sm:hidden"
+        >
+            <ChevronLeft className="h-5 w-5" aria-hidden />
+            <span className="sr-only">Back</span>
+        </Button>
+    );
 }
 
 export function MetricCard({
