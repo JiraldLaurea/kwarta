@@ -1,6 +1,7 @@
 "use client";
 
 import { type User } from "@supabase/supabase-js";
+import { motion, useReducedMotion } from "framer-motion";
 import {
     BadgeDollarSign,
     Banknote,
@@ -572,6 +573,7 @@ export function EditModal({
 }) {
     const [isVisible, setIsVisible] = useState(false);
     const [isMobileInputFocused, setIsMobileInputFocused] = useState(false);
+    const prefersReducedMotion = useReducedMotion();
     const closingRef = useRef(false);
     const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -582,8 +584,11 @@ export function EditModal({
 
         closingRef.current = true;
         setIsVisible(false);
-        window.setTimeout(onClose, window.innerWidth >= 640 ? 150 : 220);
-    }, [onClose]);
+        window.setTimeout(
+            onClose,
+            prefersReducedMotion || window.innerWidth >= 640 ? 150 : 240,
+        );
+    }, [onClose, prefersReducedMotion]);
     const {
         dragOffset,
         isDragging,
@@ -593,6 +598,24 @@ export function EditModal({
         onTouchStart,
         isSwipeDismissing,
     } = useSwipeToClose(requestClose, mobileMotion);
+    const modalOffset =
+        isDragging || isSwipeDismissing
+            ? dragOffset
+            : isVisible
+              ? 0
+              : "100%";
+    const modalAnimation =
+        mobileMotion === "right"
+            ? { x: modalOffset, y: 0 }
+            : { x: 0, y: modalOffset };
+    const modalTransition = prefersReducedMotion
+        ? { duration: 0 }
+        : isDragging && !isSwipeDismissing
+          ? { duration: 0 }
+          : {
+                duration: isSwipeDismissing ? 0.18 : 0.24,
+                ease: [0.22, 1, 0.36, 1] as const,
+            };
 
     useEffect(() => {
         const frame = window.requestAnimationFrame(() => {
@@ -721,36 +744,24 @@ export function EditModal({
                     isVisible ? "opacity-100" : "opacity-0",
                 )}
                 style={
-                    isDragging
+                    isDragging || isSwipeDismissing
                         ? { opacity: Math.max(0, 1 - dragOffset / 400) }
                         : undefined
                 }
                 type="button"
                 onClick={requestClose}
             />
-            <div
+            <motion.div
                 ref={dialogRef}
                 className={cn(
-                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.12)] transition-[transform,opacity] duration-200 ease-out sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:rounded-2xl sm:border sm:border-border sm:duration-150 sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
+                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 shadow-[0_-12px_40px_rgba(0,0,0,0.12)] will-change-transform sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:rounded-2xl sm:border sm:border-border sm:transition-opacity sm:duration-150 sm:will-change-auto sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
                     mobileMotion === "bottom" && "rounded-t-2xl",
-                    isVisible
-                        ? "translate-y-0 opacity-100"
-                        : mobileMotion === "right"
-                          ? "translate-x-full opacity-100 sm:translate-x-0 sm:opacity-0"
-                          : "translate-y-full opacity-100 sm:translate-y-0 sm:opacity-0",
-                    isDragging && !isSwipeDismissing && "transition-none",
+                    !isVisible && "sm:opacity-0",
                     className,
                 )}
-                style={
-                    isDragging || isSwipeDismissing
-                        ? {
-                              transform:
-                                  mobileMotion === "right"
-                                      ? `translateX(${dragOffset}px)`
-                                      : `translateY(${dragOffset}px)`,
-                          }
-                        : undefined
-                }
+                initial={false}
+                animate={modalAnimation}
+                transition={modalTransition}
                 role="dialog"
                 aria-modal="true"
                 onClickCapture={(event) => {
@@ -789,7 +800,7 @@ export function EditModal({
                 >
                     {children}
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }
