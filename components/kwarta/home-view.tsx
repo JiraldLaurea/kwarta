@@ -44,16 +44,13 @@ import type {
     Transaction,
     TransactionType,
 } from "@/lib/types";
-import type { CategoryFormValues } from "@/lib/schema";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
     formatMonthLabel,
-    getUniqueCategoryId,
     getSubcategoriesForCategory,
     handleDecimalInput,
     normalizeTransactionType,
     parseDecimalInput,
-    reorderCategoriesByType,
     toDateInputValue,
 } from "@/lib/kwarta/helpers";
 import { Button } from "@/components/ui/button";
@@ -69,7 +66,6 @@ import {
     FieldError,
     ModalBackButton,
 } from "@/components/kwarta/shared";
-import { CategoryForm } from "@/components/kwarta/categories";
 
 export function HomeView({
     budgets,
@@ -557,272 +553,84 @@ function SortableCategoryCard({
 
 export type HomeItemStyle = "ios" | "cards";
 
-export function ManageCategoriesModal({
+export function ManageCategoriesView({
     expenseCategories,
     incomeCategories,
-    onClose,
-    onSaveCategories,
+    onAddCategory,
+    onBack,
+    onDeleteCategory,
+    onEditCategory,
+    onReorderCategory,
 }: {
     expenseCategories: Category[];
     incomeCategories: Category[];
-    onClose: () => void;
-    onSaveCategories: (categories: Category[]) => void;
-}) {
-    const [draftExpenseCategories, setDraftExpenseCategories] =
-        useState(expenseCategories);
-    const [draftIncomeCategories, setDraftIncomeCategories] =
-        useState(incomeCategories);
-    const [categoryFormMode, setCategoryFormMode] = useState<
-        "create" | "edit" | null
-    >(null);
-    const [editingCategory, setEditingCategory] = useState<Category | null>(
-        null,
-    );
-    const [categoryPendingDelete, setCategoryPendingDelete] =
-        useState<Category | null>(null);
-
-    useEffect(() => {
-        setDraftExpenseCategories(expenseCategories);
-    }, [expenseCategories]);
-
-    useEffect(() => {
-        setDraftIncomeCategories(incomeCategories);
-    }, [incomeCategories]);
-
-    const handleReorderCategory = (
+    onAddCategory: () => void;
+    onBack: () => void;
+    onDeleteCategory: (category: Category) => void;
+    onEditCategory: (category: Category) => void;
+    onReorderCategory: (
         type: TransactionType,
         fromId: string,
         toId: string,
-    ) => {
-        const updateDraft = (current: Category[]) =>
-            reorderCategoriesByType(current, type, fromId, toId);
-
-        if (type === "income") {
-            setDraftIncomeCategories(updateDraft);
-            return;
-        }
-
-        setDraftExpenseCategories(updateDraft);
-    };
-
-    const updateDraftCategory = (category: Category) => {
-        const categoryType = normalizeTransactionType(category.type);
-        const removeCategory = (current: Category[]) =>
-            current.filter((item) => item.id !== category.id);
-
-        setDraftExpenseCategories((current) => {
-            const next = removeCategory(current);
-
-            if (categoryType !== "expense") {
-                return next;
-            }
-
-            const existingIndex = current.findIndex(
-                (item) => item.id === category.id,
-            );
-            const insertIndex = existingIndex >= 0 ? existingIndex : 0;
-
-            next.splice(insertIndex, 0, category);
-            return next;
-        });
-        setDraftIncomeCategories((current) => {
-            const next = removeCategory(current);
-
-            if (categoryType !== "income") {
-                return next;
-            }
-
-            const existingIndex = current.findIndex(
-                (item) => item.id === category.id,
-            );
-            const insertIndex = existingIndex >= 0 ? existingIndex : 0;
-
-            next.splice(insertIndex, 0, category);
-            return next;
-        });
-    };
-
-    const handleCategorySubmit = (values: CategoryFormValues) => {
-        const draftCategories = [
-            ...draftExpenseCategories,
-            ...draftIncomeCategories,
-        ];
-        const category =
-            categoryFormMode === "edit" && editingCategory
-                ? { ...editingCategory, ...values }
-                : {
-                      id: getUniqueCategoryId(values.name, draftCategories),
-                      ...values,
-                  };
-
-        updateDraftCategory(category);
-        setCategoryFormMode(null);
-        setEditingCategory(null);
-    };
-
-    const handleDeleteCategory = () => {
-        if (!categoryPendingDelete) {
-            return;
-        }
-
-        const categoryId = categoryPendingDelete.id;
-
-        setDraftExpenseCategories((current) =>
-            current.filter((category) => category.id !== categoryId),
-        );
-        setDraftIncomeCategories((current) =>
-            current.filter((category) => category.id !== categoryId),
-        );
-        setCategoryPendingDelete(null);
-    };
-
-    const handleSaveChanges = () => {
-        onSaveCategories([
-            ...draftExpenseCategories,
-            ...draftIncomeCategories,
-        ]);
-        onClose();
-    };
-
+    ) => void;
+}) {
     return (
-        <EditModal onClose={onClose}>
-            <Card className="flex min-h-dvh w-full min-w-0 flex-col rounded-none border-0 bg-white sm:max-h-[calc(100dvh-3rem)] sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
-                <CardHeader className="shrink-0 px-6 pb-4 pt-5">
-                    <ModalBackButton onClick={onClose} />
-                    <CardTitle className="text-2xl font-medium leading-8">
+        <div className="space-y-6">
+            <nav
+                aria-label="Breadcrumb"
+                className="flex items-center gap-1 text-sm leading-5"
+            >
+                <button
+                    className="rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    type="button"
+                    onClick={onBack}
+                >
+                    Settings
+                </button>
+                <ChevronRight
+                    className="h-4 w-4 text-muted-foreground"
+                    aria-hidden
+                />
+                <span aria-current="page">Manage categories</span>
+            </nav>
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h1 className="text-2xl font-medium leading-8">
                         Manage categories
-                    </CardTitle>
-                    <p className="text-base leading-6 text-muted-foreground">
+                    </h1>
+                    <p className="mt-1 text-base leading-6 text-muted-foreground">
                         Arrange, edit, or remove your income and expense
                         categories.
                     </p>
-                </CardHeader>
-                <CardContent className="min-h-0 min-w-0 flex-1 space-y-6 overflow-y-auto px-6 pb-6 pt-0">
-                    <div className="pt-1">
-                        <Button
-                            className="w-full sm:w-auto"
-                            type="button"
-                            onClick={() => {
-                                setEditingCategory(null);
-                                setCategoryFormMode("create");
-                            }}
-                        >
-                            <Plus className="h-4 w-4" aria-hidden />
-                            Add category
-                        </Button>
-                    </div>
-                    <ManageCategorySection
-                        title="Expenses"
-                        categories={draftExpenseCategories}
-                        onDeleteCategory={setCategoryPendingDelete}
-                        onEditCategory={(category) => {
-                            setEditingCategory(category);
-                            setCategoryFormMode("edit");
-                        }}
-                        onReorderCategory={handleReorderCategory}
-                    />
-                    <ManageCategorySection
-                        title="Income"
-                        categories={draftIncomeCategories}
-                        onDeleteCategory={setCategoryPendingDelete}
-                        onEditCategory={(category) => {
-                            setEditingCategory(category);
-                            setCategoryFormMode("edit");
-                        }}
-                        onReorderCategory={handleReorderCategory}
-                    />
-                </CardContent>
-                <div className="shrink-0 border-t border-border bg-neutral-50 px-5 py-4 sm:hidden">
-                    <Button
-                        className="w-full"
-                        type="button"
-                        onClick={handleSaveChanges}
-                    >
-                        Save changes
-                    </Button>
                 </div>
-                <div className="hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
-                    <Button
-                        data-modal-close
-                        type="button"
-                        variant="secondary"
-                    >
-                        Cancel
-                    </Button>
-                    <Button type="button" onClick={handleSaveChanges}>
-                        Save changes
-                    </Button>
-                </div>
-            </Card>
-            {categoryFormMode && (
-                <EditModal
-                    onClose={() => {
-                        setCategoryFormMode(null);
-                        setEditingCategory(null);
-                    }}
+                <Button
+                    className="w-full sm:w-auto"
+                    type="button"
+                    onClick={onAddCategory}
                 >
-                    <CategoryForm
-                        editing={
-                            categoryFormMode === "edit"
-                                ? editingCategory ?? undefined
-                                : undefined
-                        }
-                        modal
-                        onCancel={() => {
-                            setCategoryFormMode(null);
-                            setEditingCategory(null);
-                        }}
-                        onSubmit={handleCategorySubmit}
-                    />
-                </EditModal>
-            )}
-            {categoryPendingDelete && (
-                <EditModal onClose={() => setCategoryPendingDelete(null)}>
-                    <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
-                        <CardHeader className="px-6 pb-5 pt-6">
-                            <ModalBackButton
-                                onClick={() => setCategoryPendingDelete(null)}
-                            />
-                            <CardTitle className="text-2xl font-medium leading-8">
-                                Delete {categoryPendingDelete.name}?
-                            </CardTitle>
-                            <p className="text-base leading-7 text-muted-foreground">
-                                This will remove the card, its transactions, and
-                                any budgets linked to this category when you
-                                save changes.
-                            </p>
-                        </CardHeader>
-                        <CardContent className="px-6 pb-6 pt-0 sm:hidden">
-                            <Button
-                                className="w-full border-destructive bg-white text-destructive hover:bg-white"
-                                type="button"
-                                variant="secondary"
-                                onClick={handleDeleteCategory}
-                            >
-                                Delete card
-                            </Button>
-                        </CardContent>
-                        <div className="hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
-                            <Button
-                                type="button"
-                                variant="secondary"
-                                onClick={() => setCategoryPendingDelete(null)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                className="border-destructive bg-white text-destructive hover:bg-white"
-                                type="button"
-                                variant="secondary"
-                                onClick={handleDeleteCategory}
-                            >
-                                Delete card
-                            </Button>
-                        </div>
-                    </Card>
-                </EditModal>
-            )}
-        </EditModal>
+                    <Plus className="h-4 w-4" aria-hidden />
+                    Add category
+                </Button>
+            </div>
+
+            <div className="grid items-start gap-5 md:grid-cols-2">
+                <ManageCategorySection
+                    title="Expenses"
+                    categories={expenseCategories}
+                    onDeleteCategory={onDeleteCategory}
+                    onEditCategory={onEditCategory}
+                    onReorderCategory={onReorderCategory}
+                />
+                <ManageCategorySection
+                    title="Income"
+                    categories={incomeCategories}
+                    onDeleteCategory={onDeleteCategory}
+                    onEditCategory={onEditCategory}
+                    onReorderCategory={onReorderCategory}
+                />
+            </div>
+        </div>
     );
 }
 
