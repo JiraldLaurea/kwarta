@@ -79,11 +79,13 @@ export function CategoryForm({
     editing,
     modal = false,
     onCancel,
+    onDelete,
     onSubmit,
 }: {
     editing?: Category;
     modal?: boolean;
     onCancel: () => void;
+    onDelete?: () => void;
     onSubmit: (values: CategoryFormValues) => void;
 }) {
     const form = useForm<CategoryFormValues>({
@@ -215,9 +217,21 @@ export function CategoryForm({
                         </div>
                     </FieldError>
                     {isModal && (
-                        <Button className="mt-2 w-full sm:hidden" type="submit">
-                            {editing ? "Save category" : "Add category"}
-                        </Button>
+                        <div className="flex items-center gap-2 pt-2 sm:hidden">
+                            {editing && onDelete && (
+                                <Button
+                                    className="flex-1 border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={onDelete}
+                                >
+                                    Delete
+                                </Button>
+                            )}
+                            <Button className="flex-1" type="submit">
+                                {editing ? "Save category" : "Add category"}
+                            </Button>
+                        </div>
                     )}
                 </CardContent>
                 <div
@@ -239,10 +253,20 @@ export function CategoryForm({
                     )}
                     <div
                         className={cn(
-                            !isModal && "flex gap-2",
+                            "flex gap-2",
                             isModal && "ml-auto",
                         )}
                     >
+                        {editing && onDelete && (
+                            <Button
+                                className="border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                type="button"
+                                variant="secondary"
+                                onClick={onDelete}
+                            >
+                                Delete
+                            </Button>
+                        )}
                         <Button type="submit">
                             {!editing && (
                                 <Plus className="h-4 w-4" aria-hidden />

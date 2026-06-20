@@ -844,7 +844,6 @@ export function KwartaApp() {
                         incomeCategories={incomeCategories}
                         onAddCategory={() => setHomeCategoryFormOpen(true)}
                         onBack={() => setView("settings")}
-                        onDeleteCategory={setCategoryPendingDelete}
                         onEditCategory={(category) =>
                             setEditingCategoryId(category.id)
                         }
@@ -961,6 +960,30 @@ export function KwartaApp() {
                                 )!
                             }
                             onCancel={() => setEditingCategoryId(null)}
+                            onDelete={() => {
+                                const categoryId = editingCategoryId;
+
+                                setCategories((current) =>
+                                    current.filter(
+                                        (category) =>
+                                            category.id !== categoryId,
+                                    ),
+                                );
+                                setTransactions((current) =>
+                                    current.filter(
+                                        (transaction) =>
+                                            transaction.categoryId !==
+                                            categoryId,
+                                    ),
+                                );
+                                setBudgets((current) =>
+                                    current.filter(
+                                        (budget) =>
+                                            budget.categoryId !== categoryId,
+                                    ),
+                                );
+                                setEditingCategoryId(null);
+                            }}
                             onSubmit={(values) => {
                                 setCategories((current) =>
                                     current.map((category) =>
@@ -1210,13 +1233,13 @@ function SettingsView({
         value: HomeItemStyle;
     }> = [
         {
-            description: "Grouped rows on small screens",
+            description: "Grouped rows",
             icon: List,
             label: "List",
             value: "ios",
         },
         {
-            description: "Compact cards on every screen",
+            description: "Compact cards",
             icon: LayoutGrid,
             label: "Cards",
             value: "cards",
@@ -1269,7 +1292,7 @@ function SettingsView({
                     <CardHeader>
                         <CardTitle>Home layout</CardTitle>
                         <p className="text-sm leading-5 text-muted-foreground">
-                            Choose how category items appear on small screens.
+                            Choose how category items appear on the Home page.
                         </p>
                     </CardHeader>
                     <CardContent className="space-y-2">
