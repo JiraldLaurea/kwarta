@@ -56,12 +56,6 @@ import {
     type LucideIcon,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
-import {
-    AnimatePresence,
-    motion,
-    useReducedMotion,
-    type Variants,
-} from "framer-motion";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
@@ -210,32 +204,6 @@ type PendingBackupImport =
           itemLabel: "budgets";
       };
 
-type SettingsPageTransition = {
-    direction: 1 | -1;
-    enabled: boolean;
-};
-
-const settingsPageVariants: Variants = {
-    enter: ({ direction, enabled }: SettingsPageTransition) =>
-        enabled
-            ? {
-                  x: direction > 0 ? "100%" : "-20%",
-              }
-            : { x: 0 },
-    center: { x: 0 },
-    exit: ({ direction, enabled }: SettingsPageTransition) =>
-        enabled
-            ? {
-                  x: direction > 0 ? "-20%" : "100%",
-              }
-            : { x: 0 },
-};
-
-const settingsPageTransition = {
-    duration: 0.28,
-    ease: [0.22, 1, 0.36, 1] as const,
-};
-
 async function persistWorkspace(workspace: StoredWorkspace, userId: string) {
     const response = await fetch("/api/workspace", {
         body: JSON.stringify({ ...workspace, userId }),
@@ -258,11 +226,6 @@ export function KwartaApp() {
     const [authMode, setAuthMode] = useState<AuthMode>("login");
     const [user, setUser] = useState<User | null>(null);
     const [view, setView] = useState<View>("dashboard");
-    const [settingsPageDirection, setSettingsPageDirection] = useState<1 | -1>(
-        1,
-    );
-    const [isMobileViewport, setIsMobileViewport] = useState(false);
-    const prefersReducedMotion = useReducedMotion();
     const [homeItemStyle, setHomeItemStyle] =
         useState<HomeItemStyle>("ios");
     const [budgetsEnabled, setBudgetsEnabled] = useState(true);
@@ -301,16 +264,6 @@ export function KwartaApp() {
     const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
     const userId = user?.id ?? null;
-
-    useEffect(() => {
-        const mediaQuery = window.matchMedia("(max-width: 767px)");
-        const syncViewport = () => setIsMobileViewport(mediaQuery.matches);
-
-        syncViewport();
-        mediaQuery.addEventListener("change", syncViewport);
-
-        return () => mediaQuery.removeEventListener("change", syncViewport);
-    }, []);
 
     useEffect(() => {
         const storedHomeItemStyle = window.localStorage.getItem(
@@ -666,14 +619,6 @@ export function KwartaApp() {
         );
     }
 
-    const handleViewSelect = (nextView: View) => {
-        if (view === "manage-categories" && nextView === "settings") {
-            setSettingsPageDirection(-1);
-        }
-
-        setView(nextView);
-    };
-
     return (
         <main className="min-h-screen bg-neutral-50">
             <header className="sticky top-0 z-30 border-b bg-white">
@@ -689,7 +634,7 @@ export function KwartaApp() {
                     <nav className="hidden items-center gap-2 md:flex">
                         <NavItems
                             activeView={view}
-                            onSelect={handleViewSelect}
+                            onSelect={setView}
                         />
                     </nav>
                 </div>
@@ -853,142 +798,67 @@ export function KwartaApp() {
                     </div>
                 )}
 
-                {(view === "settings" || view === "manage-categories") && (
-                    <div className="relative overflow-x-clip">
-                        <AnimatePresence
-                            initial={false}
-                            mode="popLayout"
-                            custom={{
-                                direction: settingsPageDirection,
-                                enabled:
-                                    isMobileViewport &&
-                                    !prefersReducedMotion,
-                            }}
-                        >
-                            {view === "settings" ? (
-                                <motion.div
-                                    key="settings"
-                                    className="w-full"
-                                    custom={{
-                                        direction: settingsPageDirection,
-                                        enabled:
-                                            isMobileViewport &&
-                                            !prefersReducedMotion,
-                                    }}
-                                    variants={settingsPageVariants}
-                                    initial="enter"
-                                    animate="center"
-                                    exit="exit"
-                                    transition={settingsPageTransition}
-                                >
-                                    <SettingsView
-                                        accountName={accountName}
-                                        email={user?.email ?? "Account session"}
-                                        budgetsEnabled={budgetsEnabled}
-                                        budgetImportError={budgetImportError}
-                                        homeItemStyle={homeItemStyle}
-                                        budgetImportInputRef={
-                                            budgetImportInputRef
-                                        }
-                                        transactionImportError={
-                                            transactionImportError
-                                        }
-                                        transactionImportInputRef={
-                                            transactionImportInputRef
-                                        }
-                                        user={user}
-                                        onManageCategories={() => {
-                                            setSettingsPageDirection(1);
-                                            setView("manage-categories");
-                                        }}
-                                        onBudgetsEnabledChange={
-                                            setBudgetsEnabled
-                                        }
-                                        onBudgetExport={() =>
-                                            downloadBackupFile(
-                                                "budgets",
-                                                budgets,
-                                                categories,
-                                            )
-                                        }
-                                        onBudgetImportClick={() =>
-                                            budgetImportInputRef.current?.click()
-                                        }
-                                        onBudgetImportFile={
-                                            handleBudgetImportFile
-                                        }
-                                        onHomeItemStyleChange={setHomeItemStyle}
-                                        onSignOut={async () => {
-                                            await supabase?.auth.signOut();
-                                            setUser(null);
-                                            setIsAuthed(false);
-                                        }}
-                                        onTransactionExport={() =>
-                                            downloadBackupFile(
-                                                "transactions",
-                                                transactions,
-                                                categories,
-                                            )
-                                        }
-                                        onTransactionImportClick={() =>
-                                            transactionImportInputRef.current?.click()
-                                        }
-                                        onTransactionImportFile={
-                                            handleTransactionImportFile
-                                        }
-                                    />
-                                </motion.div>
-                            ) : (
-                                <motion.div
-                                    key="manage-categories"
-                                    className="w-full"
-                                    custom={{
-                                        direction: settingsPageDirection,
-                                        enabled:
-                                            isMobileViewport &&
-                                            !prefersReducedMotion,
-                                    }}
-                                    variants={settingsPageVariants}
-                                    initial="enter"
-                                    animate="center"
-                                    exit="exit"
-                                    transition={settingsPageTransition}
-                                >
-                                    <ManageCategoriesView
-                                        expenseCategories={expenseCategories}
-                                        incomeCategories={incomeCategories}
-                                        onAddCategory={() =>
-                                            setHomeCategoryFormOpen(true)
-                                        }
-                                        onBack={() => {
-                                            setSettingsPageDirection(-1);
-                                            setView("settings");
-                                        }}
-                                        onDeleteCategory={
-                                            setCategoryPendingDelete
-                                        }
-                                        onEditCategory={(category) =>
-                                            setEditingCategoryId(category.id)
-                                        }
-                                        onReorderCategory={(
-                                            type,
-                                            fromId,
-                                            toId,
-                                        ) =>
-                                            setCategories((current) =>
-                                                reorderCategoriesByType(
-                                                    current,
-                                                    type,
-                                                    fromId,
-                                                    toId,
-                                                ),
-                                            )
-                                        }
-                                    />
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
+                {view === "settings" && (
+                    <SettingsView
+                        accountName={accountName}
+                        email={user?.email ?? "Account session"}
+                        budgetsEnabled={budgetsEnabled}
+                        budgetImportError={budgetImportError}
+                        homeItemStyle={homeItemStyle}
+                        budgetImportInputRef={budgetImportInputRef}
+                        transactionImportError={transactionImportError}
+                        transactionImportInputRef={transactionImportInputRef}
+                        user={user}
+                        onManageCategories={() => setView("manage-categories")}
+                        onBudgetsEnabledChange={setBudgetsEnabled}
+                        onBudgetExport={() =>
+                            downloadBackupFile("budgets", budgets, categories)
+                        }
+                        onBudgetImportClick={() =>
+                            budgetImportInputRef.current?.click()
+                        }
+                        onBudgetImportFile={handleBudgetImportFile}
+                        onHomeItemStyleChange={setHomeItemStyle}
+                        onSignOut={async () => {
+                            await supabase?.auth.signOut();
+                            setUser(null);
+                            setIsAuthed(false);
+                        }}
+                        onTransactionExport={() =>
+                            downloadBackupFile(
+                                "transactions",
+                                transactions,
+                                categories,
+                            )
+                        }
+                        onTransactionImportClick={() =>
+                            transactionImportInputRef.current?.click()
+                        }
+                        onTransactionImportFile={handleTransactionImportFile}
+                    />
+                )}
+
+                {view === "manage-categories" && (
+                    <ManageCategoriesView
+                        expenseCategories={expenseCategories}
+                        incomeCategories={incomeCategories}
+                        onAddCategory={() => setHomeCategoryFormOpen(true)}
+                        onBack={() => setView("settings")}
+                        onDeleteCategory={setCategoryPendingDelete}
+                        onEditCategory={(category) =>
+                            setEditingCategoryId(category.id)
+                        }
+                        onReorderCategory={(type, fromId, toId) =>
+                            setCategories((current) =>
+                                reorderCategoriesByType(
+                                    current,
+                                    type,
+                                    fromId,
+                                    toId,
+                                ),
+                            )
+                        }
+                    />
                 )}
             </div>
             {quickAddCategory && (
@@ -1148,7 +1018,7 @@ export function KwartaApp() {
             )}
             <MobileTabBar
                 activeView={view}
-                onSelect={handleViewSelect}
+                onSelect={setView}
             />
         </main>
     );
