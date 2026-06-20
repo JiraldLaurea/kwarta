@@ -95,7 +95,13 @@ export function HomeView({
     transactions: Transaction[];
 }) {
     return (
-        <div className="space-y-5">
+        <div
+            className={cn(
+                "space-y-5",
+                homeItemStyle === "ios" &&
+                    "md:grid md:grid-cols-2 md:items-start md:gap-5 md:space-y-0",
+            )}
+        >
             <CategoryQuickAddSection
                 budgets={budgets}
                 budgetsEnabled={budgetsEnabled}
@@ -226,7 +232,7 @@ function CategoryQuickAddSection({
 
     return (
         <section>
-            <h2 className="mb-3 text-lg font-medium leading-6 sm:text-xl sm:leading-7">
+            <h2 className="mb-2 text-muted-foreground text-sm font-medium leading-5">
                 {title}
             </h2>
             {categories.length === 0 ? (
@@ -249,7 +255,7 @@ function CategoryQuickAddSection({
                         <div
                             className={cn(
                                 usesIosStyle
-                                    ? "sm:grid sm:grid-cols-3 sm:gap-2 md:grid-cols-4 md:gap-3 lg:grid-cols-6 max-sm:overflow-hidden max-sm:rounded-2xl max-sm:border max-sm:border-border max-sm:bg-white max-sm:divide-y max-sm:divide-border"
+                                    ? "overflow-hidden rounded-2xl border border-border bg-white divide-y divide-border"
                                     : "grid grid-cols-3 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3 lg:grid-cols-6",
                             )}
                         >
@@ -366,10 +372,10 @@ function SortableCategoryCard({
             {...attributes}
             {...listeners}
             className={cn(
-                "relative rounded-2xl border border-border bg-white p-4 text-left transition-[border-color,box-shadow,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex sm:min-h-[154px] sm:flex-col sm:items-center sm:justify-center sm:text-center md:p-5 md:hover:border-[var(--category-color)]",
+                "relative bg-white text-left transition-[border-color,background-color,box-shadow,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 usesIosStyle
-                    ? "max-sm:flex max-sm:min-h-[78px] max-sm:items-center max-sm:gap-3 max-sm:rounded-none max-sm:border-0 max-sm:px-4 max-sm:py-3"
-                    : "",
+                    ? "flex min-h-[78px] items-center gap-3 border-0 px-4 py-3 md:hover:bg-neutral-50"
+                    : "rounded-2xl border border-border p-4 sm:flex sm:min-h-[154px] sm:flex-col sm:items-center sm:justify-center sm:text-center md:p-5 md:hover:border-[var(--category-color)]",
                 editMode &&
                     "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
                 isDragging && "opacity-20",
@@ -394,7 +400,7 @@ function SortableCategoryCard({
                 className={cn(
                     "flex items-start gap-3",
                     usesIosStyle
-                        ? "shrink-0 sm:mb-4 sm:justify-center"
+                        ? "shrink-0"
                         : "mb-3 justify-center sm:mb-4",
                 )}
             >
@@ -403,12 +409,12 @@ function SortableCategoryCard({
                         category={category}
                         className={cn(
                             usesIosStyle
-                                ? "h-11 w-11 sm:h-10 sm:w-10"
+                                ? "h-11 w-11"
                                 : "h-10 w-10",
                         )}
                         iconClassName={cn(
                             usesIosStyle
-                                ? "h-5 w-5 sm:h-4 sm:w-4"
+                                ? "h-5 w-5"
                                 : "h-4 w-4",
                         )}
                     />
@@ -432,14 +438,15 @@ function SortableCategoryCard({
             </div>
             <div
                 className={cn(
-                    "sm:flex sm:w-full sm:flex-1 sm:flex-col sm:items-center sm:justify-center",
-                    usesIosStyle && "min-w-0 flex-1 sm:min-w-0",
+                    usesIosStyle
+                        ? "min-w-0 flex-1"
+                        : "sm:flex sm:w-full sm:flex-1 sm:flex-col sm:items-center sm:justify-center",
                 )}
             >
                 <div
                     className={cn(
                         usesIosStyle
-                            ? "flex min-w-0 items-center justify-between gap-3 sm:block"
+                            ? "flex min-w-0 items-center justify-between gap-3"
                             : "block",
                     )}
                 >
@@ -447,20 +454,20 @@ function SortableCategoryCard({
                         className={cn(
                             "truncate font-medium",
                             usesIosStyle
-                                ? "text-sm leading-5 sm:text-center md:text-base"
+                                ? "text-sm leading-5"
                                 : "text-center text-sm leading-5 md:text-base",
                         )}
                     >
                         {category.name}
                     </p>
                     {usesIosStyle && (
-                        <span className="shrink-0 text-sm font-medium leading-5 sm:hidden">
+                        <span className="shrink-0 text-sm font-medium leading-5">
                             {formatCurrency(total)}
                         </span>
                     )}
                 </div>
                 {usesIosStyle && hasBudgetTracking && (
-                    <div className="mt-2 sm:hidden">
+                    <div className="mt-2">
                         <div
                             aria-label={`${category.name} budget progress`}
                             className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
@@ -491,13 +498,8 @@ function SortableCategoryCard({
                         </p>
                     </div>
                 )}
-                {hasBudgetTracking && (
-                    <div
-                        className={cn(
-                            "mt-3 w-full",
-                            usesIosStyle && "hidden sm:block",
-                        )}
-                    >
+                {hasBudgetTracking && !usesIosStyle && (
+                    <div className="mt-3 w-full">
                         <div
                             aria-label={`${category.name} budget progress`}
                             className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
@@ -521,7 +523,7 @@ function SortableCategoryCard({
                 <div
                     className={cn(
                         "mt-3 flex-col items-center gap-1 text-center",
-                        usesIosStyle ? "hidden sm:flex" : "flex",
+                        usesIosStyle ? "hidden" : "flex",
                     )}
                 >
                     <span className="text-sm font-medium">
@@ -543,7 +545,7 @@ function SortableCategoryCard({
             </div>
             {usesIosStyle && !editMode && (
                 <ChevronRight
-                    className="h-5 w-5 shrink-0 text-muted-foreground/60 sm:hidden"
+                    className="h-5 w-5 shrink-0 text-muted-foreground/60"
                     aria-hidden
                 />
             )}
@@ -558,7 +560,6 @@ export function ManageCategoriesView({
     incomeCategories,
     onAddCategory,
     onBack,
-    onDeleteCategory,
     onEditCategory,
     onReorderCategory,
 }: {
@@ -566,7 +567,6 @@ export function ManageCategoriesView({
     incomeCategories: Category[];
     onAddCategory: () => void;
     onBack: () => void;
-    onDeleteCategory: (category: Category) => void;
     onEditCategory: (category: Category) => void;
     onReorderCategory: (
         type: TransactionType,
@@ -618,14 +618,12 @@ export function ManageCategoriesView({
                 <ManageCategorySection
                     title="Expenses"
                     categories={expenseCategories}
-                    onDeleteCategory={onDeleteCategory}
                     onEditCategory={onEditCategory}
                     onReorderCategory={onReorderCategory}
                 />
                 <ManageCategorySection
                     title="Income"
                     categories={incomeCategories}
-                    onDeleteCategory={onDeleteCategory}
                     onEditCategory={onEditCategory}
                     onReorderCategory={onReorderCategory}
                 />
@@ -636,13 +634,11 @@ export function ManageCategoriesView({
 
 function ManageCategorySection({
     categories,
-    onDeleteCategory,
     onEditCategory,
     onReorderCategory,
     title,
 }: {
     categories: Category[];
-    onDeleteCategory: (category: Category) => void;
     onEditCategory: (category: Category) => void;
     onReorderCategory: (
         type: TransactionType,
@@ -737,7 +733,6 @@ function ManageCategorySection({
                                 <SortableManageCategoryRow
                                     key={category.id}
                                     category={category}
-                                    onDeleteCategory={onDeleteCategory}
                                     onEditCategory={onEditCategory}
                                 />
                             ))}
@@ -754,11 +749,9 @@ function ManageCategorySection({
 
 function SortableManageCategoryRow({
     category,
-    onDeleteCategory,
     onEditCategory,
 }: {
     category: Category;
-    onDeleteCategory: (category: Category) => void;
     onEditCategory: (category: Category) => void;
 }) {
     const {
@@ -783,7 +776,6 @@ function SortableManageCategoryRow({
             dragAttributes={attributes}
             dragListeners={listeners}
             isDragging={isDragging}
-            onDeleteCategory={onDeleteCategory}
             onEditCategory={onEditCategory}
             style={style}
         />
@@ -798,7 +790,6 @@ const ManageCategoryRowView = forwardRef<
         dragListeners?: DraggableSyntheticListeners;
         isDragging?: boolean;
         isOverlay?: boolean;
-        onDeleteCategory?: (category: Category) => void;
         onEditCategory?: (category: Category) => void;
         style?: CSSProperties;
     }
@@ -809,7 +800,6 @@ const ManageCategoryRowView = forwardRef<
         dragListeners,
         isDragging = false,
         isOverlay = false,
-        onDeleteCategory,
         onEditCategory,
         style,
     },
@@ -819,17 +809,35 @@ const ManageCategoryRowView = forwardRef<
         <div
             ref={ref}
             style={style}
+            role={!isOverlay && onEditCategory ? "button" : undefined}
+            tabIndex={!isOverlay && onEditCategory ? 0 : undefined}
             className={cn(
-                "flex min-h-[64px] items-center gap-3 border-b border-border bg-white px-3 py-2 transition-[box-shadow,opacity,transform] first:rounded-t-md last:rounded-b-md last:border-b-0",
+                "flex min-h-[64px] items-center gap-3 border-b border-border bg-white px-3 py-2 transition-[background-color,box-shadow,opacity,transform] first:rounded-t-md last:rounded-b-md last:border-b-0",
+                !isOverlay && onEditCategory &&
+                    "cursor-pointer md:hover:bg-neutral-50",
                 isDragging && "opacity-20",
                 isOverlay &&
                     "rounded-md border border-border shadow-[0_18px_45px_rgba(37,99,235,0.2)]",
             )}
+            onClick={() => {
+                if (!isOverlay) onEditCategory?.(category);
+            }}
+            onKeyDown={(event) => {
+                if (
+                    !isOverlay &&
+                    (event.key === "Enter" || event.key === " ")
+                ) {
+                    event.preventDefault();
+                    onEditCategory?.(category);
+                }
+            }}
         >
             <span
                 className="flex h-9 w-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md border border-dashed border-border text-muted-foreground active:cursor-grabbing"
                 {...dragAttributes}
                 {...dragListeners}
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
             >
                 <GripVertical className="h-4 w-4" aria-hidden />
                 <span className="sr-only">Drag to reorder</span>
@@ -842,11 +850,10 @@ const ManageCategoryRowView = forwardRef<
             <p className="min-w-0 flex-1 truncate text-sm font-medium leading-5">
                 {category.name}
             </p>
-            {!isOverlay && onDeleteCategory && onEditCategory && (
-                <CategoryCardActionMenu
-                    category={category}
-                    onDeleteCategory={onDeleteCategory}
-                    onEditCategory={onEditCategory}
+            {!isOverlay && onEditCategory && (
+                <ChevronRight
+                    className="h-5 w-5 shrink-0 text-muted-foreground/60"
+                    aria-hidden
                 />
             )}
         </div>

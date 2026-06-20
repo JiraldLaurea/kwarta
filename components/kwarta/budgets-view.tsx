@@ -82,17 +82,6 @@ export function BudgetsView({
                 <PageHeader
                     title="Budgets"
                     description="Set monthly limits and track category spending."
-                    actions={
-                        <div className="flex flex-wrap gap-2 sm:justify-end">
-                            <Button
-                                type="button"
-                                onClick={() => setIsAddingBudget(true)}
-                            >
-                                <Plus className="h-4 w-4" aria-hidden />
-                                Add budget
-                            </Button>
-                        </div>
-                    }
                 />
                 <MonthlyBudgetSummary
                     budgets={budgets}
@@ -102,11 +91,19 @@ export function BudgetsView({
                     )}
                 />
                 <BudgetProgressList
-                    actions
+                    action={
+                        <Button
+                            type="button"
+                            onClick={() => setIsAddingBudget(true)}
+                        >
+                            <Plus className="h-4 w-4" aria-hidden />
+                            Add budget
+                        </Button>
+                    }
                     budgets={budgets}
                     categories={categories}
-                    onDelete={onDelete}
-                    onEdit={onEdit}
+                    onSelect={onEdit}
+                    presentation="list"
                     transactions={transactions.filter(
                         (transaction) => transaction.type === "expense",
                     )}
@@ -134,6 +131,10 @@ export function BudgetsView({
                         modal
                         month={month}
                         onCancel={onCancelEdit}
+                        onDelete={() => {
+                            onDelete(editing.id);
+                            onCancelEdit();
+                        }}
                         onSubmit={onSubmit}
                     />
                 </EditModal>
@@ -211,6 +212,7 @@ function BudgetForm({
     modal = false,
     month,
     onCancel,
+    onDelete,
     onSubmit,
 }: {
     categories: Category[];
@@ -218,6 +220,7 @@ function BudgetForm({
     modal?: boolean;
     month: string;
     onCancel: () => void;
+    onDelete?: () => void;
     onSubmit: (values: BudgetFormValues) => void;
 }) {
     const form = useForm<BudgetFormValues>({
@@ -349,9 +352,21 @@ function BudgetForm({
                         </div>
                     </div>
                     {isModal && (
-                        <Button className="mt-2 w-full sm:hidden" type="submit">
-                            {editing ? "Save budget" : "Add budget"}
-                        </Button>
+                        <div className="flex items-center gap-2 pt-2 sm:hidden">
+                            {editing && onDelete && (
+                                <Button
+                                    className="flex-1 border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={onDelete}
+                                >
+                                    Delete
+                                </Button>
+                            )}
+                            <Button className="flex-1" type="submit">
+                                {editing ? "Save budget" : "Add budget"}
+                            </Button>
+                        </div>
                     )}
                 </CardContent>
                 <div
@@ -373,10 +388,20 @@ function BudgetForm({
                     )}
                     <div
                         className={cn(
-                            !isModal && "flex gap-2",
+                            "flex gap-2",
                             isModal && "ml-auto",
                         )}
                     >
+                        {editing && onDelete && (
+                            <Button
+                                className="border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                type="button"
+                                variant="secondary"
+                                onClick={onDelete}
+                            >
+                                Delete
+                            </Button>
+                        )}
                         <Button type="submit">
                             {!editing && (
                                 <Plus className="h-4 w-4" aria-hidden />

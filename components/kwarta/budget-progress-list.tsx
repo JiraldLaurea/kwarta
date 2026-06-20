@@ -1,30 +1,85 @@
 "use client";
 
-import { Edit3, Trash2 } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { Budget, Category, Transaction } from "@/lib/types";
 import { cn, formatCurrency, percent } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { EmptyState } from "@/components/kwarta/shared";
+import { CategoryIconBadge, EmptyState } from "@/components/kwarta/shared";
+
+type BudgetProgressItem = {
+    budget: Budget;
+    category?: Category;
+    isOverBudget: boolean;
+    remaining: number;
+    spent: number;
+    usage: number;
+};
 
 export function BudgetProgressList({
-    actions = false,
+    action,
     backupMenu,
     budgets,
     categories,
-    onDelete,
-    onEdit,
+    onSelect,
+    presentation = "card",
     transactions,
 }: {
-    actions?: boolean;
+    action?: React.ReactNode;
     backupMenu?: React.ReactNode;
     budgets: Budget[];
     categories: Category[];
-    onDelete?: (id: string) => void;
-    onEdit?: (budget: Budget) => void;
+    onSelect?: (budget: Budget) => void;
+    presentation?: "card" | "list";
     transactions: Transaction[];
 }) {
+    const items = budgets.map((budget): BudgetProgressItem => {
+        const category = categories.find(
+            (item) => item.id === budget.categoryId,
+        );
+        const spent = transactions
+            .filter(
+                (transaction) => transaction.categoryId === budget.categoryId,
+            )
+            .reduce((sum, transaction) => sum + transaction.amount, 0);
+        const remaining = budget.limit - spent;
+
+        return {
+            budget,
+            category,
+            isOverBudget: remaining < 0,
+            remaining,
+            spent,
+            usage: percent(spent, budget.limit),
+        };
+    });
+
+    if (presentation === "list") {
+        return (
+            <section>
+                {action && <div className="mt-4">{action}</div>}
+
+                {items.length === 0 ? (
+                    <EmptyState
+                        className="mt-5 flex min-h-56 flex-col items-center justify-center rounded-md border border-dashed border-border"
+                        title="No budgets yet"
+                        description="Create a monthly budget after adding expense categories."
+                    />
+                ) : (
+                    <div className="mt-5 overflow-hidden rounded-md border border-border bg-white divide-y divide-border">
+                        {items.map((item) => (
+                            <BudgetListRow
+                                key={item.budget.id}
+                                item={item}
+                                onSelect={onSelect}
+                            />
+                        ))}
+                    </div>
+                )}
+            </section>
+        );
+    }
+
     return (
         <Card className="flex h-full flex-col">
             <CardHeader>
@@ -39,110 +94,110 @@ export function BudgetProgressList({
                 </div>
             </CardHeader>
             <CardContent
-                className={cn(
-                    "space-y-4",
-                    budgets.length === 0 && "flex flex-1",
-                )}
+                className={cn("space-y-4", items.length === 0 && "flex flex-1")}
             >
-                {budgets.length === 0 && (
+                {items.length === 0 ? (
                     <EmptyState
                         className="flex min-h-56 flex-1 flex-col items-center justify-center md:min-h-72"
                         title="No budgets yet"
                         description="Create a monthly budget after adding expense categories."
                     />
+                ) : (
+                    items.map((item) => (
+                        <BudgetCardRow key={item.budget.id} item={item} />
+                    ))
                 )}
-                {budgets.map((budget) => {
-                    const category = categories.find(
-                        (item) => item.id === budget.categoryId,
-                    );
-                    const spent = transactions
-                        .filter(
-                            (transaction) =>
-                                transaction.categoryId === budget.categoryId,
-                        )
-                        .reduce(
-                            (sum, transaction) => sum + transaction.amount,
-                            0,
-                        );
-                    const usage = percent(spent, budget.limit);
-                    const remaining = budget.limit - spent;
-                    const isOverBudget = remaining < 0;
-
-                    return (
-                        <div
-                            key={budget.id}
-                            className="rounded-md border bg-white p-3 md:p-4"
-                        >
-                            <div className="mb-3 flex items-start justify-between gap-4">
-                                <div>
-                                    <p className="font-medium leading-6">
-                                        {category?.name ?? "Deleted category"}
-                                    </p>
-                                    <p className="text-sm text-muted-foreground">
-                                        {formatCurrency(spent)} of{" "}
-                                        {formatCurrency(budget.limit)} in{" "}
-                                        {budget.month}
-                                        <span
-                                            className={cn(
-                                                "ml-2 inline-flex",
-                                                isOverBudget &&
-                                                    "text-destructive",
-                                            )}
-                                        >
-                                            {formatCurrency(
-                                                Math.abs(remaining),
-                                            )}{" "}
-                                            {isOverBudget
-                                                ? "excess"
-                                                : "remaining"}
-                                        </span>
-                                    </p>
-                                </div>
-                                {actions && (
-                                    <div className="flex gap-1">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => onEdit?.(budget)}
-                                        >
-                                            <Edit3
-                                                className="h-4 w-4"
-                                                aria-hidden
-                                            />
-                                            <span className="sr-only">
-                                                Edit budget
-                                            </span>
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() =>
-                                                onDelete?.(budget.id)
-                                            }
-                                        >
-                                            <Trash2
-                                                className="h-4 w-4"
-                                                aria-hidden
-                                            />
-                                            <span className="sr-only">
-                                                Delete budget
-                                            </span>
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                            <Progress
-                                indicatorClassName={cn(
-                                    isOverBudget && "bg-destructive",
-                                )}
-                                value={usage}
-                            />
-                        </div>
-                    );
-                })}
             </CardContent>
         </Card>
+    );
+}
+
+function BudgetListRow({
+    item,
+    onSelect,
+}: {
+    item: BudgetProgressItem;
+    onSelect?: (budget: Budget) => void;
+}) {
+    const content = <BudgetRowContent item={item} showDisclosure />;
+
+    if (!onSelect) {
+        return <div className="p-4">{content}</div>;
+    }
+
+    return (
+        <button
+            className="block min-h-[78px] w-full px-4 py-3 text-left transition-colors md:hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            type="button"
+            onClick={() => onSelect(item.budget)}
+        >
+            {content}
+        </button>
+    );
+}
+
+function BudgetCardRow({ item }: { item: BudgetProgressItem }) {
+    return (
+        <div className="rounded-md border border-border bg-white p-3 md:p-4">
+            <BudgetRowContent item={item} />
+        </div>
+    );
+}
+
+function BudgetRowContent({
+    item,
+    showDisclosure = false,
+}: {
+    item: BudgetProgressItem;
+    showDisclosure?: boolean;
+}) {
+    const { budget, category, isOverBudget, remaining, spent, usage } = item;
+    const indicatorColor = isOverBudget
+        ? "#DC2626"
+        : (category?.color ?? "#171717");
+
+    return (
+        <div className="flex min-w-0 items-center gap-3">
+            {category ? (
+                <CategoryIconBadge
+                    category={category}
+                    className="h-11 w-11 sm:h-10 sm:w-10"
+                    iconClassName="h-5 w-5 sm:h-4 sm:w-4"
+                />
+            ) : (
+                <span className="h-11 w-11 shrink-0 rounded-full border border-border bg-neutral-100 sm:h-10 sm:w-10" />
+            )}
+            <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-3">
+                    <p className="min-w-0 flex-1 truncate text-sm font-medium leading-5">
+                        {category?.name ?? "Deleted category"}
+                    </p>
+                    <p className="shrink-0 whitespace-nowrap text-sm font-medium leading-5">
+                        {formatCurrency(spent)} of{" "}
+                        {formatCurrency(budget.limit)}
+                    </p>
+                </div>
+                <Progress
+                    className="mt-2 h-1.5"
+                    indicatorStyle={{ backgroundColor: indicatorColor }}
+                    value={usage}
+                />
+                <p
+                    className={cn(
+                        "mt-1 text-xs leading-4 text-muted-foreground",
+                        isOverBudget && "text-destructive",
+                    )}
+                >
+                    {formatCurrency(Math.abs(remaining))}{" "}
+                    {isOverBudget ? "excess" : "remaining"}
+                </p>
+            </div>
+            {showDisclosure && (
+                <ChevronRight
+                    className="h-5 w-5 shrink-0 text-muted-foreground/60"
+                    aria-hidden
+                />
+            )}
+        </div>
     );
 }
