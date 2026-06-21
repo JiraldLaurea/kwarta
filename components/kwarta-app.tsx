@@ -621,7 +621,7 @@ export function KwartaApp() {
 
     return (
         <main className="min-h-screen bg-neutral-50">
-            <header className="sticky top-0 z-30 border-b bg-white">
+            <header className="sticky top-0 z-30 border-b bg-white [backface-visibility:hidden] [transform:translateZ(0)]">
                 <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-4">
                     <div className="w-[180px]">
                         <MonthPickerInput

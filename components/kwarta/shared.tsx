@@ -629,6 +629,13 @@ export function EditModal({
     }, [onOpenComplete]);
 
     useEffect(() => {
+        // Changing the document overflow resets mobile sticky positioning for a
+        // frame when the modal closes. The full-screen mobile dialog already
+        // contains scrolling and overscroll, so only lock the page on desktop.
+        if (window.innerWidth < 640) {
+            return;
+        }
+
         const previousBodyOverflow = document.body.style.overflow;
         const previousBodyOverscrollBehavior =
             document.body.style.overscrollBehavior;
@@ -740,7 +747,7 @@ export function EditModal({
             <button
                 aria-label="Close modal"
                 className={cn(
-                    "absolute inset-0 cursor-default bg-white/20 backdrop-blur-sm transition-opacity duration-200 sm:bg-white/45 sm:duration-150",
+                    "absolute inset-0 cursor-default bg-white/20 transition-opacity duration-200 sm:bg-white/45 sm:backdrop-blur-sm sm:duration-150",
                     isVisible ? "opacity-100" : "opacity-0",
                 )}
                 style={
