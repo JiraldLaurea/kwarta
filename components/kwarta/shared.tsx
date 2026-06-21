@@ -586,7 +586,11 @@ export function EditModal({
         setIsVisible(false);
         window.setTimeout(
             onClose,
-            prefersReducedMotion || window.innerWidth >= 640 ? 150 : 240,
+            prefersReducedMotion
+                ? 0
+                : window.innerWidth >= 640
+                  ? 100
+                  : 240,
         );
     }, [onClose, prefersReducedMotion]);
     const {
@@ -629,39 +633,26 @@ export function EditModal({
     }, [onOpenComplete]);
 
     useEffect(() => {
-        // Changing the document overflow resets mobile sticky positioning for a
-        // frame when the modal closes. Block background gestures instead so the
-        // lock remains active until unmount without disturbing the sticky header.
-        if (window.innerWidth < 640) {
-            function preventBackgroundScroll(event: TouchEvent) {
-                const target = event.target;
-
-                if (
-                    target instanceof Element &&
-                    target.closest("[data-bottom-sheet-scroll]")
-                ) {
-                    return;
-                }
-
-                event.preventDefault();
-            }
-
-            document.addEventListener("touchmove", preventBackgroundScroll, {
-                passive: false,
-            });
-
-            return () => {
-                document.removeEventListener(
-                    "touchmove",
-                    preventBackgroundScroll,
-                );
-            };
-        }
-
         const previousBodyOverflow = document.body.style.overflow;
         const previousBodyOverscrollBehavior =
             document.body.style.overscrollBehavior;
         const previousHtmlOverflow = document.documentElement.style.overflow;
+
+        if (window.innerWidth < 640) {
+            // Unlike `hidden`, `clip` prevents background scrolling without
+            // creating a new scroll container that resets sticky positioning.
+            document.documentElement.style.overflow = "clip";
+            document.body.style.overflow = "clip";
+            document.body.style.overscrollBehavior = "none";
+
+            return () => {
+                document.documentElement.style.overflow =
+                    previousHtmlOverflow;
+                document.body.style.overflow = previousBodyOverflow;
+                document.body.style.overscrollBehavior =
+                    previousBodyOverscrollBehavior;
+            };
+        }
 
         document.documentElement.style.overflow = "hidden";
         document.body.style.overflow = "hidden";
@@ -769,7 +760,7 @@ export function EditModal({
             <button
                 aria-label="Close modal"
                 className={cn(
-                    "absolute inset-0 cursor-default bg-white/20 transition-opacity duration-200 sm:bg-white/45 sm:backdrop-blur-sm sm:duration-150",
+                    "absolute inset-0 cursor-default bg-white/20 transition-opacity duration-200 sm:bg-white/45 sm:backdrop-blur-sm sm:duration-100",
                     isVisible ? "opacity-100" : "opacity-0",
                 )}
                 style={
@@ -783,7 +774,7 @@ export function EditModal({
             <motion.div
                 ref={dialogRef}
                 className={cn(
-                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 shadow-[0_-12px_40px_rgba(0,0,0,0.12)] will-change-transform sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:rounded-2xl sm:border sm:border-border sm:transition-opacity sm:duration-150 sm:will-change-auto sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
+                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 shadow-[0_-12px_40px_rgba(0,0,0,0.12)] will-change-transform sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:rounded-2xl sm:border sm:border-border sm:transition-opacity sm:duration-100 sm:will-change-auto sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
                     mobileMotion === "bottom" && "rounded-t-2xl",
                     !isVisible && "sm:opacity-0",
                     className,
