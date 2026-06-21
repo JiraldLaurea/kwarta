@@ -630,10 +630,32 @@ export function EditModal({
 
     useEffect(() => {
         // Changing the document overflow resets mobile sticky positioning for a
-        // frame when the modal closes. The full-screen mobile dialog already
-        // contains scrolling and overscroll, so only lock the page on desktop.
+        // frame when the modal closes. Block background gestures instead so the
+        // lock remains active until unmount without disturbing the sticky header.
         if (window.innerWidth < 640) {
-            return;
+            function preventBackgroundScroll(event: TouchEvent) {
+                const target = event.target;
+
+                if (
+                    target instanceof Element &&
+                    target.closest("[data-bottom-sheet-scroll]")
+                ) {
+                    return;
+                }
+
+                event.preventDefault();
+            }
+
+            document.addEventListener("touchmove", preventBackgroundScroll, {
+                passive: false,
+            });
+
+            return () => {
+                document.removeEventListener(
+                    "touchmove",
+                    preventBackgroundScroll,
+                );
+            };
         }
 
         const previousBodyOverflow = document.body.style.overflow;
