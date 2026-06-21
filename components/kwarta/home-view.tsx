@@ -1047,10 +1047,6 @@ export function QuickTransactionModal({
         budgetsEnabled && normalizeTransactionType(category.type) === "expense";
     const primaryInputRef = useRef<HTMLInputElement | null>(null);
     const handleOpenComplete = useCallback(() => {
-        if (window.innerWidth < 640) {
-            return;
-        }
-
         const input = primaryInputRef.current;
 
         if (!input) {

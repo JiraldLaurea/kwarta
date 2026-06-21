@@ -759,14 +759,6 @@ export function KwartaApp() {
                 {view === "reports" && (
                     <div className="space-y-4">
                         <section>
-                            <div className="mb-4 max-w-[220px]">
-                                <MonthPickerInput
-                                    ariaLabel="Select reports month"
-                                    compact
-                                    value={selectedMonth}
-                                    onChange={setSelectedMonth}
-                                />
-                            </div>
                             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                                 <MetricCard
                                     label="Income"
