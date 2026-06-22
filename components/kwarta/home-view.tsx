@@ -30,7 +30,6 @@ import {
 } from "lucide-react";
 import {
     forwardRef,
-    useCallback,
     useEffect,
     useMemo,
     useRef,
@@ -1045,25 +1044,12 @@ export function QuickTransactionModal({
     const canSetBudget = Number.isFinite(parsedLimit) && parsedLimit > 0;
     const requiresBudget =
         budgetsEnabled && normalizeTransactionType(category.type) === "expense";
-    const primaryInputRef = useRef<HTMLInputElement | null>(null);
-    const handleOpenComplete = useCallback(() => {
-        const input = primaryInputRef.current;
-
-        if (!input) {
-            return;
-        }
-
-        if (document.activeElement !== input) {
-            input.focus({ preventScroll: true });
-        }
-    }, []);
 
     if (requiresBudget && !budget) {
         return (
             <EditModal
                 mobileMotion="right"
                 onClose={onClose}
-                onOpenComplete={handleOpenComplete}
             >
                 <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
                     <form
@@ -1106,10 +1092,10 @@ export function QuickTransactionModal({
                                 </Label>
                                 <Input
                                     id="quick-budget-limit"
+                                    autoFocus
                                     inputMode="decimal"
                                     onInput={handleDecimalInput}
                                     pattern="[0-9]*[.]?[0-9]*"
-                                    ref={primaryInputRef}
                                     type="text"
                                     value={limit}
                                     onChange={(event) =>
@@ -1181,7 +1167,6 @@ export function QuickTransactionModal({
         <EditModal
             mobileMotion="right"
             onClose={onClose}
-            onOpenComplete={handleOpenComplete}
         >
             <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border">
                 <form
@@ -1230,10 +1215,10 @@ export function QuickTransactionModal({
                             <Label htmlFor="quick-amount">Amount</Label>
                             <Input
                                 id="quick-amount"
+                                autoFocus
                                 inputMode="decimal"
                                 onInput={handleDecimalInput}
                                 pattern="[0-9]*[.]?[0-9]*"
-                                ref={primaryInputRef}
                                 type="text"
                                 value={amount}
                                 onChange={(event) =>
