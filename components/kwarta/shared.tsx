@@ -559,12 +559,14 @@ export function useSwipeToClose(
 }
 
 export function EditModal({
+    animateMobileEnter = true,
     children,
     className,
     mobileMotion = "right",
     onOpenComplete,
     onClose,
 }: {
+    animateMobileEnter?: boolean;
     children: React.ReactNode;
     className?: string;
     mobileMotion?: MobileModalMotion;
@@ -605,7 +607,7 @@ export function EditModal({
     const modalOffset =
         isDragging || isSwipeDismissing
             ? dragOffset
-            : isVisible
+            : isVisible || (!animateMobileEnter && !closingRef.current)
               ? 0
               : "100%";
     const modalAnimation =

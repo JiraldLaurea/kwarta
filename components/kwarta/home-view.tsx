@@ -1048,6 +1048,7 @@ export function QuickTransactionModal({
     if (requiresBudget && !budget) {
         return (
             <EditModal
+                animateMobileEnter={false}
                 mobileMotion="right"
                 onClose={onClose}
             >
@@ -1165,6 +1166,7 @@ export function QuickTransactionModal({
 
     return (
         <EditModal
+            animateMobileEnter={false}
             mobileMotion="right"
             onClose={onClose}
         >
