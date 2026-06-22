@@ -1149,18 +1149,21 @@ function SettingsView({
   const options: Array<{
     description: string;
     icon: LucideIcon;
+    iconClassName: string;
     label: string;
     value: HomeItemStyle;
   }> = [
     {
       description: "Grouped rows",
       icon: List,
+      iconClassName: "bg-[#2563EB]",
       label: "List",
       value: "ios",
     },
     {
       description: "Compact cards",
       icon: LayoutGrid,
+      iconClassName: "bg-[#7C3AED]",
       label: "Cards",
       value: "cards",
     },
@@ -1228,8 +1231,8 @@ function SettingsView({
                 >
                   <span
                     className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-white text-muted-foreground",
-                      selected && "text-primary",
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-white",
+                      option.iconClassName,
                     )}
                   >
                     <Icon className="h-5 w-5" aria-hidden />
