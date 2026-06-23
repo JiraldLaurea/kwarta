@@ -5,7 +5,13 @@ import { Edit3, Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { transactionSchema, type TransactionFormValues } from "@/lib/schema";
-import type { Category, Transaction, TransactionType } from "@/lib/types";
+import type {
+    Account,
+    Category,
+    Transaction,
+    TransactionType,
+} from "@/lib/types";
+import { getAccountLabel } from "@/lib/kwarta/account-providers";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
     formatTime,
@@ -26,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
+    AccountLogo,
     DatePickerInput,
     EmptyState,
     FieldError,
@@ -33,6 +40,7 @@ import {
     TransactionIcon,
 } from "@/components/kwarta/shared";
 export function TransactionForm({
+    accounts,
     categories,
     editing,
     month,
@@ -40,6 +48,7 @@ export function TransactionForm({
     onDelete,
     onSubmit,
 }: {
+    accounts: Account[];
     categories: Category[];
     editing?: Transaction;
     month: string;
@@ -47,9 +56,10 @@ export function TransactionForm({
     onDelete?: () => void;
     onSubmit: (values: TransactionFormValues) => void;
 }) {
+    const defaultAccountId = accounts[0]?.id ?? "";
     const transactionDefaults = useMemo<TransactionFormValues>(
-        () =>
-            getTransactionFormValues(
+        () => ({
+            ...getTransactionFormValues(
                 {
                     type: "expense",
                     amount: 0,
@@ -61,25 +71,30 @@ export function TransactionForm({
                 },
                 categories,
             ),
-        [categories, month],
+            accountId: defaultAccountId,
+        }),
+        [categories, defaultAccountId, month],
     );
     const formDefaults = useMemo<TransactionFormValues>(
         () =>
             editing
-                ? getTransactionFormValues(
-                      {
-                          type: editing.type,
-                          amount: editing.amount,
-                          categoryId: editing.categoryId,
-                          subcategory: editing.subcategory,
-                          note: editing.note ?? "",
-                          date: editing.date,
-                          time: editing.time,
-                      },
-                      categories,
-                  )
+                ? {
+                      ...getTransactionFormValues(
+                          {
+                              type: editing.type,
+                              amount: editing.amount,
+                              categoryId: editing.categoryId,
+                              subcategory: editing.subcategory,
+                              note: editing.note ?? "",
+                              date: editing.date,
+                              time: editing.time,
+                          },
+                          categories,
+                      ),
+                      accountId: editing.accountId ?? defaultAccountId,
+                  }
                 : transactionDefaults,
-        [categories, editing, transactionDefaults],
+        [categories, defaultAccountId, editing, transactionDefaults],
     );
     const form = useForm<TransactionFormValues>({
         resolver: zodResolver(transactionSchema),
@@ -263,6 +278,33 @@ export function TransactionForm({
                             value={selectedSubcategory}
                         />
                     </FieldError>
+                    {accounts.length > 0 && (
+                        <FieldError
+                            message={form.formState.errors.accountId?.message}
+                        >
+                            <Label htmlFor="transaction-account">Account</Label>
+                            <Select
+                                id="transaction-account"
+                                onValueChange={(value) =>
+                                    form.setValue("accountId", value, {
+                                        shouldValidate: true,
+                                    })
+                                }
+                                options={accounts.map((account) => ({
+                                    icon: (
+                                        <AccountLogo
+                                            account={account}
+                                            className="h-6 w-6"
+                                            iconClassName="h-3.5 w-3.5"
+                                        />
+                                    ),
+                                    label: getAccountLabel(account),
+                                    value: account.id,
+                                }))}
+                                value={form.watch("accountId") ?? ""}
+                            />
+                        </FieldError>
+                    )}
                     <FieldError message={form.formState.errors.date?.message}>
                         <Label htmlFor="date">Date</Label>
                         <DatePickerInput

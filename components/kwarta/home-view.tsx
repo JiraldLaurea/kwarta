@@ -38,12 +38,14 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import type {
+    Account,
     Budget,
     Category,
     Transaction,
     TransactionType,
 } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
+import { getAccountLabel } from "@/lib/kwarta/account-providers";
 import {
     formatMonthLabel,
     getSubcategoriesForCategory,
@@ -58,6 +60,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
+    AccountLogo,
     CategoryIconBadge,
     DatePickerInput,
     EditModal,
@@ -1008,6 +1011,7 @@ function CategoryCardActionMenu({
 }
 
 export function QuickTransactionModal({
+    accounts,
     budget,
     budgetsEnabled,
     category,
@@ -1017,6 +1021,7 @@ export function QuickTransactionModal({
     onSetReusableBudget,
     onSubmit,
 }: {
+    accounts: Account[];
     budget?: Budget;
     budgetsEnabled: boolean;
     category: Category;
@@ -1026,6 +1031,7 @@ export function QuickTransactionModal({
     onSetReusableBudget: (limit: number) => void;
     onSubmit: (values: {
         amount: number;
+        accountId?: string;
         date: string;
         subcategory: string;
     }) => void;
@@ -1035,6 +1041,9 @@ export function QuickTransactionModal({
     const [date, setDate] = useState(toDateInputValue(new Date()));
     const [selectedSubcategory, setSelectedSubcategory] = useState(
         subcategories[0] ?? "General",
+    );
+    const [selectedAccountId, setSelectedAccountId] = useState(
+        accounts[0]?.id ?? "",
     );
     const parsedAmount = parseDecimalInput(amount);
     const canSubmit = Number.isFinite(parsedAmount) && parsedAmount > 0;
@@ -1181,6 +1190,7 @@ export function QuickTransactionModal({
 
                         onSubmit({
                             amount: parsedAmount,
+                            accountId: selectedAccountId || undefined,
                             date,
                             subcategory: selectedSubcategory,
                         });
@@ -1246,6 +1256,29 @@ export function QuickTransactionModal({
                                 />
                             </div>
                         </div>
+                        {accounts.length > 0 && (
+                            <div>
+                                <Label htmlFor="quick-account">Account</Label>
+                                <div className="mt-2">
+                                    <Select
+                                        id="quick-account"
+                                        onValueChange={setSelectedAccountId}
+                                        options={accounts.map((account) => ({
+                                            icon: (
+                                                <AccountLogo
+                                                    account={account}
+                                                    className="h-6 w-6"
+                                                    iconClassName="h-3.5 w-3.5"
+                                                />
+                                            ),
+                                            label: getAccountLabel(account),
+                                            value: account.id,
+                                        }))}
+                                        value={selectedAccountId}
+                                    />
+                                </div>
+                            </div>
+                        )}
                         <Button
                             className="mt-6 w-full sm:hidden"
                             type="submit"

@@ -62,10 +62,10 @@ import type { RefObject } from "react";
 import { useForm } from "react-hook-form";
 import type { IconType } from "react-icons";
 import {
-  IoBarChart,
-  IoBarChartOutline,
   IoHome,
   IoHomeOutline,
+  IoPieChart,
+  IoPieChartOutline,
   IoReceipt,
   IoReceiptOutline,
   IoSettings,
@@ -87,9 +87,11 @@ import {
 import { TransactionsView } from "@/components/kwarta/transactions-view";
 import { z } from "zod";
 import {
+  accounts as seedAccounts,
   budgets as seedBudgets,
   categories as seedCategories,
   transactions as seedTransactions,
+  transfers as seedTransfers,
 } from "@/lib/data";
 import {
   authSchema,
@@ -100,6 +102,8 @@ import {
   type BudgetFormValues,
   type CategoryFormValues,
   type TransactionFormValues,
+  type AccountFormValues,
+  type TransferFormValues,
 } from "@/lib/schema";
 import {
   downloadBackupFile,
@@ -109,10 +113,12 @@ import {
 } from "@/lib/kwarta/backup";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type {
+  Account,
   AuthMode,
   Budget,
   Category,
   Transaction,
+  Transfer,
   TransactionType,
 } from "@/lib/types";
 import { cn, formatCurrency, formatDate, percent } from "@/lib/utils";
@@ -126,6 +132,7 @@ import {
   getCurrentTimeInputValue,
   getDefaultCategoryIcon,
   getDefaultTransactionDate,
+  getFirstAccountId,
   getFirstCategoryId,
   getSubcategoriesForCategory,
   getTransactionFormValues,
@@ -171,6 +178,7 @@ import {
 } from "@/components/kwarta/shared";
 import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
 import { BudgetsView } from "@/components/kwarta/budgets-view";
+import { AccountsView } from "@/components/kwarta/accounts-view";
 import { CategoryForm } from "@/components/kwarta/categories";
 import {
   ImportConfirmationModal,
@@ -182,14 +190,17 @@ type View =
   | "dashboard"
   | "transactions"
   | "budgets"
+  | "accounts"
   | "reports"
   | "settings"
   | "manage-categories";
 
 type StoredWorkspace = {
+  accounts: Account[];
   budgets: Budget[];
   categories: Category[];
   transactions: Transaction[];
+  transfers: Transfer[];
 };
 
 type PendingBackupImport =
@@ -230,8 +241,10 @@ export function KwartaApp() {
     toMonthInputValue(new Date()),
   );
   const [categories, setCategories] = useState<Category[]>(seedCategories);
+  const [accounts, setAccounts] = useState<Account[]>(seedAccounts);
   const [transactions, setTransactions] =
     useState<Transaction[]>(seedTransactions);
+  const [transfers, setTransfers] = useState<Transfer[]>(seedTransfers);
   const [budgets, setBudgets] = useState<Budget[]>(seedBudgets);
   const [editingTransactionId, setEditingTransactionId] = useState<
     string | null
@@ -240,6 +253,10 @@ export function KwartaApp() {
     null,
   );
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const [editingTransferId, setEditingTransferId] = useState<string | null>(
+    null,
+  );
   const [quickAddCategory, setQuickAddCategory] = useState<Category | null>(
     null,
   );
@@ -350,7 +367,9 @@ export function KwartaApp() {
         }
 
         setCategories(withCategoryIcons(workspace.categories));
+        setAccounts(workspace.accounts);
         setTransactions(workspace.transactions);
+        setTransfers(workspace.transfers ?? []);
         setBudgets(workspace.budgets);
       } catch {
         if (cancelled) {
@@ -358,7 +377,9 @@ export function KwartaApp() {
         }
 
         setCategories(seedCategories);
+        setAccounts(seedAccounts);
         setTransactions([]);
+        setTransfers([]);
         setBudgets([]);
       } finally {
         if (!cancelled) {
@@ -382,9 +403,11 @@ export function KwartaApp() {
     const timeout = window.setTimeout(() => {
       persistWorkspace(
         {
+          accounts,
           budgets,
           categories,
           transactions,
+          transfers,
         },
         userId,
       ).catch(() => {
@@ -395,7 +418,15 @@ export function KwartaApp() {
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [budgets, categories, transactions, userId, workspaceReady]);
+  }, [
+    accounts,
+    budgets,
+    categories,
+    transactions,
+    transfers,
+    userId,
+    workspaceReady,
+  ]);
 
   const monthTransactions = useMemo(
     () =>
@@ -657,6 +688,7 @@ export function KwartaApp() {
               )
             }
             onEdit={(transaction) => setEditingTransactionId(transaction.id)}
+            accounts={accounts}
             onSubmit={(values) => {
               if (editingTransactionId) {
                 setTransactions((current) =>
@@ -665,6 +697,7 @@ export function KwartaApp() {
                       ? {
                           ...transaction,
                           ...values,
+                          accountId: values.accountId || undefined,
                           note: values.note || "",
                           time: normalizeTimeValue(values.time),
                         }
@@ -679,6 +712,7 @@ export function KwartaApp() {
                 {
                   id: crypto.randomUUID(),
                   ...values,
+                  accountId: values.accountId || getFirstAccountId(accounts),
                   note: values.note || "",
                   time:
                     values.time === "00:00"
@@ -722,8 +756,107 @@ export function KwartaApp() {
           />
         )}
 
+        {view === "accounts" && (
+          <AccountsView
+            accounts={accounts}
+            editingId={editingAccountId}
+            editingTransferId={editingTransferId}
+            month={selectedMonth}
+            onCancelEdit={() => setEditingAccountId(null)}
+            onCancelEditTransfer={() => setEditingTransferId(null)}
+            onDelete={(id) => {
+              setAccounts((current) =>
+                current.filter((account) => account.id !== id),
+              );
+              setTransactions((current) =>
+                current.map((transaction) =>
+                  transaction.accountId === id
+                    ? { ...transaction, accountId: undefined }
+                    : transaction,
+                ),
+              );
+              setTransfers((current) =>
+                current.filter(
+                  (transfer) =>
+                    transfer.fromAccountId !== id &&
+                    transfer.toAccountId !== id,
+                ),
+              );
+            }}
+            onDeleteTransfer={(id) => {
+              setTransfers((current) =>
+                current.filter((transfer) => transfer.id !== id),
+              );
+            }}
+            onEdit={(account) => setEditingAccountId(account.id)}
+            onEditTransfer={(transfer) => setEditingTransferId(transfer.id)}
+            onSubmit={(values) => {
+              if (editingAccountId) {
+                setAccounts((current) =>
+                  current.map((account) =>
+                    account.id === editingAccountId
+                      ? { ...account, ...values }
+                      : account,
+                  ),
+                );
+                setEditingAccountId(null);
+                return;
+              }
+
+              setAccounts((current) => [
+                ...current,
+                { id: crypto.randomUUID(), ...values },
+              ]);
+            }}
+            onSubmitTransfer={(values) => {
+              if (editingTransferId) {
+                setTransfers((current) =>
+                  current.map((transfer) =>
+                    transfer.id === editingTransferId
+                      ? {
+                          ...transfer,
+                          ...values,
+                          note: values.note || "",
+                        }
+                      : transfer,
+                  ),
+                );
+                setEditingTransferId(null);
+                return;
+              }
+
+              setTransfers((current) => [
+                {
+                  id: crypto.randomUUID(),
+                  ...values,
+                  note: values.note || "",
+                },
+                ...current,
+              ]);
+            }}
+            transactions={transactions}
+            transfers={transfers}
+          />
+        )}
+
         {view === "reports" && (
           <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="-ml-2"
+                onClick={() => setView("settings")}
+              >
+                <ChevronLeft className="h-5 w-5" aria-hidden />
+                <span className="sr-only">Back to settings</span>
+              </Button>
+              <PageHeader
+                title="Reports"
+                description="Income, expenses, and spending insights for the selected month."
+              />
+            </div>
             <section>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 <MetricCard
@@ -768,6 +901,7 @@ export function KwartaApp() {
             transactionImportInputRef={transactionImportInputRef}
             user={user}
             onManageCategories={() => setView("manage-categories")}
+            onViewReports={() => setView("reports")}
             onBudgetsEnabledChange={setBudgetsEnabled}
             onBudgetExport={() =>
               downloadBackupFile("budgets", budgets, categories)
@@ -807,6 +941,7 @@ export function KwartaApp() {
       </div>
       {quickAddCategory && (
         <QuickTransactionModal
+          accounts={accounts}
           budget={monthBudgets.find(
             (budget) => budget.categoryId === quickAddCategory.id,
           )}
@@ -853,12 +988,13 @@ export function KwartaApp() {
             );
             setQuickAddCategory(null);
           }}
-          onSubmit={({ amount, date, subcategory }) => {
+          onSubmit={({ amount, accountId, date, subcategory }) => {
             setTransactions((current) => [
               {
                 id: crypto.randomUUID(),
                 amount,
                 categoryId: quickAddCategory.id,
+                accountId: accountId || getFirstAccountId(accounts),
                 date,
                 subcategory: subcategory,
                 note: "",
@@ -1001,12 +1137,14 @@ function NavItems({
   onSelect: (view: View) => void;
 }) {
   const currentNavView =
-    activeView === "manage-categories" ? "settings" : activeView;
+    activeView === "manage-categories" || activeView === "reports"
+      ? "settings"
+      : activeView;
   const items: Array<{ label: string; view: View }> = [
     { label: "Home", view: "dashboard" },
     { label: "Transactions", view: "transactions" },
     { label: "Budgets", view: "budgets" },
-    { label: "Reports", view: "reports" },
+    { label: "Accounts", view: "accounts" },
     { label: "Settings", view: "settings" },
   ];
 
@@ -1039,7 +1177,9 @@ function MobileTabBar({
   onSelect: (view: View) => void;
 }) {
   const currentNavView =
-    activeView === "manage-categories" ? "settings" : activeView;
+    activeView === "manage-categories" || activeView === "reports"
+      ? "settings"
+      : activeView;
   const items: Array<{
     icon: IconType;
     activeIcon: IconType;
@@ -1059,16 +1199,16 @@ function MobileTabBar({
       view: "transactions",
     },
     {
-      icon: IoWalletOutline,
-      activeIcon: IoWallet,
+      icon: IoPieChartOutline,
+      activeIcon: IoPieChart,
       label: "Budgets",
       view: "budgets",
     },
     {
-      icon: IoBarChartOutline,
-      activeIcon: IoBarChart,
-      label: "Reports",
-      view: "reports",
+      icon: IoWalletOutline,
+      activeIcon: IoWallet,
+      label: "Accounts",
+      view: "accounts",
     },
     {
       icon: IoSettingsOutline,
@@ -1121,6 +1261,7 @@ function SettingsView({
   onBudgetsEnabledChange,
   onHomeItemStyleChange,
   onManageCategories,
+  onViewReports,
   onSignOut,
   onTransactionExport,
   onTransactionImportClick,
@@ -1141,6 +1282,7 @@ function SettingsView({
   onBudgetsEnabledChange: (enabled: boolean) => void;
   onHomeItemStyleChange: (style: HomeItemStyle) => void;
   onManageCategories: () => void;
+  onViewReports: () => void;
   onSignOut: () => void;
   onTransactionExport: () => void;
   onTransactionImportClick: () => void;
@@ -1192,7 +1334,7 @@ function SettingsView({
               label="Disable Budget Tracking"
               onChange={(checked) => onBudgetsEnabledChange(!checked)}
             />
-            <div className="mt-5 border-t border-border pt-5">
+            <div className="mt-5 space-y-3 border-t border-border pt-5">
               <Button
                 className="w-full justify-between"
                 type="button"
@@ -1200,6 +1342,15 @@ function SettingsView({
                 onClick={onManageCategories}
               >
                 <span>Manage categories</span>
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </Button>
+              <Button
+                className="w-full justify-between"
+                type="button"
+                variant="secondary"
+                onClick={onViewReports}
+              >
+                <span>Reports</span>
                 <ChevronRight className="h-4 w-4" aria-hidden />
               </Button>
             </div>

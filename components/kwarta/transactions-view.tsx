@@ -1,10 +1,11 @@
 "use client";
 
 import type { TransactionFormValues } from "@/lib/schema";
-import type { Category, Transaction } from "@/lib/types";
+import type { Account, Category, Transaction } from "@/lib/types";
 import { EditModal, PageHeader } from "@/components/kwarta/shared";
 import { TransactionForm, TransactionTable } from "@/components/kwarta/transactions";
 export function TransactionsView({
+    accounts,
     categories,
     editingId,
     month,
@@ -14,6 +15,7 @@ export function TransactionsView({
     onSubmit,
     transactions,
 }: {
+    accounts: Account[];
     categories: Category[];
     editingId: string | null;
     month: string;
@@ -43,6 +45,7 @@ export function TransactionsView({
             {editing && (
                 <EditModal onClose={onCancelEdit}>
                     <TransactionForm
+                        accounts={accounts}
                         categories={categories}
                         editing={editing}
                         month={month}
