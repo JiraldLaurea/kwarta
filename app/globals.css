@@ -55,3 +55,38 @@ select {
     transform: translateY(0);
   }
 }
+
+/* Always-visible thin scrollbar for scrollable popovers (e.g. Select menus).
+   Radix injects a global rule that hides the Select viewport scrollbar
+   ([data-radix-select-viewport]{scrollbar-width:none} + ::-webkit-scrollbar
+   {display:none}); these selectors match its specificity and source order so
+   the scrollbar is shown again. */
+.kwarta-scrollbar,
+[data-radix-select-viewport].kwarta-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(0 0% 80%) transparent;
+}
+
+.kwarta-scrollbar::-webkit-scrollbar,
+[data-radix-select-viewport].kwarta-scrollbar::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+}
+
+.kwarta-scrollbar::-webkit-scrollbar-track,
+[data-radix-select-viewport].kwarta-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.kwarta-scrollbar::-webkit-scrollbar-thumb,
+[data-radix-select-viewport].kwarta-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(0 0% 80%);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.kwarta-scrollbar::-webkit-scrollbar-thumb:hover,
+[data-radix-select-viewport].kwarta-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(0 0% 65%);
+}

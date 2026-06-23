@@ -25,12 +25,17 @@ import {
     ShoppingBag,
     Smartphone,
     Utensils,
+    Wallet,
     Zap,
     type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Category, TransactionType } from "@/lib/types";
+import {
+    getAccountProvider,
+    getProviderLogoSrc,
+} from "@/lib/kwarta/account-providers";
 import { cn } from "@/lib/utils";
 import {
     formatPickerDate,
@@ -74,6 +79,7 @@ export const categoryIconChoices = [
     { value: "graduation-cap", label: "Education", icon: GraduationCap },
     { value: "clapperboard", label: "Entertainment", icon: Clapperboard },
     { value: "badge-dollar-sign", label: "Income", icon: BadgeDollarSign },
+    { value: "wallet", label: "Wallet", icon: Wallet },
 ] satisfies Array<{ value: string; label: string; icon: LucideIcon }>;
 
 export function PageHeader({
@@ -558,7 +564,119 @@ export function useSwipeToClose(
     };
 }
 
-export function EditModal({
+// Reactive viewport check matching the `sm` Tailwind breakpoint (640px).
+// SSR-safe: starts false on the server and first client render.
+export function useIsMobileViewport() {
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const query = window.matchMedia("(max-width: 639px)");
+        const update = () => setIsMobile(query.matches);
+
+        update();
+        query.addEventListener("change", update);
+
+        return () => query.removeEventListener("change", update);
+    }, []);
+
+    return isMobile;
+}
+
+/**
+ * On mobile, forms render as a real in-flow full-page view (no overlay, no
+ * backdrop, no body scroll-lock, no entrance animation) to avoid input and
+ * keyboard glitches caused by a fixed/animated modal. On desktop (>=640px) it
+ * stays a centered modal dialog.
+ */
+export function EditModal(props: {
+    animateMobileEnter?: boolean;
+    children: React.ReactNode;
+    className?: string;
+    mobileMotion?: MobileModalMotion;
+    onOpenComplete?: () => void;
+    onClose: () => void;
+}) {
+    const isMobile = useIsMobileViewport();
+
+    if (isMobile) {
+        return <MobileFormPage {...props} />;
+    }
+
+    return <DesktopEditModal {...props} />;
+}
+
+function MobileFormPage({
+    children,
+    className,
+    onOpenComplete,
+    onClose,
+}: {
+    children: React.ReactNode;
+    className?: string;
+    onOpenComplete?: () => void;
+    onClose: () => void;
+}) {
+    useEffect(() => {
+        onOpenComplete?.();
+        // Bring the new page to the top, matching a real navigation.
+        window.scrollTo(0, 0);
+    }, [onOpenComplete]);
+
+    useEffect(() => {
+        // Lock the underlying page scroll so the form page is the only
+        // scroll container — otherwise the body scrolls behind the fixed
+        // page, producing a second scrollbar on short viewports.
+        const previousHtmlOverflow = document.documentElement.style.overflow;
+        const previousBodyOverflow = document.body.style.overflow;
+
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+
+        return () => {
+            document.documentElement.style.overflow = previousHtmlOverflow;
+            document.body.style.overflow = previousBodyOverflow;
+        };
+    }, []);
+
+    useEffect(() => {
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === "Escape") {
+                onClose();
+            }
+        }
+
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [onClose]);
+
+    return (
+        <div
+            className={cn(
+                "fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-white [&>*]:!min-h-0 [&>*]:!border-0 [&>*]:!rounded-none [&>*]:!shadow-none",
+                className,
+            )}
+            role="dialog"
+            aria-modal="true"
+            onClickCapture={(event) => {
+                if (
+                    event.target instanceof Element &&
+                    event.target.closest("[data-modal-close]")
+                ) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onClose();
+                }
+            }}
+        >
+            {children}
+        </div>
+    );
+}
+
+function DesktopEditModal({
     animateMobileEnter = true,
     children,
     className,
@@ -891,6 +1009,125 @@ export function CategoryIconBadge({
         >
             <Icon className={cn("h-4 w-4", iconClassName)} aria-hidden />
         </span>
+    );
+}
+
+export function IconBadge({
+    color,
+    icon,
+    className = "",
+    iconClassName = "",
+}: {
+    color: string;
+    icon: string;
+    className?: string;
+    iconClassName?: string;
+}) {
+    const Icon = categoryIconMap.get(icon) ?? Receipt;
+
+    return (
+        <span
+            className={cn(
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white",
+                className,
+            )}
+            style={{ color: "white", backgroundColor: color }}
+        >
+            <Icon className={cn("h-4 w-4", iconClassName)} aria-hidden />
+        </span>
+    );
+}
+
+export function AccountLogo({
+    account,
+    className = "",
+    iconClassName = "",
+}: {
+    account: { color: string; icon: string; provider?: string };
+    className?: string;
+    iconClassName?: string;
+}) {
+    const provider = getAccountProvider(account.provider);
+    // Track per-provider image load failure so a missing SVG falls back to the
+    // wordmark/icon below. Keyed by provider so switching accounts re-tries.
+    const [logoFailed, setLogoFailed] = useState<string | null>(null);
+
+    if (
+        provider?.hasLogoFile &&
+        logoFailed !== provider.key
+    ) {
+        return (
+            <span
+                className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white",
+                    className,
+                )}
+            >
+                {/* Plain <img> (not next/image) so a missing file triggers
+                    onError and falls back to the wordmark tile below. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    alt={provider.label}
+                    className="h-full w-full object-contain"
+                    src={getProviderLogoSrc(provider.key)}
+                    onError={() => setLogoFailed(provider.key)}
+                />
+            </span>
+        );
+    }
+
+    if (provider?.kind === "brand-icon" && provider.icon) {
+        const BrandIcon = provider.icon;
+
+        return (
+            <span
+                className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                    className,
+                )}
+                style={{
+                    backgroundColor: provider.color,
+                    color: provider.textColor ?? "white",
+                }}
+            >
+                <BrandIcon className={cn("h-4 w-4", iconClassName)} aria-hidden />
+                <span className="sr-only">{provider.label}</span>
+            </span>
+        );
+    }
+
+    if (provider?.kind === "wordmark" && provider.wordmark) {
+        return (
+            <span
+                className={cn(
+                    "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full px-1 text-center font-semibold leading-none tracking-tight",
+                    className,
+                )}
+                style={{
+                    backgroundColor: provider.color,
+                    color: provider.textColor ?? "white",
+                    // Scale the wordmark down so longer names still fit the tile.
+                    fontSize:
+                        provider.wordmark.length > 4
+                            ? "0.5rem"
+                            : provider.wordmark.length > 2
+                              ? "0.6rem"
+                              : "0.72rem",
+                }}
+            >
+                {provider.wordmark}
+                <span className="sr-only">{provider.label}</span>
+            </span>
+        );
+    }
+
+    return (
+        <IconBadge
+            color={account.color}
+            icon={account.icon}
+            className={className}
+            iconClassName={iconClassName}
+        />
     );
 }
 
