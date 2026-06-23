@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Category, TransactionType } from "@/lib/types";
 import {
     getAccountProvider,
@@ -616,10 +617,17 @@ function MobileFormPage({
     onOpenComplete?: () => void;
     onClose: () => void;
 }) {
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     useEffect(() => {
         onOpenComplete?.();
         // Bring the new page to the top, matching a real navigation.
-        window.scrollTo(0, 0);
+        scrollRef.current?.scrollTo(0, 0);
     }, [onOpenComplete]);
 
     useEffect(() => {
@@ -639,6 +647,65 @@ function MobileFormPage({
     }, []);
 
     useEffect(() => {
+        // While an input is focused, the mobile browser scrolls it into view
+        // by scrolling our container, which shifts the whole page up. Lock the
+        // scroll position for the duration of the focus so nothing moves.
+        const container = scrollRef.current;
+
+        if (!container) {
+            return;
+        }
+
+        let lockedScrollTop: number | null = null;
+
+        function isFormControl(node: EventTarget | null) {
+            return (
+                node instanceof HTMLInputElement ||
+                node instanceof HTMLTextAreaElement ||
+                node instanceof HTMLSelectElement
+            );
+        }
+
+        function handleFocusIn(event: FocusEvent) {
+            if (!isFormControl(event.target) || !container) {
+                return;
+            }
+
+            lockedScrollTop = container.scrollTop;
+        }
+
+        function handleFocusOut(event: FocusEvent) {
+            if (!isFormControl(event.target)) {
+                return;
+            }
+
+            lockedScrollTop = null;
+        }
+
+        function handleScroll() {
+            if (lockedScrollTop === null || !container) {
+                return;
+            }
+
+            // Reassert the locked position if the browser tried to scroll the
+            // focused field into view.
+            if (container.scrollTop !== lockedScrollTop) {
+                container.scrollTop = lockedScrollTop;
+            }
+        }
+
+        container.addEventListener("focusin", handleFocusIn);
+        container.addEventListener("focusout", handleFocusOut);
+        container.addEventListener("scroll", handleScroll, { passive: true });
+
+        return () => {
+            container.removeEventListener("focusin", handleFocusIn);
+            container.removeEventListener("focusout", handleFocusOut);
+            container.removeEventListener("scroll", handleScroll);
+        };
+    }, [mounted]);
+
+    useEffect(() => {
         function handleKeyDown(event: KeyboardEvent) {
             if (event.key === "Escape") {
                 onClose();
@@ -652,8 +719,13 @@ function MobileFormPage({
         };
     }, [onClose]);
 
-    return (
+    if (!mounted) {
+        return null;
+    }
+
+    return createPortal(
         <div
+            ref={scrollRef}
             className={cn(
                 "fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-white [&>*]:!min-h-0 [&>*]:!border-0 [&>*]:!rounded-none [&>*]:!shadow-none",
                 className,
@@ -672,7 +744,8 @@ function MobileFormPage({
             }}
         >
             {children}
-        </div>
+        </div>,
+        document.body,
     );
 }
 
