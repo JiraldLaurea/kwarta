@@ -3,15 +3,84 @@ import {
     categories as defaultCategories,
 } from "@/lib/data";
 import type {
+    Account,
+    AccountType,
     Budget,
     Category,
     Transaction,
+    Transfer,
     TransactionType,
 } from "@/lib/types";
 import type {
     BudgetFormValues,
     TransactionFormValues,
 } from "@/lib/schema";
+
+export const accountTypeLabels: Record<AccountType, string> = {
+    bank: "Bank",
+    cash: "Cash",
+    ewallet: "E-Wallet",
+};
+
+export const accountTypeOrder: AccountType[] = ["bank", "ewallet", "cash"];
+
+export function getAccountBalance(
+    account: Account,
+    transactions: Transaction[],
+    transfers: Transfer[] = [],
+) {
+    const fromTransactions = transactions.reduce((balance, transaction) => {
+        if (transaction.accountId !== account.id) {
+            return balance;
+        }
+
+        return transaction.type === "income"
+            ? balance + transaction.amount
+            : balance - transaction.amount;
+    }, account.openingBalance);
+
+    return transfers.reduce((balance, transfer) => {
+        // The source account loses the amount plus any transfer fee; the
+        // destination account only receives the amount.
+        if (transfer.fromAccountId === account.id) {
+            return balance - transfer.amount - transfer.fee;
+        }
+
+        if (transfer.toAccountId === account.id) {
+            return balance + transfer.amount;
+        }
+
+        return balance;
+    }, fromTransactions);
+}
+
+export function getNetWorth(
+    accounts: Account[],
+    transactions: Transaction[],
+    transfers: Transfer[] = [],
+) {
+    return accounts.reduce(
+        (sum, account) =>
+            sum + getAccountBalance(account, transactions, transfers),
+        0,
+    );
+}
+
+export function getDefaultAccountIcon(type: AccountType) {
+    if (type === "bank") {
+        return "landmark";
+    }
+
+    if (type === "ewallet") {
+        return "smartphone";
+    }
+
+    return "banknote";
+}
+
+export function getFirstAccountId(accounts: Account[]) {
+    return accounts[0]?.id ?? "";
+}
 
 export const defaultSubcategories: Record<string, string[]> = {
     salary: ["Paycheck", "Bonus", "Allowance", "Commission"],

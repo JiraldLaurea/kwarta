@@ -1,4 +1,10 @@
-import type { Budget, Category, Transaction } from "@/lib/types";
+import type {
+  Account,
+  Budget,
+  Category,
+  Transaction,
+  Transfer,
+} from "@/lib/types";
 
 export const categories: Category[] = [
   { id: "salary", name: "Salary", type: "income", color: "#171717", icon: "briefcase" },
@@ -12,7 +18,22 @@ export const categories: Category[] = [
   { id: "subscriptions", name: "Subscriptions", type: "expense", color: "#4F46E5", icon: "repeat" }
 ];
 
+export const accounts: Account[] = [
+  {
+    id: "cash",
+    name: "Cash",
+    type: "cash",
+    color: "#16A34A",
+    icon: "banknote",
+    openingBalance: 0,
+    syncStatus: "manual"
+  }
+];
+
 export const transactions: Transaction[] = [
+];
+
+export const transfers: Transfer[] = [
 ];
 
 export const budgets: Budget[] = [
