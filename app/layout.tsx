@@ -35,8 +35,29 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const accountLogoPreloads = [
+    "bdo",
+    "bpi",
+    "gcash",
+    "gotyme",
+    "maribank",
+    "maya",
+    "unionbank"
+  ];
+
   return (
     <html lang="en">
+      <head>
+        {accountLogoPreloads.map((logo) => (
+          <link
+            as="image"
+            href={`/account-logos/${logo}.svg`}
+            key={logo}
+            rel="preload"
+            type="image/svg+xml"
+          />
+        ))}
+      </head>
       <body className={GeistSans.variable}>
         <PwaRegistration />
         {children}

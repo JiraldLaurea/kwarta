@@ -131,7 +131,6 @@ export const accountProviders: AccountProvider[] = [
         color: "#003C71",
         kind: "wordmark",
         wordmark: "Metro",
-        hasLogoFile: true,
     },
     {
         key: "landbank",
@@ -140,7 +139,6 @@ export const accountProviders: AccountProvider[] = [
         color: "#0B7A3B",
         kind: "wordmark",
         wordmark: "LBP",
-        hasLogoFile: true,
     },
     {
         key: "pnb",
@@ -149,7 +147,6 @@ export const accountProviders: AccountProvider[] = [
         color: "#00529C",
         kind: "wordmark",
         wordmark: "PNB",
-        hasLogoFile: true,
     },
     {
         key: "securitybank",
@@ -158,7 +155,6 @@ export const accountProviders: AccountProvider[] = [
         color: "#00563F",
         kind: "wordmark",
         wordmark: "SB",
-        hasLogoFile: true,
     },
     {
         key: "maribank",

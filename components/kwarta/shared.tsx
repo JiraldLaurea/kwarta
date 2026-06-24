@@ -36,6 +36,7 @@ import {
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { RemoveScroll } from "react-remove-scroll";
 import type { Category, TransactionType } from "@/lib/types";
 import {
     getAccountProvider,
@@ -649,6 +650,7 @@ function MobileFormPage({
         const previousBodyOverscrollBehavior =
             document.body.style.overscrollBehavior;
         const lockViewport = () => {
+            target.scrollTop = 0;
             window.scrollTo(0, 0);
         };
 
@@ -662,12 +664,14 @@ function MobileFormPage({
         });
         window.addEventListener("scroll", lockViewport, { passive: true });
         window.addEventListener("resize", lockViewport);
+        target.addEventListener("scroll", lockViewport, { passive: true });
         window.visualViewport?.addEventListener("resize", lockViewport);
         window.visualViewport?.addEventListener("scroll", lockViewport);
 
         return () => {
             window.removeEventListener("scroll", lockViewport);
             window.removeEventListener("resize", lockViewport);
+            target.removeEventListener("scroll", lockViewport);
             window.visualViewport?.removeEventListener("resize", lockViewport);
             window.visualViewport?.removeEventListener("scroll", lockViewport);
             enableBodyScroll(target);
@@ -783,43 +787,52 @@ function MobileFormPage({
     }
 
     return createPortal(
-        <div
-            ref={scrollRef}
-            className={cn(
-                "fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-white [&>*]:!min-h-0 [&>*]:!border-0 [&>*]:!rounded-none [&>*]:!shadow-none",
-                className,
-            )}
-            role="dialog"
-            aria-modal="true"
-            onPointerDownCapture={(event) => {
-                const target = event.target;
-
-                if (
-                    !isTextInputTarget(target) ||
-                    document.activeElement === target ||
-                    !(target instanceof HTMLElement)
-                ) {
-                    return;
-                }
-
-                event.preventDefault();
-                target.focus({ preventScroll: true });
-                window.requestAnimationFrame(() => window.scrollTo(0, 0));
-                window.setTimeout(() => window.scrollTo(0, 0), 80);
-            }}
-            onClickCapture={(event) => {
-                if (
-                    event.target instanceof Element &&
-                    event.target.closest("[data-modal-close]")
-                ) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onClose();
-                }
-            }}
+        <RemoveScroll
+            allowPinchZoom
+            className="fixed inset-0 z-[60] overflow-hidden bg-white"
+            removeScrollBar={false}
         >
-            {children}
-        </div>,
+            <div
+                ref={scrollRef}
+                className={cn(
+                    "h-full overflow-hidden overscroll-none bg-white [&>*]:!min-h-0 [&>*]:!border-0 [&>*]:!rounded-none [&>*]:!shadow-none",
+                    className,
+                )}
+                role="dialog"
+                aria-modal="true"
+                onPointerDownCapture={(event) => {
+                    const target = event.target;
+
+                    if (
+                        !isTextInputTarget(target) ||
+                        document.activeElement === target ||
+                        !(target instanceof HTMLElement)
+                    ) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    target.focus({ preventScroll: true });
+                    window.requestAnimationFrame(() => window.scrollTo(0, 0));
+                    window.setTimeout(() => window.scrollTo(0, 0), 80);
+                }}
+                onTouchMoveCapture={(event) => {
+                    event.preventDefault();
+                }}
+                onClickCapture={(event) => {
+                    if (
+                        event.target instanceof Element &&
+                        event.target.closest("[data-modal-close]")
+                    ) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onClose();
+                    }
+                }}
+            >
+                {children}
+            </div>
+        </RemoveScroll>,
         document.body,
     );
 }
@@ -1196,14 +1209,11 @@ export function AccountLogo({
     iconClassName?: string;
 }) {
     const provider = getAccountProvider(account.provider);
-    // Track per-provider image load failure so a missing SVG falls back to the
-    // wordmark/icon below. Keyed by provider so switching accounts re-tries.
     const [logoFailed, setLogoFailed] = useState<string | null>(null);
+    const logoSrc =
+        provider?.hasLogoFile && provider ? getProviderLogoSrc(provider.key) : undefined;
 
-    if (
-        provider?.hasLogoFile &&
-        logoFailed !== provider.key
-    ) {
+    if (provider && logoSrc && logoFailed !== provider.key) {
         return (
             <span
                 className={cn(
@@ -1211,13 +1221,14 @@ export function AccountLogo({
                     className,
                 )}
             >
-                {/* Plain <img> (not next/image) so a missing file triggers
-                    onError and falls back to the wordmark tile below. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     alt={provider.label}
                     className="h-full w-full object-contain"
-                    src={getProviderLogoSrc(provider.key)}
+                    decoding="sync"
+                    fetchPriority="high"
+                    loading="eager"
+                    src={logoSrc}
                     onError={() => setLogoFailed(provider.key)}
                 />
             </span>
