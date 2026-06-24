@@ -1132,7 +1132,7 @@ export function AccountLogo({
         return (
             <span
                 className={cn(
-                    "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white",
+                    "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-transparent",
                     className,
                 )}
             >
