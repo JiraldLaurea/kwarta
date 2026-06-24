@@ -2,6 +2,10 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  disableBodyScroll,
+  enableBodyScroll,
+} from "body-scroll-lock";
+import {
   closestCenter,
   DndContext,
   DragOverlay,
@@ -267,6 +271,7 @@ export function KwartaApp() {
     useState<Category | null>(null);
   const transactionImportInputRef = useRef<HTMLInputElement>(null);
   const budgetImportInputRef = useRef<HTMLInputElement>(null);
+  const quickAddPageRef = useRef<HTMLElement>(null);
   const [transactionImportError, setTransactionImportError] = useState<
     string | null
   >(null);
@@ -296,6 +301,22 @@ export function KwartaApp() {
       query.removeEventListener("change", syncLayout);
     };
   }, []);
+
+  useEffect(() => {
+    if (!quickAddCategory || isDesktopLayout || !quickAddPageRef.current) {
+      return;
+    }
+
+    const target = quickAddPageRef.current;
+    disableBodyScroll(target, {
+      allowTouchMove: () => false,
+      reserveScrollBarGap: false,
+    });
+
+    return () => {
+      enableBodyScroll(target);
+    };
+  }, [isDesktopLayout, quickAddCategory]);
 
   useEffect(() => {
     const storedHomeItemStyle = window.localStorage.getItem(
@@ -748,7 +769,7 @@ export function KwartaApp() {
         className="fixed inset-0 overflow-hidden bg-white"
         removeScrollBar={false}
       >
-        <main className="h-full overflow-hidden bg-white">
+        <main ref={quickAddPageRef} className="h-full overflow-hidden bg-white">
           <QuickTransactionModal
             accounts={accounts}
             budget={quickAddBudget}

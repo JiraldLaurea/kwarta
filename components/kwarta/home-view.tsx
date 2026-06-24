@@ -1058,6 +1058,8 @@ export function QuickTransactionModal({
     const requiresBudget =
         budgetsEnabled && normalizeTransactionType(category.type) === "expense";
     const isPage = presentation === "page";
+    const amountInputRef = useRef<HTMLInputElement>(null);
+    const limitInputRef = useRef<HTMLInputElement>(null);
     const pageInputFocusProps = isPage
         ? {
               onPointerDown: (
@@ -1086,6 +1088,23 @@ export function QuickTransactionModal({
     ) : (
         <ModalBackButton onClick={onClose} />
     );
+
+    useEffect(() => {
+        if (!isPage) {
+            return;
+        }
+
+        const input =
+            requiresBudget && !budget
+                ? limitInputRef.current
+                : amountInputRef.current;
+        const frame = window.requestAnimationFrame(() => {
+            input?.focus({ preventScroll: true });
+            window.scrollTo(0, 0);
+        });
+
+        return () => window.cancelAnimationFrame(frame);
+    }, [budget, isPage, requiresBudget]);
 
     if (requiresBudget && !budget) {
         const budgetForm = (
@@ -1140,6 +1159,7 @@ export function QuickTransactionModal({
                                 onInput={handleDecimalInput}
                                 pattern="[0-9]*[.]?[0-9]*"
                                 {...pageInputFocusProps}
+                                ref={limitInputRef}
                                 type="text"
                                 value={limit}
                                 onChange={(event) =>
@@ -1275,39 +1295,52 @@ export function QuickTransactionModal({
                         Record this {category.type} for {formatMonthLabel(month)}.
                     </p>
                 </CardHeader>
-                <CardContent className="space-y-4 px-6 pb-6 pt-0">
-                    <FieldError>
-                        <Label htmlFor="quick-amount">Amount</Label>
-                        <Input
-                            id="quick-amount"
-                            autoFocus={!isPage}
-                            inputMode="decimal"
-                            onInput={handleDecimalInput}
-                            pattern="[0-9]*[.]?[0-9]*"
-                            {...pageInputFocusProps}
-                            type="text"
-                            value={amount}
-                            onChange={(event) =>
-                                setAmount(event.currentTarget.value)
-                            }
-                        />
-                    </FieldError>
-                    <div>
-                        <Label htmlFor="quick-subcategory">Subcategory</Label>
-                        <div className="mt-2">
-                            <Select
-                                id="quick-subcategory"
-                                onValueChange={setSelectedSubcategory}
-                                options={subcategories.map((subcategory) => ({
-                                    label: subcategory,
-                                    value: subcategory,
-                                }))}
-                                value={selectedSubcategory}
+                <CardContent className="px-6 pb-6 pt-0">
+                    <div
+                        className={cn(
+                            isPage
+                                ? "grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3"
+                                : "space-y-4",
+                        )}
+                    >
+                        <FieldError>
+                            <Label htmlFor="quick-amount">Amount</Label>
+                            <Input
+                                id="quick-amount"
+                                autoFocus={!isPage}
+                                inputMode="decimal"
+                                onInput={handleDecimalInput}
+                                pattern="[0-9]*[.]?[0-9]*"
+                                {...pageInputFocusProps}
+                                ref={amountInputRef}
+                                type="text"
+                                value={amount}
+                                onChange={(event) =>
+                                    setAmount(event.currentTarget.value)
+                                }
                             />
+                        </FieldError>
+                        <div>
+                            <Label htmlFor="quick-subcategory">
+                                Subcategory
+                            </Label>
+                            <div className="mt-2">
+                                <Select
+                                    id="quick-subcategory"
+                                    onValueChange={setSelectedSubcategory}
+                                    options={subcategories.map(
+                                        (subcategory) => ({
+                                            label: subcategory,
+                                            value: subcategory,
+                                        }),
+                                    )}
+                                    value={selectedSubcategory}
+                                />
+                            </div>
                         </div>
                     </div>
                     {accounts.length > 0 && (
-                        <div>
+                        <div className="mt-4">
                             <Label htmlFor="quick-account">Account</Label>
                             <div className="mt-2">
                                 <Select
