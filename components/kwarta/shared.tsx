@@ -1,6 +1,10 @@
 "use client";
 
 import { type User } from "@supabase/supabase-js";
+import {
+    disableBodyScroll,
+    enableBodyScroll,
+} from "body-scroll-lock";
 import { motion, useReducedMotion } from "framer-motion";
 import {
     BadgeDollarSign,
@@ -634,15 +638,43 @@ function MobileFormPage({
         // Lock the underlying page scroll so the form page is the only
         // scroll container — otherwise the body scrolls behind the fixed
         // page, producing a second scrollbar on short viewports.
+        const target = scrollRef.current;
+
+        if (!target) {
+            return;
+        }
+
         const previousHtmlOverflow = document.documentElement.style.overflow;
         const previousBodyOverflow = document.body.style.overflow;
+        const previousBodyOverscrollBehavior =
+            document.body.style.overscrollBehavior;
+        const lockViewport = () => {
+            window.scrollTo(0, 0);
+        };
 
         document.documentElement.style.overflow = "hidden";
         document.body.style.overflow = "hidden";
+        document.body.style.overscrollBehavior = "none";
+        lockViewport();
+        disableBodyScroll(target, {
+            allowTouchMove: () => false,
+            reserveScrollBarGap: false,
+        });
+        window.addEventListener("scroll", lockViewport, { passive: true });
+        window.addEventListener("resize", lockViewport);
+        window.visualViewport?.addEventListener("resize", lockViewport);
+        window.visualViewport?.addEventListener("scroll", lockViewport);
 
         return () => {
+            window.removeEventListener("scroll", lockViewport);
+            window.removeEventListener("resize", lockViewport);
+            window.visualViewport?.removeEventListener("resize", lockViewport);
+            window.visualViewport?.removeEventListener("scroll", lockViewport);
+            enableBodyScroll(target);
             document.documentElement.style.overflow = previousHtmlOverflow;
             document.body.style.overflow = previousBodyOverflow;
+            document.body.style.overscrollBehavior =
+                previousBodyOverscrollBehavior;
         };
     }, []);
 
@@ -723,6 +755,33 @@ function MobileFormPage({
         return null;
     }
 
+    function isTextInputTarget(target: EventTarget | Element | null) {
+        if (!(target instanceof HTMLElement)) {
+            return false;
+        }
+
+        if (target instanceof HTMLTextAreaElement) {
+            return true;
+        }
+
+        if (target instanceof HTMLInputElement) {
+            return ![
+                "button",
+                "checkbox",
+                "color",
+                "file",
+                "hidden",
+                "image",
+                "radio",
+                "range",
+                "reset",
+                "submit",
+            ].includes(target.type);
+        }
+
+        return target.isContentEditable;
+    }
+
     return createPortal(
         <div
             ref={scrollRef}
@@ -732,6 +791,22 @@ function MobileFormPage({
             )}
             role="dialog"
             aria-modal="true"
+            onPointerDownCapture={(event) => {
+                const target = event.target;
+
+                if (
+                    !isTextInputTarget(target) ||
+                    document.activeElement === target ||
+                    !(target instanceof HTMLElement)
+                ) {
+                    return;
+                }
+
+                event.preventDefault();
+                target.focus({ preventScroll: true });
+                window.requestAnimationFrame(() => window.scrollTo(0, 0));
+                window.setTimeout(() => window.scrollTo(0, 0), 80);
+            }}
             onClickCapture={(event) => {
                 if (
                     event.target instanceof Element &&
