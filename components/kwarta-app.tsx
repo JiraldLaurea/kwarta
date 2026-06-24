@@ -61,6 +61,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useForm } from "react-hook-form";
 import type { IconType } from "react-icons";
+import { RemoveScroll } from "react-remove-scroll";
 import {
   IoHome,
   IoHomeOutline,
@@ -295,33 +296,6 @@ export function KwartaApp() {
       query.removeEventListener("change", syncLayout);
     };
   }, []);
-
-  useEffect(() => {
-    if (!quickAddCategory || isDesktopLayout) {
-      return;
-    }
-
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-    const previousHtmlOverscrollBehavior =
-      document.documentElement.style.overscrollBehavior;
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousBodyOverscrollBehavior =
-      document.body.style.overscrollBehavior;
-
-    window.scrollTo(0, 0);
-    document.documentElement.style.overflow = "hidden";
-    document.documentElement.style.overscrollBehavior = "none";
-    document.body.style.overflow = "hidden";
-    document.body.style.overscrollBehavior = "none";
-
-    return () => {
-      document.documentElement.style.overflow = previousHtmlOverflow;
-      document.documentElement.style.overscrollBehavior =
-        previousHtmlOverscrollBehavior;
-      document.body.style.overflow = previousBodyOverflow;
-      document.body.style.overscrollBehavior = previousBodyOverscrollBehavior;
-    };
-  }, [isDesktopLayout, quickAddCategory]);
 
   useEffect(() => {
     const storedHomeItemStyle = window.localStorage.getItem(
@@ -769,20 +743,26 @@ export function KwartaApp() {
 
   if (quickAddCategory && !isDesktopLayout) {
     return (
-      <main className="fixed inset-0 overflow-hidden bg-white">
-        <QuickTransactionModal
-          accounts={accounts}
-          budget={quickAddBudget}
-          budgetsEnabled={budgetsEnabled}
-          category={quickAddCategory}
-          month={selectedMonth}
-          presentation="page"
-          onClose={closeQuickAdd}
-          onSetBudget={handleQuickAddBudget}
-          onSetReusableBudget={handleQuickAddReusableBudget}
-          onSubmit={handleQuickAddTransaction}
-        />
-      </main>
+      <RemoveScroll
+        allowPinchZoom
+        className="fixed inset-0 overflow-hidden bg-white"
+        removeScrollBar={false}
+      >
+        <main className="h-full overflow-hidden bg-white">
+          <QuickTransactionModal
+            accounts={accounts}
+            budget={quickAddBudget}
+            budgetsEnabled={budgetsEnabled}
+            category={quickAddCategory}
+            month={selectedMonth}
+            presentation="page"
+            onClose={closeQuickAdd}
+            onSetBudget={handleQuickAddBudget}
+            onSetReusableBudget={handleQuickAddReusableBudget}
+            onSubmit={handleQuickAddTransaction}
+          />
+        </main>
+      </RemoveScroll>
     );
   }
 

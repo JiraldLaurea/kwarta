@@ -36,9 +36,7 @@ import {
     useRef,
     useState,
     type CSSProperties,
-    type FocusEvent as ReactFocusEvent,
-    type TouchEvent as ReactTouchEvent,
-    type WheelEvent as ReactWheelEvent,
+    type PointerEvent as ReactPointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import type {
@@ -1060,38 +1058,17 @@ export function QuickTransactionModal({
     const requiresBudget =
         budgetsEnabled && normalizeTransactionType(category.type) === "expense";
     const isPage = presentation === "page";
-    const [isPageInputFocused, setIsPageInputFocused] = useState(false);
-    const focusUnlockTimerRef = useRef<number | null>(null);
-    const formScrollLockProps = isPage
+    const pageInputFocusProps = isPage
         ? {
-              onBlurCapture: () => {
-                  if (focusUnlockTimerRef.current) {
-                      window.clearTimeout(focusUnlockTimerRef.current);
+              onPointerDown: (
+                  event: ReactPointerEvent<HTMLInputElement>,
+              ) => {
+                  if (document.activeElement === event.currentTarget) {
+                      return;
                   }
 
-                  focusUnlockTimerRef.current = window.setTimeout(
-                      () => setIsPageInputFocused(false),
-                      0,
-                  );
-              },
-              onFocusCapture: (event: ReactFocusEvent<HTMLFormElement>) => {
-                  if (focusUnlockTimerRef.current) {
-                      window.clearTimeout(focusUnlockTimerRef.current);
-                  }
-
-                  if (event.target instanceof HTMLInputElement) {
-                      setIsPageInputFocused(true);
-                  }
-              },
-              onTouchMove: (event: ReactTouchEvent<HTMLFormElement>) => {
-                  if (isPageInputFocused) {
-                      event.preventDefault();
-                  }
-              },
-              onWheel: (event: ReactWheelEvent<HTMLFormElement>) => {
-                  if (isPageInputFocused) {
-                      event.preventDefault();
-                  }
+                  event.preventDefault();
+                  event.currentTarget.focus({ preventScroll: true });
               },
           }
         : {};
@@ -1110,35 +1087,6 @@ export function QuickTransactionModal({
         <ModalBackButton onClick={onClose} />
     );
 
-    useEffect(() => {
-        if (!isPageInputFocused) {
-            return;
-        }
-
-        function preventScroll(event: TouchEvent | WheelEvent) {
-            event.preventDefault();
-        }
-
-        window.scrollTo(0, 0);
-        document.addEventListener("touchmove", preventScroll, {
-            passive: false,
-        });
-        document.addEventListener("wheel", preventScroll, { passive: false });
-
-        return () => {
-            document.removeEventListener("touchmove", preventScroll);
-            document.removeEventListener("wheel", preventScroll);
-        };
-    }, [isPageInputFocused]);
-
-    useEffect(() => {
-        return () => {
-            if (focusUnlockTimerRef.current) {
-                window.clearTimeout(focusUnlockTimerRef.current);
-            }
-        };
-    }, []);
-
     if (requiresBudget && !budget) {
         const budgetForm = (
             <Card
@@ -1150,7 +1098,6 @@ export function QuickTransactionModal({
                 )}
             >
                 <form
-                    {...formScrollLockProps}
                     onSubmit={(event) => {
                         event.preventDefault();
 
@@ -1192,6 +1139,7 @@ export function QuickTransactionModal({
                                 inputMode="decimal"
                                 onInput={handleDecimalInput}
                                 pattern="[0-9]*[.]?[0-9]*"
+                                {...pageInputFocusProps}
                                 type="text"
                                 value={limit}
                                 onChange={(event) =>
@@ -1287,7 +1235,6 @@ export function QuickTransactionModal({
             )}
         >
             <form
-                {...formScrollLockProps}
                 onSubmit={(event) => {
                     event.preventDefault();
 
@@ -1337,6 +1284,7 @@ export function QuickTransactionModal({
                             inputMode="decimal"
                             onInput={handleDecimalInput}
                             pattern="[0-9]*[.]?[0-9]*"
+                            {...pageInputFocusProps}
                             type="text"
                             value={amount}
                             onChange={(event) =>
