@@ -742,7 +742,7 @@ export function KwartaApp() {
 
   if (quickAddCategory && !isDesktopLayout) {
     return (
-      <main className="min-h-dvh bg-white">
+      <main className="h-dvh overflow-hidden bg-white">
         <QuickTransactionModal
           accounts={accounts}
           budget={quickAddBudget}
