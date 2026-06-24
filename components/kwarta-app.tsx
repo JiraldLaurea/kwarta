@@ -297,6 +297,33 @@ export function KwartaApp() {
   }, []);
 
   useEffect(() => {
+    if (!quickAddCategory || isDesktopLayout) {
+      return;
+    }
+
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousHtmlOverscrollBehavior =
+      document.documentElement.style.overscrollBehavior;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyOverscrollBehavior =
+      document.body.style.overscrollBehavior;
+
+    window.scrollTo(0, 0);
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.overscrollBehavior = "none";
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.documentElement.style.overscrollBehavior =
+        previousHtmlOverscrollBehavior;
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.overscrollBehavior = previousBodyOverscrollBehavior;
+    };
+  }, [isDesktopLayout, quickAddCategory]);
+
+  useEffect(() => {
     const storedHomeItemStyle = window.localStorage.getItem(
       "kwarta:home-item-style",
     );
@@ -742,7 +769,7 @@ export function KwartaApp() {
 
   if (quickAddCategory && !isDesktopLayout) {
     return (
-      <main className="h-dvh overflow-hidden bg-white">
+      <main className="fixed inset-0 overflow-hidden bg-white">
         <QuickTransactionModal
           accounts={accounts}
           budget={quickAddBudget}
