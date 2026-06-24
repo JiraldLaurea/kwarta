@@ -261,7 +261,7 @@ function CategoryQuickAddSection({
                         <div
                             className={cn(
                                 usesIosStyle
-                                    ? "overflow-hidden rounded-2xl border border-border bg-white divide-y divide-border"
+                                    ? "overflow-hidden rounded-md border border-border bg-white divide-y divide-border"
                                     : "grid grid-cols-3 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3 lg:grid-cols-6",
                             )}
                         >
@@ -405,24 +405,14 @@ function SortableCategoryCard({
             <div
                 className={cn(
                     "flex items-start gap-3",
-                    usesIosStyle
-                        ? "shrink-0"
-                        : "mb-3 justify-center sm:mb-4",
+                    usesIosStyle ? "shrink-0" : "mb-3 justify-center sm:mb-4",
                 )}
             >
                 <div className="flex items-center gap-2">
                     <CategoryIconBadge
                         category={category}
-                        className={cn(
-                            usesIosStyle
-                                ? "h-11 w-11"
-                                : "h-10 w-10",
-                        )}
-                        iconClassName={cn(
-                            usesIosStyle
-                                ? "h-5 w-5"
-                                : "h-4 w-4",
-                        )}
+                        className={cn(usesIosStyle ? "h-11 w-11" : "h-10 w-10")}
+                        iconClassName={cn(usesIosStyle ? "h-5 w-5" : "h-4 w-4")}
                     />
                     {editMode && (
                         <span className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground">
@@ -602,10 +592,10 @@ export function ManageCategoriesView({
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-medium leading-8">
+                    <h1 className="text-xl font-medium leading-7">
                         Manage categories
                     </h1>
-                    <p className="mt-1 text-base leading-6 text-muted-foreground">
+                    <p className="mt-1 text-sm leading-5 text-muted-foreground">
                         Arrange, edit, or remove your income and expense
                         categories.
                     </p>
@@ -690,7 +680,9 @@ function ManageCategorySection({
             (item) => item.id === String(event.active.id),
         );
         setActiveCategory(category ?? null);
-        setActiveCategoryWidth(event.active.rect.current.initial?.width ?? null);
+        setActiveCategoryWidth(
+            event.active.rect.current.initial?.width ?? null,
+        );
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
@@ -819,7 +811,8 @@ const ManageCategoryRowView = forwardRef<
             tabIndex={!isOverlay && onEditCategory ? 0 : undefined}
             className={cn(
                 "flex min-h-[64px] items-center gap-3 border-b border-border bg-white px-3 py-2 transition-[background-color,box-shadow,opacity,transform] first:rounded-t-md last:rounded-b-md last:border-b-0",
-                !isOverlay && onEditCategory &&
+                !isOverlay &&
+                    onEditCategory &&
                     "cursor-pointer md:hover:bg-neutral-50",
                 isDragging && "opacity-20",
                 isOverlay &&
@@ -971,43 +964,43 @@ function CategoryCardActionMenu({
             {isOpen &&
                 menuPosition &&
                 createPortal(
-                <div
-                    ref={menuRef}
-                    className="fixed z-[90] w-44 overflow-hidden rounded-lg border border-border bg-white p-2 shadow-[0_18px_50px_rgba(0,0,0,0.12)]"
-                    role="menu"
-                    style={{
-                        left: menuPosition.left,
-                        top: menuPosition.top,
-                    }}
-                    onPointerDown={(event) => event.stopPropagation()}
-                >
-                    <button
-                        className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 md:hover:bg-neutral-100"
-                        role="menuitem"
-                        type="button"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            onEditCategory(category);
-                            setIsOpen(false);
+                    <div
+                        ref={menuRef}
+                        className="fixed z-[90] w-44 overflow-hidden rounded-lg border border-border bg-white p-2 shadow-[0_18px_50px_rgba(0,0,0,0.12)]"
+                        role="menu"
+                        style={{
+                            left: menuPosition.left,
+                            top: menuPosition.top,
                         }}
+                        onPointerDown={(event) => event.stopPropagation()}
                     >
-                        <Edit3 className="h-4 w-4" aria-hidden />
-                        Edit
-                    </button>
-                    <button
-                        className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 text-destructive md:hover:bg-neutral-100"
-                        role="menuitem"
-                        type="button"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            onDeleteCategory(category);
-                            setIsOpen(false);
-                        }}
-                    >
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                        Delete
-                    </button>
-                </div>,
+                        <button
+                            className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 md:hover:bg-neutral-100"
+                            role="menuitem"
+                            type="button"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onEditCategory(category);
+                                setIsOpen(false);
+                            }}
+                        >
+                            <Edit3 className="h-4 w-4" aria-hidden />
+                            Edit
+                        </button>
+                        <button
+                            className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 text-destructive md:hover:bg-neutral-100"
+                            role="menuitem"
+                            type="button"
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                onDeleteCategory(category);
+                                setIsOpen(false);
+                            }}
+                        >
+                            <Trash2 className="h-4 w-4" aria-hidden />
+                            Delete
+                        </button>
+                    </div>,
                     document.body,
                 )}
         </div>
@@ -1093,7 +1086,7 @@ export function QuickTransactionModal({
                       window.requestAnimationFrame(() => window.scrollTo(0, 0));
                       window.setTimeout(() => window.scrollTo(0, 0), 80);
                   },
-            }
+              }
             : {};
 
     useLayoutEffect(() => {
@@ -1312,7 +1305,8 @@ export function QuickTransactionModal({
                         Add {category.name}
                     </CardTitle>
                     <p className="text-base leading-6 text-muted-foreground">
-                        Record this {category.type} for {formatMonthLabel(month)}.
+                        Record this {category.type} for{" "}
+                        {formatMonthLabel(month)}.
                     </p>
                 </CardHeader>
                 <CardContent className="px-6 pb-6 pt-0">

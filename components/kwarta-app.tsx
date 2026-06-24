@@ -26,7 +26,6 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Calendar,
   Check,
-  ChevronLeft,
   ChevronRight,
   CircleDollarSign,
   BadgeDollarSign,
@@ -1032,18 +1031,26 @@ export function KwartaApp() {
         )}
 
         {view === "reports" && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Button
+          <div className="space-y-6">
+            <nav
+              aria-label="Breadcrumb"
+              className="flex items-center gap-1 text-sm leading-5"
+            >
+              <button
+                className="rounded-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 type="button"
-                variant="ghost"
-                size="icon"
-                className="-ml-2"
                 onClick={() => setView("settings")}
               >
-                <ChevronLeft className="h-5 w-5" aria-hidden />
-                <span className="sr-only">Back to settings</span>
-              </Button>
+                Settings
+              </button>
+              <ChevronRight
+                className="h-4 w-4 text-muted-foreground"
+                aria-hidden
+              />
+              <span aria-current="page">Reports</span>
+            </nav>
+
+            <div>
               <PageHeader
                 title="Reports"
                 description="Income, expenses, and spending insights for the selected month."
