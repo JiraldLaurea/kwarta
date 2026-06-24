@@ -272,6 +272,7 @@ export function KwartaApp() {
   const transactionImportInputRef = useRef<HTMLInputElement>(null);
   const budgetImportInputRef = useRef<HTMLInputElement>(null);
   const quickAddPageRef = useRef<HTMLElement>(null);
+  const quickAddFocusBridgeRef = useRef<HTMLInputElement>(null);
   const [transactionImportError, setTransactionImportError] = useState<
     string | null
   >(null);
@@ -308,12 +309,26 @@ export function KwartaApp() {
     }
 
     const target = quickAddPageRef.current;
+    const lockViewport = () => {
+      target.scrollTop = 0;
+      window.scrollTo(0, 0);
+    };
+
+    lockViewport();
     disableBodyScroll(target, {
       allowTouchMove: () => false,
       reserveScrollBarGap: false,
     });
+    window.addEventListener("scroll", lockViewport, { passive: true });
+    window.addEventListener("resize", lockViewport);
+    window.visualViewport?.addEventListener("resize", lockViewport);
+    window.visualViewport?.addEventListener("scroll", lockViewport);
 
     return () => {
+      window.removeEventListener("scroll", lockViewport);
+      window.removeEventListener("resize", lockViewport);
+      window.visualViewport?.removeEventListener("resize", lockViewport);
+      window.visualViewport?.removeEventListener("scroll", lockViewport);
       enableBodyScroll(target);
     };
   }, [isDesktopLayout, quickAddCategory]);
@@ -506,6 +521,14 @@ export function KwartaApp() {
 
   function closeQuickAdd() {
     setQuickAddCategory(null);
+  }
+
+  function openQuickAdd(category: Category) {
+    if (!isDesktopLayout) {
+      quickAddFocusBridgeRef.current?.focus({ preventScroll: true });
+    }
+
+    setQuickAddCategory(category);
   }
 
   function handleQuickAddBudget(limit: number) {
@@ -762,33 +785,53 @@ export function KwartaApp() {
     );
   }
 
+  const quickAddFocusBridge = (
+    <input
+      ref={quickAddFocusBridgeRef}
+      aria-hidden="true"
+      className="fixed bottom-0 left-0 h-px w-px border-0 bg-transparent p-0 text-base opacity-[0.01] outline-none"
+      inputMode="decimal"
+      tabIndex={-1}
+      type="text"
+    />
+  );
+
   if (quickAddCategory && !isDesktopLayout) {
     return (
-      <RemoveScroll
-        allowPinchZoom
-        className="fixed inset-0 overflow-hidden bg-white"
-        removeScrollBar={false}
-      >
-        <main ref={quickAddPageRef} className="h-full overflow-hidden bg-white">
-          <QuickTransactionModal
-            accounts={accounts}
-            budget={quickAddBudget}
-            budgetsEnabled={budgetsEnabled}
-            category={quickAddCategory}
-            month={selectedMonth}
-            presentation="page"
-            onClose={closeQuickAdd}
-            onSetBudget={handleQuickAddBudget}
-            onSetReusableBudget={handleQuickAddReusableBudget}
-            onSubmit={handleQuickAddTransaction}
-          />
-        </main>
-      </RemoveScroll>
+      <>
+        {quickAddFocusBridge}
+        <RemoveScroll
+          allowPinchZoom
+          className="fixed inset-0 overflow-hidden bg-white"
+          removeScrollBar={false}
+        >
+          <main
+            ref={quickAddPageRef}
+            className="h-full overflow-hidden bg-white"
+          >
+            <QuickTransactionModal
+              accounts={accounts}
+              budget={quickAddBudget}
+              budgetsEnabled={budgetsEnabled}
+              category={quickAddCategory}
+              mobileFocusBridgeRef={quickAddFocusBridgeRef}
+              month={selectedMonth}
+              presentation="page"
+              onClose={closeQuickAdd}
+              onSetBudget={handleQuickAddBudget}
+              onSetReusableBudget={handleQuickAddReusableBudget}
+              onSubmit={handleQuickAddTransaction}
+            />
+          </main>
+        </RemoveScroll>
+      </>
     );
   }
 
   return (
-    <main className="min-h-screen bg-neutral-50">
+    <>
+      {quickAddFocusBridge}
+      <main className="min-h-screen bg-neutral-50">
       <header className="sticky top-0 z-30 border-b bg-white [backface-visibility:hidden] [transform:translateZ(0)]">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-4">
           <div className="w-[180px]">
@@ -820,7 +863,7 @@ export function KwartaApp() {
                 reorderCategoriesByType(current, type, fromId, toId),
               )
             }
-            onSelectCategory={setQuickAddCategory}
+            onSelectCategory={openQuickAdd}
             transactions={monthTransactions}
           />
         )}
@@ -1196,7 +1239,8 @@ export function KwartaApp() {
         <ImportLoadingModal itemLabel={isImportingBackup} />
       )}
       <MobileTabBar activeView={view} onSelect={setView} />
-    </main>
+      </main>
+    </>
   );
 }
 

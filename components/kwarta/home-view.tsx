@@ -32,11 +32,13 @@ import {
 import {
     forwardRef,
     useEffect,
+    useLayoutEffect,
     useMemo,
     useRef,
     useState,
     type CSSProperties,
     type PointerEvent as ReactPointerEvent,
+    type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 import type {
@@ -1017,6 +1019,7 @@ export function QuickTransactionModal({
     budget,
     budgetsEnabled,
     category,
+    mobileFocusBridgeRef,
     month,
     onClose,
     presentation = "modal",
@@ -1028,6 +1031,7 @@ export function QuickTransactionModal({
     budget?: Budget;
     budgetsEnabled: boolean;
     category: Category;
+    mobileFocusBridgeRef?: RefObject<HTMLInputElement>;
     month: string;
     onClose: () => void;
     presentation?: "modal" | "page";
@@ -1089,8 +1093,24 @@ export function QuickTransactionModal({
                       window.requestAnimationFrame(() => window.scrollTo(0, 0));
                       window.setTimeout(() => window.scrollTo(0, 0), 80);
                   },
-              }
+            }
             : {};
+
+    useLayoutEffect(() => {
+        if (!isPage) {
+            return;
+        }
+
+        const input =
+            initialPageFocusTarget === "limit"
+                ? limitInputRef.current
+                : amountInputRef.current;
+
+        if (document.activeElement === mobileFocusBridgeRef?.current) {
+            input?.focus({ preventScroll: true });
+            window.scrollTo(0, 0);
+        }
+    }, [initialPageFocusTarget, isPage, mobileFocusBridgeRef]);
     const backButton = isPage ? (
         <Button
             type="button"
