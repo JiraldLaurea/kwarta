@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeftRight, Link2, Plus, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
     accountFormSchema,
@@ -43,11 +43,11 @@ import {
     IconBadge,
     ModalBackButton,
     PageHeader,
-    categoryIconChoices,
     colorChoices,
 } from "@/components/kwarta/shared";
 import {
     getAccountLabel,
+    getAccountProvider,
     getAccountSubtitle,
     getAccountTitle,
     getProvidersForType,
@@ -56,9 +56,51 @@ import {
 // Sentinel for the "Other" option in the brand dropdown (maps to no provider).
 const OTHER_PROVIDER_VALUE = "__other__";
 
+function getDefaultProviderForType(type: AccountType) {
+    return getProvidersForType(type)[0]?.key;
+}
+
+function getNormalizedAccountType(type?: string, provider?: string, icon?: string) {
+    if (type === "bank" || type === "ewallet" || type === "cash") {
+        return type;
+    }
+
+    const providerType = getAccountProvider(provider)?.types[0];
+
+    if (providerType) {
+        return providerType;
+    }
+
+    if (icon === getDefaultAccountIcon("bank")) {
+        return "bank";
+    }
+
+    if (icon === getDefaultAccountIcon("ewallet")) {
+        return "ewallet";
+    }
+
+    return "cash";
+}
+
 // Compact one-line account label (e.g. "BPI · Savings") for transfer history.
 function accountLabel(account?: Account) {
     return account ? getAccountLabel(account) : "Unknown";
+}
+
+function normalizeAccount(account: Account): Account {
+    const type = getNormalizedAccountType(
+        account.type,
+        account.provider || undefined,
+        account.icon,
+    );
+    const provider = account.provider || undefined;
+
+    return {
+        ...account,
+        type,
+        provider,
+        icon: provider ? account.icon : getDefaultAccountIcon(type),
+    };
 }
 
 export function AccountsView({
@@ -92,18 +134,19 @@ export function AccountsView({
     transactions: Transaction[];
     transfers: Transfer[];
 }) {
-    const editing = accounts.find((account) => account.id === editingId);
+    const normalizedAccounts = accounts.map(normalizeAccount);
+    const editing = normalizedAccounts.find((account) => account.id === editingId);
     const editingTransfer = transfers.find(
         (transfer) => transfer.id === editingTransferId,
     );
     const [isAddingAccount, setIsAddingAccount] = useState(false);
     const [isAddingTransfer, setIsAddingTransfer] = useState(false);
-    const canTransfer = accounts.length >= 2;
+    const canTransfer = normalizedAccounts.length >= 2;
 
     const groups = accountTypeOrder
         .map((type) => ({
             type,
-            accounts: accounts.filter((account) => account.type === type),
+            accounts: normalizedAccounts.filter((account) => account.type === type),
         }))
         .filter((group) => group.accounts.length > 0);
 
@@ -139,14 +182,14 @@ export function AccountsView({
                 />
 
                 <NetWorthSummary
-                    accounts={accounts}
+                    accounts={normalizedAccounts}
                     transactions={transactions}
                     transfers={transfers}
                 />
 
                 <ConnectAccountCard />
 
-                {accounts.length === 0 ? (
+                {normalizedAccounts.length === 0 ? (
                     <EmptyState
                         className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed bg-white"
                         title="No accounts yet"
@@ -159,7 +202,7 @@ export function AccountsView({
                                 <h2 className="px-1 text-sm font-medium leading-5 text-muted-foreground">
                                     {accountTypeLabels[group.type]}
                                 </h2>
-                                <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                                     {group.accounts.map((account) => (
                                         <AccountCard
                                             key={account.id}
@@ -180,7 +223,7 @@ export function AccountsView({
 
                 {transfers.length > 0 && (
                     <TransferHistory
-                        accounts={accounts}
+                        accounts={normalizedAccounts}
                         transfers={transfers}
                         onSelect={onEditTransfer}
                     />
@@ -202,6 +245,7 @@ export function AccountsView({
                 <EditModal onClose={onCancelEdit}>
                     <AccountForm
                         editing={editing}
+                        key={editing.id}
                         modal
                         onCancel={onCancelEdit}
                         onDelete={() => {
@@ -215,7 +259,7 @@ export function AccountsView({
             {isAddingTransfer && (
                 <EditModal onClose={() => setIsAddingTransfer(false)}>
                     <TransferForm
-                        accounts={accounts}
+                        accounts={normalizedAccounts}
                         modal
                         month={month}
                         onCancel={() => setIsAddingTransfer(false)}
@@ -229,7 +273,7 @@ export function AccountsView({
             {editingTransfer && (
                 <EditModal onClose={onCancelEditTransfer}>
                     <TransferForm
-                        accounts={accounts}
+                        accounts={normalizedAccounts}
                         editing={editingTransfer}
                         modal
                         month={month}
@@ -270,7 +314,7 @@ function NetWorthSummary({
             <CardContent>
                 <p
                     className={cn(
-                        "text-3xl font-semibold leading-9",
+                        "text-3xl font-medium leading-9",
                         isNegative && "text-destructive",
                     )}
                 >
@@ -341,7 +385,7 @@ function AccountCard({
                     iconClassName="h-5 w-5"
                 />
                 <div className="min-w-0">
-                    <p className="truncate font-medium leading-5">{title}</p>
+                    <p className="truncate font-medium text-sm leading-5">{title}</p>
                     {secondary && (
                         <p className="mt-0.5 truncate text-xs leading-4 text-muted-foreground">
                             {secondary}
@@ -351,7 +395,7 @@ function AccountCard({
             </div>
             <p
                 className={cn(
-                    "shrink-0 text-right font-medium leading-5",
+                    "shrink-0 text-right text-sm font-medium leading-5",
                     balance < 0 && "text-destructive",
                 )}
             >
@@ -464,7 +508,7 @@ function TransferForm({
                   time: editing.time,
               }
             : {
-                  fromAccountId: accounts[0]?.id ?? "",
+                  fromAccountId: "",
                   toAccountId: "",
                   amount: 0,
                   fee: 0,
@@ -545,6 +589,7 @@ function TransferForm({
                                     label: accountLabel(account),
                                     value: account.id,
                                 }))}
+                            placeholder="Select source account"
                             value={fromAccountId}
                         />
                     </FieldError>
@@ -697,44 +742,119 @@ function AccountForm({
     onDelete?: () => void;
     onSubmit: (values: AccountFormValues) => void;
 }) {
+    const defaultAccountValues: AccountFormValues = {
+        name: "",
+        type: "bank",
+        color: colorChoices[1],
+        icon: getDefaultAccountIcon("bank"),
+        openingBalance: 0,
+        // Default to the first bank brand so new accounts start on the
+        // logo-driven path rather than the custom-look path.
+        provider: getDefaultProviderForType("bank"),
+        syncStatus: "manual",
+    };
+    const editingType = editing
+        ? getNormalizedAccountType(
+              editing.type,
+              editing.provider || undefined,
+              editing.icon,
+          )
+        : undefined;
+
     const form = useForm<AccountFormValues>({
         resolver: zodResolver(accountFormSchema),
+        defaultValues: defaultAccountValues,
         values: editing
             ? {
                   name: editing.name,
-                  type: editing.type,
+                  type: editingType ?? "cash",
                   color: editing.color,
-                  icon: editing.icon,
+                  icon:
+                      editing.provider && editing.icon
+                          ? editing.icon
+                          : getDefaultAccountIcon(editingType ?? "cash"),
                   openingBalance: editing.openingBalance,
-                  provider: editing.provider,
+                  provider: editing.provider || undefined,
                   externalId: editing.externalId,
                   syncStatus: editing.syncStatus ?? "manual",
               }
-            : {
-                  name: "",
-                  type: "bank",
-                  color: colorChoices[1],
-                  icon: getDefaultAccountIcon("bank"),
-                  openingBalance: 0,
-                  // Default to the first bank brand so new accounts start on the
-                  // logo-driven path rather than the custom-look path.
-                  provider: getProvidersForType("bank")[0]?.key,
-                  syncStatus: "manual",
-              },
+            : undefined,
     });
     const selectedColor = form.watch("color");
     const selectedIcon = form.watch("icon");
-    const selectedType = form.watch("type");
-    const selectedProvider = form.watch("provider");
+    const watchedType = form.watch("type");
+    const selectedProvider = form.watch("provider") || undefined;
+    const selectedType = getNormalizedAccountType(
+        watchedType,
+        selectedProvider,
+        selectedIcon,
+    );
 
     const isEditing = Boolean(editing);
     const isModal = isEditing || modal;
     const providerChoices = getProvidersForType(selectedType);
     const supportsBrands = providerChoices.length > 0;
+    const defaultProviderForSelectedType = getDefaultProviderForType(selectedType);
+    const selectedProviderIsValid = providerChoices.some(
+        (provider) => provider.key === selectedProvider,
+    );
+    const brandSelectValue =
+        selectedProvider === undefined
+            ? undefined
+            : selectedProviderIsValid
+              ? selectedProvider
+              : defaultProviderForSelectedType;
     // Whether the per-account look (color + icon) needs to be chosen manually:
     // only for Cash, or for a bank/e-wallet set to "Other" (no brand).
     const usesCustomLook = !supportsBrands || !selectedProvider;
     const brandLabel = selectedType === "ewallet" ? "E-Wallet" : "Bank";
+
+    useEffect(() => {
+        if (watchedType === selectedType) {
+            return;
+        }
+
+        form.setValue("type", selectedType, {
+            shouldValidate: true,
+        });
+    }, [form, selectedType, watchedType]);
+
+    useEffect(() => {
+        if (
+            !supportsBrands ||
+            selectedProvider === undefined ||
+            selectedProviderIsValid ||
+            !defaultProviderForSelectedType
+        ) {
+            return;
+        }
+
+        form.setValue("provider", defaultProviderForSelectedType, {
+            shouldValidate: true,
+        });
+    }, [
+        defaultProviderForSelectedType,
+        form,
+        selectedProvider,
+        selectedProviderIsValid,
+        supportsBrands,
+    ]);
+
+    useEffect(() => {
+        if (selectedProvider) {
+            return;
+        }
+
+        const defaultIcon = getDefaultAccountIcon(selectedType);
+
+        if (selectedIcon === defaultIcon) {
+            return;
+        }
+
+        form.setValue("icon", defaultIcon, {
+            shouldValidate: true,
+        });
+    }, [form, selectedIcon, selectedProvider, selectedType]);
 
     return (
         <Card
@@ -745,7 +865,14 @@ function AccountForm({
         >
             <form
                 onSubmit={form.handleSubmit((values) => {
-                    onSubmit(values);
+                    const provider = values.provider || undefined;
+                    onSubmit({
+                        ...values,
+                        provider,
+                        icon: provider
+                            ? values.icon
+                            : getDefaultAccountIcon(values.type),
+                    });
                     form.reset();
                 })}
             >
@@ -781,23 +908,21 @@ function AccountForm({
                                 id="account-type"
                                 onValueChange={(value) => {
                                     const nextType = value as AccountType;
-                                    form.setValue("type", nextType, {
-                                        shouldValidate: true,
-                                    });
-                                    form.setValue(
-                                        "icon",
-                                        getDefaultAccountIcon(nextType),
+                                    form.reset(
+                                        {
+                                            ...form.getValues(),
+                                            type: nextType,
+                                            icon: getDefaultAccountIcon(nextType),
+                                            provider:
+                                                getDefaultProviderForType(
+                                                    nextType,
+                                                ),
+                                        },
+                                        {
+                                            keepErrors: true,
+                                        },
                                     );
-
-                                    // Reset the brand selection when changing
-                                    // type: default bank/e-wallet to their first
-                                    // brand; cash has no brand.
-                                    const nextProviders =
-                                        getProvidersForType(nextType);
-                                    form.setValue(
-                                        "provider",
-                                        nextProviders[0]?.key,
-                                    );
+                                    form.trigger(["type", "provider"]);
                                 }}
                                 options={[
                                     { label: "Bank", value: "bank" },
@@ -832,14 +957,27 @@ function AccountForm({
                             <Label htmlFor="account-brand">{brandLabel}</Label>
                             <Select
                                 id="account-brand"
-                                onValueChange={(value) =>
-                                    form.setValue(
-                                        "provider",
+                                onValueChange={(value) => {
+                                    const nextProvider =
                                         value === OTHER_PROVIDER_VALUE
                                             ? undefined
-                                            : value,
-                                    )
-                                }
+                                            : value;
+
+                                    form.setValue(
+                                        "provider",
+                                        nextProvider,
+                                    );
+
+                                    if (!nextProvider) {
+                                        form.setValue(
+                                            "icon",
+                                            getDefaultAccountIcon(selectedType),
+                                            {
+                                                shouldValidate: true,
+                                            },
+                                        );
+                                    }
+                                }}
                                 options={[
                                     ...providerChoices.map((provider) => ({
                                         icon: (
@@ -869,7 +1007,7 @@ function AccountForm({
                                         value: OTHER_PROVIDER_VALUE,
                                     },
                                 ]}
-                                value={selectedProvider ?? OTHER_PROVIDER_VALUE}
+                                value={brandSelectValue ?? OTHER_PROVIDER_VALUE}
                             />
                         </FieldError>
                     )}
@@ -890,68 +1028,27 @@ function AccountForm({
                         />
                     </FieldError>
                     {usesCustomLook && (
-                        <>
-                            <div>
-                                <Label>Color</Label>
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                    {colorChoices.map((color) => (
-                                        <button
-                                            key={color}
-                                            aria-label={`Use ${color}`}
-                                            className={cn(
-                                                "h-8 w-8 rounded-full border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                                selectedColor === color &&
-                                                    "ring-2 ring-ring ring-offset-2",
-                                            )}
-                                            style={{ backgroundColor: color }}
-                                            type="button"
-                                            onClick={() =>
-                                                form.setValue("color", color)
-                                            }
-                                        />
-                                    ))}
-                                </div>
+                        <div>
+                            <Label>Color</Label>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                {colorChoices.map((color) => (
+                                    <button
+                                        key={color}
+                                        aria-label={`Use ${color}`}
+                                        className={cn(
+                                            "h-8 w-8 rounded-full border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                            selectedColor === color &&
+                                                "ring-2 ring-ring ring-offset-2",
+                                        )}
+                                        style={{ backgroundColor: color }}
+                                        type="button"
+                                        onClick={() =>
+                                            form.setValue("color", color)
+                                        }
+                                    />
+                                ))}
                             </div>
-                            <FieldError
-                                message={form.formState.errors.icon?.message}
-                            >
-                                <Label>Icon</Label>
-                                <div className="mt-2 flex max-w-[560px] flex-wrap gap-2">
-                                    {categoryIconChoices.map((choice) => {
-                                        const Icon = choice.icon;
-                                        const isSelected =
-                                            selectedIcon === choice.value;
-
-                                        return (
-                                            <button
-                                                key={choice.value}
-                                                aria-label={`Use ${choice.label} icon`}
-                                                className={cn(
-                                                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition-colors md:hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                                    isSelected &&
-                                                        "border-[#2563EB] bg-[#E8F0FE] text-[#0B57D0] ring-2 ring-[#2563EB]/20",
-                                                )}
-                                                type="button"
-                                                onClick={() =>
-                                                    form.setValue(
-                                                        "icon",
-                                                        choice.value,
-                                                        {
-                                                            shouldValidate: true,
-                                                        },
-                                                    )
-                                                }
-                                            >
-                                                <Icon
-                                                    className="h-4 w-4"
-                                                    aria-hidden
-                                                />
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </FieldError>
-                        </>
+                        </div>
                     )}
                     {isModal && (
                         <div className="flex items-center gap-2 pt-2 sm:hidden">
