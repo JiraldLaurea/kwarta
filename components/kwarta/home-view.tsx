@@ -1060,20 +1060,37 @@ export function QuickTransactionModal({
     const isPage = presentation === "page";
     const amountInputRef = useRef<HTMLInputElement>(null);
     const limitInputRef = useRef<HTMLInputElement>(null);
-    const pageInputFocusProps = isPage
-        ? {
-              onPointerDown: (
-                  event: ReactPointerEvent<HTMLInputElement>,
-              ) => {
-                  if (document.activeElement === event.currentTarget) {
-                      return;
-                  }
+    const initialPageFocusTarget =
+        requiresBudget && !budget ? "limit" : "amount";
+    const [pageFocusTarget, setPageFocusTarget] = useState<
+        "amount" | "limit" | null
+    >(isPage ? initialPageFocusTarget : null);
+    const getPageInputProps = (target: "amount" | "limit") =>
+        isPage
+            ? {
+                  className:
+                      pageFocusTarget === target
+                          ? "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]"
+                          : undefined,
+                  onBlur: () => setPageFocusTarget(null),
+                  onFocus: () => {
+                      setPageFocusTarget(target);
+                      window.scrollTo(0, 0);
+                  },
+                  onPointerDown: (
+                      event: ReactPointerEvent<HTMLInputElement>,
+                  ) => {
+                      if (document.activeElement !== event.currentTarget) {
+                          event.preventDefault();
+                          event.currentTarget.focus({ preventScroll: true });
+                      }
 
-                  event.preventDefault();
-                  event.currentTarget.focus({ preventScroll: true });
-              },
-          }
-        : {};
+                      setPageFocusTarget(target);
+                      window.requestAnimationFrame(() => window.scrollTo(0, 0));
+                      window.setTimeout(() => window.scrollTo(0, 0), 80);
+                  },
+              }
+            : {};
     const backButton = isPage ? (
         <Button
             type="button"
@@ -1141,7 +1158,7 @@ export function QuickTransactionModal({
                                 inputMode="decimal"
                                 onInput={handleDecimalInput}
                                 pattern="[0-9]*[.]?[0-9]*"
-                                {...pageInputFocusProps}
+                                {...getPageInputProps("limit")}
                                 ref={limitInputRef}
                                 type="text"
                                 value={limit}
@@ -1294,7 +1311,7 @@ export function QuickTransactionModal({
                                 inputMode="decimal"
                                 onInput={handleDecimalInput}
                                 pattern="[0-9]*[.]?[0-9]*"
-                                {...pageInputFocusProps}
+                                {...getPageInputProps("amount")}
                                 ref={amountInputRef}
                                 type="text"
                                 value={amount}
