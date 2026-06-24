@@ -1089,23 +1089,6 @@ export function QuickTransactionModal({
         <ModalBackButton onClick={onClose} />
     );
 
-    useEffect(() => {
-        if (!isPage) {
-            return;
-        }
-
-        const input =
-            requiresBudget && !budget
-                ? limitInputRef.current
-                : amountInputRef.current;
-        const frame = window.requestAnimationFrame(() => {
-            input?.focus({ preventScroll: true });
-            window.scrollTo(0, 0);
-        });
-
-        return () => window.cancelAnimationFrame(frame);
-    }, [budget, isPage, requiresBudget]);
-
     if (requiresBudget && !budget) {
         const budgetForm = (
             <Card
