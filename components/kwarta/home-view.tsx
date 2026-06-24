@@ -21,6 +21,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+    ChevronLeft,
     ChevronRight,
     Edit3,
     Ellipsis,
@@ -1017,6 +1018,7 @@ export function QuickTransactionModal({
     category,
     month,
     onClose,
+    presentation = "modal",
     onSetBudget,
     onSetReusableBudget,
     onSubmit,
@@ -1027,6 +1029,7 @@ export function QuickTransactionModal({
     category: Category;
     month: string;
     onClose: () => void;
+    presentation?: "modal" | "page";
     onSetBudget: (limit: number) => void;
     onSetReusableBudget: (limit: number) => void;
     onSubmit: (values: {
@@ -1053,107 +1056,126 @@ export function QuickTransactionModal({
     const canSetBudget = Number.isFinite(parsedLimit) && parsedLimit > 0;
     const requiresBudget =
         budgetsEnabled && normalizeTransactionType(category.type) === "expense";
+    const isPage = presentation === "page";
+    const backButton = isPage ? (
+        <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="-ml-2 mb-3"
+            onClick={onClose}
+        >
+            <ChevronLeft className="h-5 w-5" aria-hidden />
+            <span className="sr-only">Back</span>
+        </Button>
+    ) : (
+        <ModalBackButton onClick={onClose} />
+    );
 
     if (requiresBudget && !budget) {
-        return (
-            <EditModal
-                animateMobileEnter={false}
-                mobileMotion="right"
-                onClose={onClose}
+        const budgetForm = (
+            <Card
+                className={cn(
+                    "bg-white",
+                    isPage
+                        ? "min-h-dvh rounded-none border-0"
+                        : "min-h-dvh rounded-none border-0 sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border",
+                )}
             >
-                <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
-                    <form
-                        onSubmit={(event) => {
-                            event.preventDefault();
+                <form
+                    onSubmit={(event) => {
+                        event.preventDefault();
 
-                            if (!canSetBudget) {
-                                return;
-                            }
+                        if (!canSetBudget) {
+                            return;
+                        }
 
-                            if (reuseBudget) {
-                                onSetReusableBudget(parsedLimit);
-                                return;
-                            }
+                        if (reuseBudget) {
+                            onSetReusableBudget(parsedLimit);
+                            return;
+                        }
 
-                            onSetBudget(parsedLimit);
-                        }}
-                    >
-                        <CardHeader className="px-6 pb-2 pt-6">
-                            <ModalBackButton onClick={onClose} />
-                            <div className="flex !m-0 !mb-4">
-                                <CategoryIconBadge
-                                    category={category}
-                                    className="h-10 w-10"
-                                    iconClassName="h-4 w-4"
-                                />
-                            </div>
-                            <CardTitle className="text-2xl font-medium leading-8">
-                                No Budget Set
-                            </CardTitle>
-                            <p className="text-base leading-6 text-muted-foreground">
-                                Set a limit for {category.name} before adding
-                                transactions.
-                            </p>
-                        </CardHeader>
-                        <CardContent className="px-6 pb-6 pt-0">
-                            <FieldError>
-                                <Label htmlFor="quick-budget-limit">
-                                    Limit
-                                </Label>
-                                <Input
-                                    id="quick-budget-limit"
-                                    autoFocus
-                                    inputMode="decimal"
-                                    onInput={handleDecimalInput}
-                                    pattern="[0-9]*[.]?[0-9]*"
-                                    type="text"
-                                    value={limit}
-                                    onChange={(event) =>
-                                        setLimit(event.currentTarget.value)
+                        onSetBudget(parsedLimit);
+                    }}
+                >
+                    <CardHeader className="px-6 pb-2 pt-6">
+                        {backButton}
+                        <div className="flex !m-0 !mb-4">
+                            <CategoryIconBadge
+                                category={category}
+                                className="h-10 w-10"
+                                iconClassName="h-4 w-4"
+                            />
+                        </div>
+                        <CardTitle className="text-2xl font-medium leading-8">
+                            No Budget Set
+                        </CardTitle>
+                        <p className="text-base leading-6 text-muted-foreground">
+                            Set a limit for {category.name} before adding
+                            transactions.
+                        </p>
+                    </CardHeader>
+                    <CardContent className="px-6 pb-6 pt-0">
+                        <FieldError>
+                            <Label htmlFor="quick-budget-limit">Limit</Label>
+                            <Input
+                                id="quick-budget-limit"
+                                autoFocus={!isPage}
+                                inputMode="decimal"
+                                onInput={handleDecimalInput}
+                                pattern="[0-9]*[.]?[0-9]*"
+                                type="text"
+                                value={limit}
+                                onChange={(event) =>
+                                    setLimit(event.currentTarget.value)
+                                }
+                            />
+                        </FieldError>
+                        <div className="mt-4">
+                            <Label htmlFor="quick-reuse-budget">
+                                Reuse budget
+                            </Label>
+                            <div className="mt-2 flex items-center gap-3">
+                                <button
+                                    aria-checked={reuseBudget}
+                                    className={cn(
+                                        "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D99FF]/30",
+                                        reuseBudget
+                                            ? "bg-[#007AFF]"
+                                            : "bg-neutral-300",
+                                    )}
+                                    id="quick-reuse-budget"
+                                    role="switch"
+                                    type="button"
+                                    onClick={() =>
+                                        setReuseBudget((value) => !value)
                                     }
-                                />
-                            </FieldError>
-                            <div className="mt-4">
-                                <Label htmlFor="quick-reuse-budget">
-                                    Reuse budget
-                                </Label>
-                                <div className="mt-2 flex items-center gap-3">
-                                    <button
-                                        aria-checked={reuseBudget}
+                                >
+                                    <span
                                         className={cn(
-                                            "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D99FF]/30",
-                                            reuseBudget
-                                                ? "bg-[#007AFF]"
-                                                : "bg-neutral-300",
+                                            "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
+                                            reuseBudget && "left-[18px]",
                                         )}
-                                        id="quick-reuse-budget"
-                                        role="switch"
-                                        type="button"
-                                        onClick={() =>
-                                            setReuseBudget((value) => !value)
-                                        }
-                                    >
-                                        <span
-                                            className={cn(
-                                                "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
-                                                reuseBudget && "left-[18px]",
-                                            )}
-                                        />
-                                    </button>
-                                    <p className="text-sm leading-5 text-muted-foreground">
-                                        Reuse this same budget for succeeding
-                                        months.
-                                    </p>
-                                </div>
+                                    />
+                                </button>
+                                <p className="text-sm leading-5 text-muted-foreground">
+                                    Reuse this same budget for succeeding
+                                    months.
+                                </p>
                             </div>
-                            <Button
-                                className="mt-6 w-full sm:hidden"
-                                type="submit"
-                                disabled={!canSetBudget}
-                            >
-                                Set budget
-                            </Button>
-                        </CardContent>
+                        </div>
+                        <Button
+                            className={cn(
+                                "mt-6 w-full",
+                                !isPage && "sm:hidden",
+                            )}
+                            type="submit"
+                            disabled={!canSetBudget}
+                        >
+                            Set budget
+                        </Button>
+                    </CardContent>
+                    {!isPage && (
                         <div className="hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
                             <Button
                                 data-modal-close
@@ -1167,127 +1189,139 @@ export function QuickTransactionModal({
                                 Set budget
                             </Button>
                         </div>
-                    </form>
-                </Card>
+                    )}
+                </form>
+            </Card>
+        );
+
+        if (isPage) {
+            return budgetForm;
+        }
+
+        return (
+            <EditModal
+                animateMobileEnter={false}
+                mobileMotion="right"
+                onClose={onClose}
+            >
+                {budgetForm}
             </EditModal>
         );
     }
 
-    return (
-        <EditModal
-            animateMobileEnter={false}
-            mobileMotion="right"
-            onClose={onClose}
+    const transactionForm = (
+        <Card
+            className={cn(
+                "bg-white",
+                isPage
+                    ? "min-h-dvh rounded-none border-0"
+                    : "min-h-dvh rounded-none border-0 sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border",
+            )}
         >
-            <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border">
-                <form
-                    onSubmit={(event) => {
-                        event.preventDefault();
+            <form
+                onSubmit={(event) => {
+                    event.preventDefault();
 
-                        if (!canSubmit) {
-                            return;
-                        }
+                    if (!canSubmit) {
+                        return;
+                    }
 
-                        onSubmit({
-                            amount: parsedAmount,
-                            accountId: selectedAccountId || undefined,
-                            date,
-                            subcategory: selectedSubcategory,
-                        });
-                    }}
-                >
-                    <CardHeader className="px-6 pb-2 pt-6">
-                        <ModalBackButton onClick={onClose} />
-                        <div className="!m-0 !mb-4 flex items-start justify-between">
-                            <CategoryIconBadge
-                                category={category}
-                                className="h-10 w-10"
-                                iconClassName="h-4 w-4"
+                    onSubmit({
+                        amount: parsedAmount,
+                        accountId: selectedAccountId || undefined,
+                        date,
+                        subcategory: selectedSubcategory,
+                    });
+                }}
+            >
+                <CardHeader className="px-6 pb-2 pt-6">
+                    {backButton}
+                    <div className="!m-0 !mb-4 flex items-start justify-between">
+                        <CategoryIconBadge
+                            category={category}
+                            className="h-10 w-10"
+                            iconClassName="h-4 w-4"
+                        />
+                        <div className="w-[164px]">
+                            <DatePickerInput
+                                ariaLabel="Select transaction date"
+                                displayTodayLabel
+                                popoverAlign="right"
+                                value={date}
+                                onChange={setDate}
                             />
-                            <div className="w-[164px]">
-                                <DatePickerInput
-                                    ariaLabel="Select transaction date"
-                                    displayTodayLabel
-                                    popoverAlign="right"
-                                    value={date}
-                                    onChange={setDate}
-                                />
-                            </div>
                         </div>
-                        <CardTitle className="text-2xl font-medium leading-8">
-                            Add {category.name}
-                        </CardTitle>
-                        <p className="text-base leading-6 text-muted-foreground">
-                            Record this {category.type} for{" "}
-                            {formatMonthLabel(month)}.
-                        </p>
-                    </CardHeader>
-                    <CardContent className="space-y-4 px-6 pb-6 pt-0">
-                        <FieldError>
-                            <Label htmlFor="quick-amount">Amount</Label>
-                            <Input
-                                id="quick-amount"
-                                autoFocus
-                                inputMode="decimal"
-                                onInput={handleDecimalInput}
-                                pattern="[0-9]*[.]?[0-9]*"
-                                type="text"
-                                value={amount}
-                                onChange={(event) =>
-                                    setAmount(event.currentTarget.value)
-                                }
+                    </div>
+                    <CardTitle className="text-2xl font-medium leading-8">
+                        Add {category.name}
+                    </CardTitle>
+                    <p className="text-base leading-6 text-muted-foreground">
+                        Record this {category.type} for {formatMonthLabel(month)}.
+                    </p>
+                </CardHeader>
+                <CardContent className="space-y-4 px-6 pb-6 pt-0">
+                    <FieldError>
+                        <Label htmlFor="quick-amount">Amount</Label>
+                        <Input
+                            id="quick-amount"
+                            autoFocus={!isPage}
+                            inputMode="decimal"
+                            onInput={handleDecimalInput}
+                            pattern="[0-9]*[.]?[0-9]*"
+                            type="text"
+                            value={amount}
+                            onChange={(event) =>
+                                setAmount(event.currentTarget.value)
+                            }
+                        />
+                    </FieldError>
+                    <div>
+                        <Label htmlFor="quick-subcategory">Subcategory</Label>
+                        <div className="mt-2">
+                            <Select
+                                id="quick-subcategory"
+                                onValueChange={setSelectedSubcategory}
+                                options={subcategories.map((subcategory) => ({
+                                    label: subcategory,
+                                    value: subcategory,
+                                }))}
+                                value={selectedSubcategory}
                             />
-                        </FieldError>
+                        </div>
+                    </div>
+                    {accounts.length > 0 && (
                         <div>
-                            <Label htmlFor="quick-subcategory">
-                                Subcategory
-                            </Label>
+                            <Label htmlFor="quick-account">Account</Label>
                             <div className="mt-2">
                                 <Select
-                                    id="quick-subcategory"
-                                    onValueChange={setSelectedSubcategory}
-                                    options={subcategories.map(
-                                        (subcategory) => ({
-                                            label: subcategory,
-                                            value: subcategory,
-                                        }),
-                                    )}
-                                    value={selectedSubcategory}
+                                    id="quick-account"
+                                    onValueChange={setSelectedAccountId}
+                                    options={accounts.map((account) => ({
+                                        icon: (
+                                            <AccountLogo
+                                                account={account}
+                                                className="h-6 w-6"
+                                                iconClassName="h-3.5 w-3.5"
+                                            />
+                                        ),
+                                        label: getAccountLabel(account),
+                                        value: account.id,
+                                    }))}
+                                    value={selectedAccountId}
                                 />
                             </div>
                         </div>
-                        {accounts.length > 0 && (
-                            <div>
-                                <Label htmlFor="quick-account">Account</Label>
-                                <div className="mt-2">
-                                    <Select
-                                        id="quick-account"
-                                        onValueChange={setSelectedAccountId}
-                                        options={accounts.map((account) => ({
-                                            icon: (
-                                                <AccountLogo
-                                                    account={account}
-                                                    className="h-6 w-6"
-                                                    iconClassName="h-3.5 w-3.5"
-                                                />
-                                            ),
-                                            label: getAccountLabel(account),
-                                            value: account.id,
-                                        }))}
-                                        value={selectedAccountId}
-                                    />
-                                </div>
-                            </div>
-                        )}
-                        <Button
-                            className="mt-6 w-full sm:hidden"
-                            type="submit"
-                            disabled={!canSubmit}
-                        >
-                            <Plus className="h-4 w-4" aria-hidden />
-                            Add transaction
-                        </Button>
-                    </CardContent>
+                    )}
+                    <Button
+                        className={cn("mt-6 w-full", !isPage && "sm:hidden")}
+                        type="submit"
+                        disabled={!canSubmit}
+                    >
+                        <Plus className="h-4 w-4" aria-hidden />
+                        Add transaction
+                    </Button>
+                </CardContent>
+                {!isPage && (
                     <div className="hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
                         <Button
                             data-modal-close
@@ -1302,8 +1336,22 @@ export function QuickTransactionModal({
                             Add transaction
                         </Button>
                     </div>
-                </form>
-            </Card>
+                )}
+            </form>
+        </Card>
+    );
+
+    if (isPage) {
+        return transactionForm;
+    }
+
+    return (
+        <EditModal
+            animateMobileEnter={false}
+            mobileMotion="right"
+            onClose={onClose}
+        >
+            {transactionForm}
         </EditModal>
     );
 }

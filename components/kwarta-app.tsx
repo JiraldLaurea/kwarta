@@ -235,6 +235,7 @@ export function KwartaApp() {
   const [authMode, setAuthMode] = useState<AuthMode>("login");
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<View>("dashboard");
+  const [isDesktopLayout, setIsDesktopLayout] = useState(false);
   const [homeItemStyle, setHomeItemStyle] = useState<HomeItemStyle>("ios");
   const [budgetsEnabled, setBudgetsEnabled] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() =>
@@ -279,6 +280,21 @@ export function KwartaApp() {
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const userId = user?.id ?? null;
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 768px)");
+
+    function syncLayout() {
+      setIsDesktopLayout(query.matches);
+    }
+
+    syncLayout();
+    query.addEventListener("change", syncLayout);
+
+    return () => {
+      query.removeEventListener("change", syncLayout);
+    };
+  }, []);
 
   useEffect(() => {
     const storedHomeItemStyle = window.localStorage.getItem(
@@ -462,6 +478,92 @@ export function KwartaApp() {
     (category) => normalizeTransactionType(category.type) === "income",
   );
   const accountName = getAccountName(user);
+  const quickAddBudget = quickAddCategory
+    ? monthBudgets.find((budget) => budget.categoryId === quickAddCategory.id)
+    : undefined;
+
+  function closeQuickAdd() {
+    setQuickAddCategory(null);
+  }
+
+  function handleQuickAddBudget(limit: number) {
+    if (!quickAddCategory) {
+      return;
+    }
+
+    setBudgets((current) => {
+      const existingBudget = current.find(
+        (budget) =>
+          budget.categoryId === quickAddCategory.id &&
+          budget.month === selectedMonth,
+      );
+
+      if (existingBudget) {
+        return current.map((budget) =>
+          budget.id === existingBudget.id ? { ...budget, limit } : budget,
+        );
+      }
+
+      return [
+        {
+          id: crypto.randomUUID(),
+          categoryId: quickAddCategory.id,
+          limit,
+          month: selectedMonth,
+        },
+        ...current,
+      ];
+    });
+    setQuickAddCategory(null);
+  }
+
+  function handleQuickAddReusableBudget(limit: number) {
+    if (!quickAddCategory) {
+      return;
+    }
+
+    setBudgets((current) =>
+      upsertReusableBudgets(current, {
+        categoryId: quickAddCategory.id,
+        limit,
+        month: selectedMonth,
+        reuseBudget: true,
+      }),
+    );
+    setQuickAddCategory(null);
+  }
+
+  function handleQuickAddTransaction({
+    amount,
+    accountId,
+    date,
+    subcategory,
+  }: {
+    amount: number;
+    accountId?: string;
+    date: string;
+    subcategory: string;
+  }) {
+    if (!quickAddCategory) {
+      return;
+    }
+
+    setTransactions((current) => [
+      {
+        id: crypto.randomUUID(),
+        amount,
+        categoryId: quickAddCategory.id,
+        accountId: accountId || getFirstAccountId(accounts),
+        date,
+        subcategory,
+        note: "",
+        time: getCurrentTimeInputValue(),
+        type: quickAddCategory.type,
+      },
+      ...current,
+    ]);
+    setQuickAddCategory(null);
+  }
 
   const spendingByCategory = useMemo(() => {
     return expenseCategories
@@ -635,6 +737,25 @@ export function KwartaApp() {
           }
         }}
       />
+    );
+  }
+
+  if (quickAddCategory && !isDesktopLayout) {
+    return (
+      <main className="min-h-dvh bg-white">
+        <QuickTransactionModal
+          accounts={accounts}
+          budget={quickAddBudget}
+          budgetsEnabled={budgetsEnabled}
+          category={quickAddCategory}
+          month={selectedMonth}
+          presentation="page"
+          onClose={closeQuickAdd}
+          onSetBudget={handleQuickAddBudget}
+          onSetReusableBudget={handleQuickAddReusableBudget}
+          onSubmit={handleQuickAddTransaction}
+        />
+      </main>
     );
   }
 
@@ -939,72 +1060,17 @@ export function KwartaApp() {
           />
         )}
       </div>
-      {quickAddCategory && (
+      {quickAddCategory && isDesktopLayout && (
         <QuickTransactionModal
           accounts={accounts}
-          budget={monthBudgets.find(
-            (budget) => budget.categoryId === quickAddCategory.id,
-          )}
+          budget={quickAddBudget}
           budgetsEnabled={budgetsEnabled}
           category={quickAddCategory}
           month={selectedMonth}
-          onClose={() => setQuickAddCategory(null)}
-          onSetBudget={(limit) => {
-            setBudgets((current) => {
-              const existingBudget = current.find(
-                (budget) =>
-                  budget.categoryId === quickAddCategory.id &&
-                  budget.month === selectedMonth,
-              );
-
-              if (existingBudget) {
-                return current.map((budget) =>
-                  budget.id === existingBudget.id
-                    ? { ...budget, limit }
-                    : budget,
-                );
-              }
-
-              return [
-                {
-                  id: crypto.randomUUID(),
-                  categoryId: quickAddCategory.id,
-                  limit,
-                  month: selectedMonth,
-                },
-                ...current,
-              ];
-            });
-            setQuickAddCategory(null);
-          }}
-          onSetReusableBudget={(limit) => {
-            setBudgets((current) =>
-              upsertReusableBudgets(current, {
-                categoryId: quickAddCategory.id,
-                limit,
-                month: selectedMonth,
-                reuseBudget: true,
-              }),
-            );
-            setQuickAddCategory(null);
-          }}
-          onSubmit={({ amount, accountId, date, subcategory }) => {
-            setTransactions((current) => [
-              {
-                id: crypto.randomUUID(),
-                amount,
-                categoryId: quickAddCategory.id,
-                accountId: accountId || getFirstAccountId(accounts),
-                date,
-                subcategory: subcategory,
-                note: "",
-                time: getCurrentTimeInputValue(),
-                type: quickAddCategory.type,
-              },
-              ...current,
-            ]);
-            setQuickAddCategory(null);
-          }}
+          onClose={closeQuickAdd}
+          onSetBudget={handleQuickAddBudget}
+          onSetReusableBudget={handleQuickAddReusableBudget}
+          onSubmit={handleQuickAddTransaction}
         />
       )}
       {homeCategoryFormOpen && (
