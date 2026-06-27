@@ -261,7 +261,7 @@ function CategoryQuickAddSection({
                         <div
                             className={cn(
                                 usesIosStyle
-                                    ? "overflow-hidden rounded-md border border-border bg-white divide-y divide-border"
+                                    ? "overflow-hidden rounded-lg border border-border bg-white divide-y divide-border"
                                     : "grid grid-cols-3 gap-2 sm:grid-cols-3 md:grid-cols-5 md:gap-3 lg:grid-cols-7",
                             )}
                         >
@@ -414,23 +414,7 @@ function SortableCategoryCard({
                         className={cn(usesIosStyle ? "h-11 w-11" : "h-10 w-10")}
                         iconClassName={cn(usesIosStyle ? "h-5 w-5" : "h-4 w-4")}
                     />
-                    {editMode && (
-                        <span className="flex h-8 w-8 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground">
-                            <GripVertical className="h-4 w-4" aria-hidden />
-                            <span className="sr-only">Drag to reorder</span>
-                        </span>
-                    )}
                 </div>
-
-                {editMode && !isOverlay && (
-                    <div className="h-8 w-8 shrink-0">
-                        <CategoryCardActionMenu
-                            category={category}
-                            onDeleteCategory={onDeleteCategory}
-                            onEditCategory={onEditCategory}
-                        />
-                    </div>
-                )}
             </div>
             <div
                 className={cn(
@@ -471,12 +455,15 @@ function SortableCategoryCard({
                             {budget && (
                                 <div
                                     className={cn(
-                                        "h-full rounded-full",
+                                        "h-full rounded-full transition-all",
                                         total > budget.limit &&
                                             "bg-destructive",
                                     )}
                                     style={{
-                                        backgroundColor: category.color,
+                                        backgroundColor:
+                                            total > budget.limit
+                                                ? "#DC2626"
+                                                : category.color,
                                         width: budgetProgressWidth,
                                     }}
                                 />
@@ -503,12 +490,15 @@ function SortableCategoryCard({
                             {budget && (
                                 <div
                                     className={cn(
-                                        "h-full rounded-full",
+                                        "h-full rounded-full transition-all",
                                         total > budget.limit &&
                                             "bg-destructive",
                                     )}
                                     style={{
-                                        backgroundColor: category.color,
+                                        backgroundColor:
+                                            total > budget.limit
+                                                ? "#DC2626"
+                                                : category.color,
                                         width: budgetProgressWidth,
                                     }}
                                 />
@@ -1012,9 +1002,11 @@ export function QuickTransactionModal({
     budget,
     budgetsEnabled,
     category,
+    defaultDate,
     mobileFocusBridgeRef,
     month,
     onClose,
+    periodLabel,
     presentation = "modal",
     onSetBudget,
     onSetReusableBudget,
@@ -1024,9 +1016,11 @@ export function QuickTransactionModal({
     budget?: Budget;
     budgetsEnabled: boolean;
     category: Category;
+    defaultDate?: string;
     mobileFocusBridgeRef?: RefObject<HTMLInputElement>;
     month: string;
     onClose: () => void;
+    periodLabel?: string;
     presentation?: "modal" | "page";
     onSetBudget: (limit: number) => void;
     onSetReusableBudget: (limit: number) => void;
@@ -1039,7 +1033,7 @@ export function QuickTransactionModal({
 }) {
     const subcategories = getSubcategoriesForCategory(category);
     const [amount, setAmount] = useState("");
-    const [date, setDate] = useState(toDateInputValue(new Date()));
+    const [date, setDate] = useState(defaultDate ?? toDateInputValue(new Date()));
     const [selectedSubcategory, setSelectedSubcategory] = useState(
         subcategories[0] ?? "General",
     );
@@ -1306,15 +1300,13 @@ export function QuickTransactionModal({
                     </CardTitle>
                     <p className="text-base leading-6 text-muted-foreground">
                         Record this {category.type} for{" "}
-                        {formatMonthLabel(month)}.
+                        {periodLabel ?? formatMonthLabel(month)}.
                     </p>
                 </CardHeader>
                 <CardContent className="px-6 pb-6 pt-0">
                     <div
                         className={cn(
-                            isPage
-                                ? "grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3"
-                                : "space-y-4",
+                            "grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3",
                         )}
                     >
                         <FieldError>

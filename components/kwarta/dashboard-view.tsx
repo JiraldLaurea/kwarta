@@ -13,18 +13,13 @@ import {
     YAxis,
 } from "recharts";
 import type { Budget, Category, Transaction } from "@/lib/types";
-import { cn, formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { EmptyState, TransactionIcon } from "@/components/kwarta/shared";
-import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
+import { EmptyState } from "@/components/kwarta/shared";
 
 export function DashboardView({
-    budgets,
-    budgetsEnabled,
-    categories,
     cashflowData,
     spendingByCategory,
-    transactions,
 }: {
     budgets: Budget[];
     budgetsEnabled: boolean;
@@ -33,36 +28,8 @@ export function DashboardView({
     spendingByCategory: Array<{ name: string; value: number; color: string }>;
     transactions: Transaction[];
 }) {
-    const expenses = transactions.filter(
-        (transaction) => transaction.type === "expense",
-    );
-
     return (
-        <div className="grid gap-4 md:gap-5 lg:grid-cols-[1.4fr_0.6fr]">
-            {budgetsEnabled ? (
-                <BudgetProgressList
-                    budgets={budgets}
-                    categories={categories}
-                    transactions={expenses}
-                />
-            ) : (
-                <Card className="flex h-full flex-col">
-                    <CardHeader>
-                        <CardTitle>Budget progress</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                            Budget tracking is disabled in Settings.
-                        </p>
-                    </CardHeader>
-                    <CardContent className="flex flex-1">
-                        <EmptyState
-                            className="flex min-h-48 flex-1 flex-col items-center justify-center md:min-h-72"
-                            title="Budgets disabled"
-                            description="Turn budget tracking back on to compare spending against monthly limits."
-                        />
-                    </CardContent>
-                </Card>
-            )}
-
+        <div className="grid gap-4 md:gap-5 lg:grid-cols-2">
             <Card>
                 <CardHeader>
                     <div>
@@ -131,10 +98,6 @@ export function DashboardView({
             </Card>
 
             <CashflowCard cashflowData={cashflowData} />
-            <RecentTransactions
-                categories={categories}
-                transactions={transactions.slice(0, 6)}
-            />
         </div>
     );
 }
@@ -218,76 +181,3 @@ function CashflowTooltip({
     );
 }
 
-function RecentTransactions({
-    categories,
-    transactions,
-}: {
-    categories: Category[];
-    transactions: Transaction[];
-}) {
-    return (
-        <Card className="flex h-full flex-col">
-            <CardHeader>
-                <CardTitle>Recent activity</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                    Latest income and expense entries.
-                </p>
-            </CardHeader>
-            <CardContent
-                className={cn(transactions.length === 0 && "flex flex-1")}
-            >
-                {transactions.length === 0 ? (
-                    <EmptyState
-                        className="flex min-h-48 flex-1 flex-col items-center justify-center md:min-h-72"
-                        title="No activity yet"
-                        description="New transactions will appear here."
-                    />
-                ) : (
-                    <div className="space-y-3">
-                        {transactions.map((transaction) => {
-                            const category = categories.find(
-                                (item) => item.id === transaction.categoryId,
-                            );
-
-                            return (
-                                <div
-                                    key={transaction.id}
-                                    className="flex items-center justify-between gap-3 border-b pb-3 last:border-0 last:pb-0"
-                                >
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <TransactionIcon
-                                            category={category}
-                                            type={transaction.type}
-                                        />
-                                        <div className="min-w-0">
-                                            <p className="truncate font-medium leading-6">
-                                                {transaction.subcategory}
-                                            </p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {category?.name ??
-                                                    "Uncategorized"}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <p
-                                        className={cn(
-                                            "shrink-0 font-medium",
-                                            transaction.type === "income"
-                                                ? "text-[#15803D]"
-                                                : "text-[#DC2626]",
-                                        )}
-                                    >
-                                        {transaction.type === "income"
-                                            ? "+"
-                                            : "-"}
-                                        {formatCurrency(transaction.amount)}
-                                    </p>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </CardContent>
-        </Card>
-    );
-}

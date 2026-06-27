@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { budgetSchema, type BudgetFormValues } from "@/lib/schema";
@@ -17,10 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Select } from "@/components/ui/select";
 import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
 import {
+    CategoryIconBadge,
     EditModal,
     FieldError,
     ModalBackButton,
@@ -37,6 +35,7 @@ export function BudgetsView({
     onCancelEdit,
     onDelete,
     onEdit,
+    periodLabel,
     onSubmit,
     transactions,
 }: {
@@ -46,6 +45,7 @@ export function BudgetsView({
     categories: Category[];
     editingId: string | null;
     month: string;
+    periodLabel: string;
     onCancelEdit: () => void;
     onDelete: (id: string) => void;
     onEdit: (budget: Budget) => void;
@@ -53,8 +53,11 @@ export function BudgetsView({
     transactions: Transaction[];
 }) {
     const editing = allBudgets.find((budget) => budget.id === editingId);
-    const [isAddingBudget, setIsAddingBudget] = useState(false);
-
+    const editingCategory = editing
+        ? categories.find((category) => category.id === editing.categoryId)
+        : undefined;
+    const [addingBudgetCategory, setAddingBudgetCategory] =
+        useState<Category | null>(null);
     if (!budgetsEnabled) {
         return (
             <div className="space-y-4 md:space-y-5">
@@ -85,48 +88,48 @@ export function BudgetsView({
                 />
                 <MonthlyBudgetSummary
                     budgets={budgets}
+                    categories={categories}
                     month={month}
+                    periodLabel={periodLabel}
                     transactions={transactions.filter(
                         (transaction) => transaction.type === "expense",
                     )}
                 />
                 <BudgetProgressList
-                    action={
-                        <Button
-                            type="button"
-                            onClick={() => setIsAddingBudget(true)}
-                        >
-                            <Plus className="h-4 w-4" aria-hidden />
-                            Add budget
-                        </Button>
-                    }
                     budgets={budgets}
                     categories={categories}
-                    onSelect={onEdit}
+                    onSelectCategory={(category, budget) => {
+                        if (budget) {
+                            onEdit(budget);
+                            return;
+                        }
+
+                        setAddingBudgetCategory(category);
+                    }}
                     presentation="list"
                     transactions={transactions.filter(
                         (transaction) => transaction.type === "expense",
                     )}
                 />
             </div>
-            {isAddingBudget && (
-                <EditModal onClose={() => setIsAddingBudget(false)}>
+            {addingBudgetCategory && (
+                <EditModal onClose={() => setAddingBudgetCategory(null)}>
                     <BudgetForm
-                        categories={categories}
+                        category={addingBudgetCategory}
                         modal
                         month={month}
-                        onCancel={() => setIsAddingBudget(false)}
+                        onCancel={() => setAddingBudgetCategory(null)}
                         onSubmit={(values) => {
                             onSubmit(values);
-                            setIsAddingBudget(false);
+                            setAddingBudgetCategory(null);
                         }}
                     />
                 </EditModal>
             )}
-            {editing && (
+            {editing && editingCategory && (
                 <EditModal onClose={onCancelEdit}>
                     <BudgetForm
-                        categories={categories}
+                        category={editingCategory}
                         editing={editing}
                         modal
                         month={month}
@@ -145,11 +148,15 @@ export function BudgetsView({
 
 function MonthlyBudgetSummary({
     budgets,
+    categories,
     month,
+    periodLabel,
     transactions,
 }: {
     budgets: Budget[];
+    categories: Category[];
     month: string;
+    periodLabel: string;
     transactions: Transaction[];
 }) {
     const totalBudget = budgets.reduce((sum, budget) => sum + budget.limit, 0);
@@ -161,13 +168,40 @@ function MonthlyBudgetSummary({
     const isOverBudget = remaining < 0;
     const usage = percent(totalSpent, totalBudget);
     const averageExpensePerDay = totalSpent / getAverageExpenseDayCount(month);
+    const segments = budgets
+        .map((budget) => {
+            const category = categories.find(
+                (item) => item.id === budget.categoryId,
+            );
+            const spent = transactions
+                .filter(
+                    (transaction) =>
+                        transaction.categoryId === budget.categoryId,
+                )
+                .reduce((sum, transaction) => sum + transaction.amount, 0);
+
+            return category && spent > 0
+                  ? {
+                      category,
+                      spent,
+                      width: percent(spent, totalBudget),
+                  }
+                : null;
+        })
+        .filter(Boolean) as Array<{
+            category: Category;
+            spent: number;
+            width: number;
+        }>;
+    segments.sort((first, second) => second.spent - first.spent);
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Total budget</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                    Overall spending plan for {formatMonthLabel(month)}.
+                    Spending for {periodLabel} against the{" "}
+                    {formatMonthLabel(month)} budget.
                 </p>
             </CardHeader>
             <CardContent>
@@ -180,12 +214,33 @@ function MonthlyBudgetSummary({
                             {formatCurrency(totalBudget)} total budget
                         </span>
                     </div>
-                    <Progress
-                        indicatorClassName={cn(
-                            isOverBudget && "bg-destructive",
-                        )}
-                        value={usage}
-                    />
+                    <div className="h-4 overflow-hidden rounded-sm bg-neutral-100">
+                        <div className="flex h-full">
+                            {segments.map((segment) => (
+                                <span
+                                    aria-hidden
+                                    className="h-full shrink-0 border-r border-white transition-all last:border-r-0"
+                                    key={segment.category.id}
+                                    style={{
+                                        backgroundColor: segment.category.color,
+                                        width: `${Math.min(segment.width, 100)}%`,
+                                    }}
+                                />
+                            ))}
+                            {isOverBudget && (
+                                <span
+                                    aria-hidden
+                                    className="h-full shrink-0 bg-destructive transition-all"
+                                    style={{
+                                        width: `${Math.min(
+                                            percent(Math.abs(remaining), totalBudget),
+                                            100,
+                                        )}%`,
+                                    }}
+                                />
+                            )}
+                        </div>
+                    </div>
                     <div className="mt-2 flex items-center justify-between gap-3 text-sm text-muted-foreground leading-5">
                         <span>
                             ~{formatCurrency(averageExpensePerDay)} per day
@@ -200,6 +255,25 @@ function MonthlyBudgetSummary({
                             {isOverBudget ? "excess" : "left"}
                         </span>
                     </div>
+                    {segments.length > 0 && (
+                        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
+                            {segments.map((segment) => (
+                                <span
+                                    className="inline-flex items-center gap-2 text-sm leading-5"
+                                    key={segment.category.id}
+                                >
+                                    <span
+                                        className="h-2.5 w-2.5 rounded-full"
+                                        style={{
+                                            backgroundColor:
+                                                segment.category.color,
+                                        }}
+                                    />
+                                    {segment.category.name}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </CardContent>
         </Card>
@@ -207,7 +281,7 @@ function MonthlyBudgetSummary({
 }
 
 function BudgetForm({
-    categories,
+    category,
     editing,
     modal = false,
     month,
@@ -215,7 +289,7 @@ function BudgetForm({
     onDelete,
     onSubmit,
 }: {
-    categories: Category[];
+    category: Category;
     editing?: Budget;
     modal?: boolean;
     month: string;
@@ -227,10 +301,11 @@ function BudgetForm({
         resolver: zodResolver(budgetSchema),
         values: {
             ...(editing ?? {
-                categoryId: categories[0]?.id ?? "",
+                categoryId: category.id,
                 limit: 0,
                 month,
             }),
+            categoryId: category.id,
             reuseBudget: true,
         },
     });
@@ -238,6 +313,7 @@ function BudgetForm({
     const isEditing = Boolean(editing);
     const isModal = modal || isEditing;
     const reuseBudget = form.watch("reuseBudget");
+    const submitLabel = editing ? "Save budget" : "Set budget";
 
     return (
         <Card
@@ -254,12 +330,21 @@ function BudgetForm({
             >
                 <CardHeader className={cn(isModal && "px-6 pb-2 pt-6")}>
                     {isModal && <ModalBackButton onClick={onCancel} />}
+                    {isModal && (
+                        <div className="!mb-4 !mt-0 flex">
+                            <CategoryIconBadge
+                                category={category}
+                                className="h-10 w-10"
+                                iconClassName="h-4 w-4"
+                            />
+                        </div>
+                    )}
                     <CardTitle
                         className={cn(
                             isModal && "text-2xl font-medium leading-8",
                         )}
                     >
-                        {editing ? "Edit budget" : "Add monthly budget"}
+                        {editing ? "Edit budget" : "No Budget Set"}
                     </CardTitle>
                     <p
                         className={cn(
@@ -267,57 +352,41 @@ function BudgetForm({
                             isModal && "text-base leading-6",
                         )}
                     >
-                        Set limits against expense categories.
+                        {editing
+                            ? `Set a monthly limit for ${category.name}.`
+                            : `Set a limit for ${category.name} before adding transactions.`}
                     </p>
                 </CardHeader>
                 <CardContent
                     className={cn("space-y-4", isModal && "px-6 pb-6 pt-0")}
                 >
-                    <FieldError
-                        message={form.formState.errors.categoryId?.message}
-                    >
-                        <Label htmlFor="budget-category">Category</Label>
-                        <Select
-                            disabled={categories.length === 0}
-                            id="budget-category"
-                            onValueChange={(value) =>
-                                form.setValue("categoryId", value, {
-                                    shouldValidate: true,
-                                })
-                            }
-                            options={categories.map((category) => ({
-                                label: category.name,
-                                value: category.id,
-                            }))}
-                            placeholder="Create an expense category first"
-                            value={form.watch("categoryId")}
-                        />
-                    </FieldError>
-                    <FieldError message={form.formState.errors.limit?.message}>
-                        <Label htmlFor="limit">Limit</Label>
-                        <Input
-                            id="limit"
-                            inputMode="decimal"
-                            onInput={handleDecimalInput}
-                            pattern="[0-9]*[.]?[0-9]*"
-                            type="text"
-                            {...form.register("limit", {
-                                setValueAs: parseDecimalInput,
-                            })}
-                        />
-                    </FieldError>
-                    <FieldError message={form.formState.errors.month?.message}>
-                        <Label htmlFor="month">Month</Label>
-                        <MonthPickerInput
-                            id="month"
-                            value={form.watch("month")}
-                            onChange={(value) =>
-                                form.setValue("month", value, {
-                                    shouldValidate: true,
-                                })
-                            }
-                        />
-                    </FieldError>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
+                        <FieldError message={form.formState.errors.limit?.message}>
+                            <Label htmlFor="limit">Limit</Label>
+                            <Input
+                                id="limit"
+                                inputMode="decimal"
+                                onInput={handleDecimalInput}
+                                pattern="[0-9]*[.]?[0-9]*"
+                                type="text"
+                                {...form.register("limit", {
+                                    setValueAs: parseDecimalInput,
+                                })}
+                            />
+                        </FieldError>
+                        <FieldError message={form.formState.errors.month?.message}>
+                            <Label htmlFor="month">Month</Label>
+                            <MonthPickerInput
+                                id="month"
+                                value={form.watch("month")}
+                                onChange={(value) =>
+                                    form.setValue("month", value, {
+                                        shouldValidate: true,
+                                    })
+                                }
+                            />
+                        </FieldError>
+                    </div>
                     <div>
                         <Label htmlFor="reuse-budget">Reuse budget</Label>
                         <div className="mt-2 flex items-center gap-3">
@@ -364,7 +433,7 @@ function BudgetForm({
                                 </Button>
                             )}
                             <Button className="flex-1" type="submit">
-                                {editing ? "Save budget" : "Add budget"}
+                                {submitLabel}
                             </Button>
                         </div>
                     )}
@@ -403,10 +472,7 @@ function BudgetForm({
                             </Button>
                         )}
                         <Button type="submit">
-                            {!editing && (
-                                <Plus className="h-4 w-4" aria-hidden />
-                            )}
-                            {editing ? "Save budget" : "Add budget"}
+                            {submitLabel}
                         </Button>
                     </div>
                 </div>
@@ -414,4 +480,3 @@ function BudgetForm({
         </Card>
     );
 }
-

@@ -8,8 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { CategoryIconBadge, EmptyState } from "@/components/kwarta/shared";
 
 type BudgetProgressItem = {
-    budget: Budget;
-    category?: Category;
+    budget?: Budget;
+    category: Category;
     isOverBudget: boolean;
     remaining: number;
     spent: number;
@@ -22,6 +22,7 @@ export function BudgetProgressList({
     budgets,
     categories,
     onSelect,
+    onSelectCategory,
     presentation = "card",
     transactions,
 }: {
@@ -30,27 +31,26 @@ export function BudgetProgressList({
     budgets: Budget[];
     categories: Category[];
     onSelect?: (budget: Budget) => void;
+    onSelectCategory?: (category: Category, budget?: Budget) => void;
     presentation?: "card" | "list";
     transactions: Transaction[];
 }) {
-    const items = budgets.map((budget): BudgetProgressItem => {
-        const category = categories.find(
-            (item) => item.id === budget.categoryId,
-        );
+    const items = categories.map((category): BudgetProgressItem => {
+        const budget = budgets.find((item) => item.categoryId === category.id);
         const spent = transactions
             .filter(
-                (transaction) => transaction.categoryId === budget.categoryId,
+                (transaction) => transaction.categoryId === category.id,
             )
             .reduce((sum, transaction) => sum + transaction.amount, 0);
-        const remaining = budget.limit - spent;
+        const remaining = budget ? budget.limit - spent : 0;
 
         return {
             budget,
             category,
-            isOverBudget: remaining < 0,
+            isOverBudget: Boolean(budget && remaining < 0),
             remaining,
             spent,
-            usage: percent(spent, budget.limit),
+            usage: budget ? percent(spent, budget.limit) : 0,
         };
     });
 
@@ -66,12 +66,21 @@ export function BudgetProgressList({
                         description="Create a monthly budget after adding expense categories."
                     />
                 ) : (
-                    <div className="mt-5 overflow-hidden rounded-md border border-border bg-white divide-y divide-border">
+                    <div className="mt-5 overflow-hidden rounded-lg border border-border bg-white divide-y divide-border">
                         {items.map((item) => (
                             <BudgetListRow
-                                key={item.budget.id}
+                                key={item.category.id}
                                 item={item}
-                                onSelect={onSelect}
+                                onSelect={
+                                    onSelectCategory ??
+                                    (onSelect
+                                        ? (_category, budget) => {
+                                              if (budget) {
+                                                  onSelect(budget);
+                                              }
+                                          }
+                                        : undefined)
+                                }
                             />
                         ))}
                     </div>
@@ -104,7 +113,7 @@ export function BudgetProgressList({
                     />
                 ) : (
                     items.map((item) => (
-                        <BudgetCardRow key={item.budget.id} item={item} />
+                        <BudgetCardRow key={item.category.id} item={item} />
                     ))
                 )}
             </CardContent>
@@ -117,7 +126,7 @@ function BudgetListRow({
     onSelect,
 }: {
     item: BudgetProgressItem;
-    onSelect?: (budget: Budget) => void;
+    onSelect?: (category: Category, budget?: Budget) => void;
 }) {
     const content = <BudgetRowContent item={item} showDisclosure />;
 
@@ -129,7 +138,7 @@ function BudgetListRow({
         <button
             className="block min-h-[78px] w-full px-4 py-3 text-left transition-colors md:hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             type="button"
-            onClick={() => onSelect(item.budget)}
+            onClick={() => onSelect(item.category, item.budget)}
         >
             {content}
         </button>
@@ -154,43 +163,51 @@ function BudgetRowContent({
     const { budget, category, isOverBudget, remaining, spent, usage } = item;
     const indicatorColor = isOverBudget
         ? "#DC2626"
-        : (category?.color ?? "#171717");
+        : category.color;
 
     return (
         <div className="flex min-w-0 items-center gap-3">
-            {category ? (
-                <CategoryIconBadge
-                    category={category}
-                    className="h-11 w-11 sm:h-10 sm:w-10"
-                    iconClassName="h-5 w-5 sm:h-4 sm:w-4"
-                />
-            ) : (
-                <span className="h-11 w-11 shrink-0 rounded-full border border-border bg-neutral-100 sm:h-10 sm:w-10" />
-            )}
+            <CategoryIconBadge
+                category={category}
+                className="h-11 w-11 sm:h-10 sm:w-10"
+                iconClassName="h-5 w-5 sm:h-4 sm:w-4"
+            />
             <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-3">
                     <p className="min-w-0 flex-1 truncate text-sm font-medium leading-5">
-                        {category?.name ?? "Deleted category"}
+                        {category.name}
                     </p>
-                    <p className="shrink-0 whitespace-nowrap text-sm font-medium leading-5">
-                        {formatCurrency(spent)} of{" "}
-                        {formatCurrency(budget.limit)}
-                    </p>
+                    {budget ? (
+                        <p className="shrink-0 whitespace-nowrap text-sm font-medium leading-5">
+                            {formatCurrency(spent)} of{" "}
+                            {formatCurrency(budget.limit)}
+                        </p>
+                    ) : (
+                        <p className="shrink-0 whitespace-nowrap text-sm font-medium leading-5">
+                            {formatCurrency(0)}
+                        </p>
+                    )}
                 </div>
                 <Progress
                     className="mt-2 h-1.5"
                     indicatorStyle={{ backgroundColor: indicatorColor }}
                     value={usage}
                 />
-                <p
-                    className={cn(
-                        "mt-1 text-xs leading-4 text-muted-foreground",
-                        isOverBudget && "text-destructive",
-                    )}
-                >
-                    {formatCurrency(Math.abs(remaining))}{" "}
-                    {isOverBudget ? "excess" : "remaining"}
-                </p>
+                {budget ? (
+                    <p
+                        className={cn(
+                            "mt-1 text-xs leading-4 text-muted-foreground",
+                            isOverBudget && "text-destructive",
+                        )}
+                    >
+                        {formatCurrency(Math.abs(remaining))}{" "}
+                        {isOverBudget ? "excess" : "remaining"}
+                    </p>
+                ) : (
+                    <p className="mt-1 text-xs leading-4 text-muted-foreground">
+                        No budget set
+                    </p>
+                )}
             </div>
             {showDisclosure && (
                 <ChevronRight
