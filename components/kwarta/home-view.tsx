@@ -262,7 +262,7 @@ function CategoryQuickAddSection({
                             className={cn(
                                 usesIosStyle
                                     ? "overflow-hidden rounded-md border border-border bg-white divide-y divide-border"
-                                    : "grid grid-cols-3 gap-2 sm:grid-cols-3 md:grid-cols-4 md:gap-3 lg:grid-cols-6",
+                                    : "grid grid-cols-3 gap-2 sm:grid-cols-3 md:grid-cols-5 md:gap-3 lg:grid-cols-7",
                             )}
                         >
                             {categories.map((category) => (
