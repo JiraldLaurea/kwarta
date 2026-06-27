@@ -237,47 +237,49 @@ export function TransactionForm({
                             />
                         </FieldError>
                     </div>
-                    <FieldError
-                        message={form.formState.errors.categoryId?.message}
-                    >
-                        <Label htmlFor="transaction-category">Category</Label>
-                        <Select
-                            disabled={availableCategories.length === 0}
-                            id="transaction-category"
-                            onValueChange={(value) =>
-                                form.setValue("categoryId", value, {
-                                    shouldValidate: true,
-                                })
-                            }
-                            options={availableCategories.map((category) => ({
-                                label: category.name,
-                                value: category.id,
-                            }))}
-                            placeholder={`Create a ${type} category first`}
-                            value={form.watch("categoryId")}
-                        />
-                    </FieldError>
-                    <FieldError
-                        message={form.formState.errors.subcategory?.message}
-                    >
-                        <Label htmlFor="transaction-subcategory">
-                            Subcategory
-                        </Label>
-                        <Select
-                            disabled={subcategories.length === 0}
-                            id="transaction-subcategory"
-                            onValueChange={(value) =>
-                                form.setValue("subcategory", value, {
-                                    shouldValidate: true,
-                                })
-                            }
-                            options={subcategories.map((subcategory) => ({
-                                label: subcategory,
-                                value: subcategory,
-                            }))}
-                            value={selectedSubcategory}
-                        />
-                    </FieldError>
+                    <div className="grid grid-cols-2 gap-3">
+                        <FieldError
+                            message={form.formState.errors.categoryId?.message}
+                        >
+                            <Label htmlFor="transaction-category">Category</Label>
+                            <Select
+                                disabled={availableCategories.length === 0}
+                                id="transaction-category"
+                                onValueChange={(value) =>
+                                    form.setValue("categoryId", value, {
+                                        shouldValidate: true,
+                                    })
+                                }
+                                options={availableCategories.map((category) => ({
+                                    label: category.name,
+                                    value: category.id,
+                                }))}
+                                placeholder={`Create a ${type} category first`}
+                                value={form.watch("categoryId")}
+                            />
+                        </FieldError>
+                        <FieldError
+                            message={form.formState.errors.subcategory?.message}
+                        >
+                            <Label htmlFor="transaction-subcategory">
+                                Subcategory
+                            </Label>
+                            <Select
+                                disabled={subcategories.length === 0}
+                                id="transaction-subcategory"
+                                onValueChange={(value) =>
+                                    form.setValue("subcategory", value, {
+                                        shouldValidate: true,
+                                    })
+                                }
+                                options={subcategories.map((subcategory) => ({
+                                    label: subcategory,
+                                    value: subcategory,
+                                }))}
+                                value={selectedSubcategory}
+                            />
+                        </FieldError>
+                    </div>
                     {accounts.length > 0 && (
                         <FieldError
                             message={form.formState.errors.accountId?.message}
@@ -438,7 +440,7 @@ export function TransactionTable({
                             return (
                                 <section
                                     key={group.date}
-                                    className="overflow-hidden rounded-md border bg-white"
+                                    className="overflow-hidden rounded-lg border bg-white"
                                 >
                                     <TransactionGroupHeader
                                         date={group.date}
@@ -526,7 +528,7 @@ export function TransactionTable({
                             return (
                                 <section
                                     key={group.date}
-                                    className="overflow-hidden rounded-md border bg-white"
+                                    className="overflow-hidden rounded-lg border bg-white"
                                 >
                                     <TransactionGroupHeader
                                         date={group.date}

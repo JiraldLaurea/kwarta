@@ -10,12 +10,7 @@ import {
     type AccountFormValues,
     type TransferFormValues,
 } from "@/lib/schema";
-import type {
-    Account,
-    AccountType,
-    Transaction,
-    Transfer,
-} from "@/lib/types";
+import type { Account, AccountType, Transaction, Transfer } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 import {
     accountTypeLabels,
@@ -60,7 +55,11 @@ function getDefaultProviderForType(type: AccountType) {
     return getProvidersForType(type)[0]?.key;
 }
 
-function getNormalizedAccountType(type?: string, provider?: string, icon?: string) {
+function getNormalizedAccountType(
+    type?: string,
+    provider?: string,
+    icon?: string,
+) {
     if (type === "bank" || type === "ewallet" || type === "cash") {
         return type;
     }
@@ -135,7 +134,9 @@ export function AccountsView({
     transfers: Transfer[];
 }) {
     const normalizedAccounts = accounts.map(normalizeAccount);
-    const editing = normalizedAccounts.find((account) => account.id === editingId);
+    const editing = normalizedAccounts.find(
+        (account) => account.id === editingId,
+    );
     const editingTransfer = transfers.find(
         (transfer) => transfer.id === editingTransferId,
     );
@@ -146,7 +147,9 @@ export function AccountsView({
     const groups = accountTypeOrder
         .map((type) => ({
             type,
-            accounts: normalizedAccounts.filter((account) => account.type === type),
+            accounts: normalizedAccounts.filter(
+                (account) => account.type === type,
+            ),
         }))
         .filter((group) => group.accounts.length > 0);
 
@@ -157,8 +160,9 @@ export function AccountsView({
                     title="Accounts"
                     description="Track balances across your banks, e-wallets, and cash."
                     actions={
-                        <div className="flex gap-2">
+                        <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex-none sm:grid-cols-none sm:flex">
                             <Button
+                                className="w-full sm:w-auto"
                                 type="button"
                                 variant="secondary"
                                 disabled={!canTransfer}
@@ -171,6 +175,7 @@ export function AccountsView({
                                 Transfer
                             </Button>
                             <Button
+                                className="w-full sm:w-auto"
                                 type="button"
                                 onClick={() => setIsAddingAccount(true)}
                             >
@@ -327,7 +332,7 @@ function NetWorthSummary({
 
 function ConnectAccountCard() {
     return (
-        <div className="flex flex-col gap-3 rounded-md border border-dashed border-border bg-neutral-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border bg-neutral-50 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#0B57D0] text-white">
                     <Link2 className="h-5 w-5" aria-hidden />
@@ -376,7 +381,7 @@ function AccountCard({
         <button
             type="button"
             onClick={onSelect}
-            className="flex w-full items-center justify-between gap-3 rounded-md border bg-white p-4 text-left transition-colors md:hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex w-full items-center justify-between gap-3 rounded-lg border bg-white p-4 text-left transition-colors md:hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
             <div className="flex min-w-0 items-center gap-3">
                 <AccountLogo
@@ -385,7 +390,9 @@ function AccountCard({
                     iconClassName="h-5 w-5"
                 />
                 <div className="min-w-0">
-                    <p className="truncate font-medium text-sm leading-5">{title}</p>
+                    <p className="truncate font-medium text-sm leading-5">
+                        {title}
+                    </p>
                     {secondary && (
                         <p className="mt-0.5 truncate text-xs leading-4 text-muted-foreground">
                             {secondary}
@@ -417,17 +424,15 @@ function TransferHistory({
     const accountsById = new Map(
         accounts.map((account) => [account.id, account]),
     );
-    const sortedTransfers = transfers
-        .slice()
-        .sort((left, right) => {
-            const dateOrder = right.date.localeCompare(left.date);
+    const sortedTransfers = transfers.slice().sort((left, right) => {
+        const dateOrder = right.date.localeCompare(left.date);
 
-            if (dateOrder !== 0) {
-                return dateOrder;
-            }
+        if (dateOrder !== 0) {
+            return dateOrder;
+        }
 
-            return right.time.localeCompare(left.time);
-        });
+        return right.time.localeCompare(left.time);
+    });
 
     return (
         <section className="space-y-2">
@@ -436,7 +441,9 @@ function TransferHistory({
             </h2>
             <div className="overflow-hidden rounded-md border bg-white divide-y">
                 {sortedTransfers.map((transfer) => {
-                    const fromAccount = accountsById.get(transfer.fromAccountId);
+                    const fromAccount = accountsById.get(
+                        transfer.fromAccountId,
+                    );
                     const toAccount = accountsById.get(transfer.toAccountId);
 
                     return (
@@ -575,9 +582,7 @@ function TransferForm({
                                 })
                             }
                             options={accounts
-                                .filter(
-                                    (account) => account.id !== toAccountId,
-                                )
+                                .filter((account) => account.id !== toAccountId)
                                 .map((account) => ({
                                     icon: (
                                         <AccountLogo
@@ -794,7 +799,8 @@ function AccountForm({
     const isModal = isEditing || modal;
     const providerChoices = getProvidersForType(selectedType);
     const supportsBrands = providerChoices.length > 0;
-    const defaultProviderForSelectedType = getDefaultProviderForType(selectedType);
+    const defaultProviderForSelectedType =
+        getDefaultProviderForType(selectedType);
     const selectedProviderIsValid = providerChoices.some(
         (provider) => provider.key === selectedProvider,
     );
@@ -912,7 +918,9 @@ function AccountForm({
                                         {
                                             ...form.getValues(),
                                             type: nextType,
-                                            icon: getDefaultAccountIcon(nextType),
+                                            icon: getDefaultAccountIcon(
+                                                nextType,
+                                            ),
                                             provider:
                                                 getDefaultProviderForType(
                                                     nextType,
@@ -963,10 +971,7 @@ function AccountForm({
                                             ? undefined
                                             : value;
 
-                                    form.setValue(
-                                        "provider",
-                                        nextProvider,
-                                    );
+                                    form.setValue("provider", nextProvider);
 
                                     if (!nextProvider) {
                                         form.setValue(
