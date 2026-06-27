@@ -716,7 +716,7 @@ function ManageCategorySection({
                         items={categoryIds}
                         strategy={rectSortingStrategy}
                     >
-                        <div className="min-w-0 rounded-md border border-border bg-white">
+                        <div className="min-w-0 rounded-lg border border-border bg-white">
                             {categories.map((category) => (
                                 <SortableManageCategoryRow
                                     key={category.id}
@@ -800,13 +800,13 @@ const ManageCategoryRowView = forwardRef<
             role={!isOverlay && onEditCategory ? "button" : undefined}
             tabIndex={!isOverlay && onEditCategory ? 0 : undefined}
             className={cn(
-                "flex min-h-[64px] items-center gap-3 border-b border-border bg-white px-3 py-2 transition-[background-color,box-shadow,opacity,transform] first:rounded-t-md last:rounded-b-md last:border-b-0",
+                "flex min-h-[64px] items-center gap-3 border-b border-border bg-white px-3 py-2 transition-[background-color,box-shadow,opacity,transform] first:rounded-t-lg last:rounded-b-lg last:border-b-0",
                 !isOverlay &&
                     onEditCategory &&
                     "cursor-pointer md:hover:bg-neutral-50",
-                isDragging && "opacity-20",
+                isDragging && "",
                 isOverlay &&
-                    "rounded-md border border-border shadow-[0_18px_45px_rgba(37,99,235,0.2)]",
+                    "rounded-lg border border-border shadow-2xl",
             )}
             onClick={() => {
                 if (!isOverlay) onEditCategory?.(category);
@@ -822,7 +822,7 @@ const ManageCategoryRowView = forwardRef<
             }}
         >
             <span
-                className="flex h-9 w-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-md border border-dashed border-border text-muted-foreground active:cursor-grabbing"
+                className="flex h-9 w-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg border border-dashed border-border text-muted-foreground active:cursor-grabbing"
                 {...dragAttributes}
                 {...dragListeners}
                 onClick={(event) => event.stopPropagation()}
@@ -929,7 +929,7 @@ function CategoryCardActionMenu({
                 aria-expanded={isOpen}
                 aria-haspopup="menu"
                 className={cn(
-                    "h-8 w-8 rounded-md border border-transparent md:hover:bg-neutral-100",
+                    "h-8 w-8 rounded-lg border border-transparent md:hover:bg-neutral-100",
                     isOpen &&
                         "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
                 )}
@@ -1033,7 +1033,9 @@ export function QuickTransactionModal({
 }) {
     const subcategories = getSubcategoriesForCategory(category);
     const [amount, setAmount] = useState("");
-    const [date, setDate] = useState(defaultDate ?? toDateInputValue(new Date()));
+    const [date, setDate] = useState(
+        defaultDate ?? toDateInputValue(new Date()),
+    );
     const [selectedSubcategory, setSelectedSubcategory] = useState(
         subcategories[0] ?? "General",
     );
