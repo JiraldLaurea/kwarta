@@ -322,6 +322,102 @@ export function isInMonth(dateValue: string, monthValue: string) {
     return dateValue.startsWith(monthValue);
 }
 
+export type PeriodFrequency = "monthly" | "weekly" | "custom";
+
+export type SelectedPeriod = {
+    frequency: PeriodFrequency;
+    startDate: string;
+    endDate: string;
+};
+
+export function isInDateRange(
+    dateValue: string,
+    startDate: string,
+    endDate: string,
+) {
+    return dateValue >= startDate && dateValue <= endDate;
+}
+
+export function getMonthRange(monthValue: string) {
+    const date = parseMonthValue(monthValue);
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+    return {
+        startDate: toDateInputValue(start),
+        endDate: toDateInputValue(end),
+    };
+}
+
+export function getWeekRange(dateValue: string) {
+    const date = parseDateValue(dateValue);
+    const start = new Date(date);
+    const mondayOffset = (date.getDay() + 6) % 7;
+    start.setDate(date.getDate() - mondayOffset);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+
+    return {
+        startDate: toDateInputValue(start),
+        endDate: toDateInputValue(end),
+    };
+}
+
+export function createMonthlyPeriod(monthValue: string): SelectedPeriod {
+    return {
+        frequency: "monthly",
+        ...getMonthRange(monthValue),
+    };
+}
+
+export function createWeeklyPeriod(dateValue: string): SelectedPeriod {
+    return {
+        frequency: "weekly",
+        ...getWeekRange(dateValue),
+    };
+}
+
+export function createCustomPeriod(
+    startDate: string,
+    endDate: string,
+): SelectedPeriod {
+    return {
+        frequency: "custom",
+        startDate,
+        endDate: endDate < startDate ? startDate : endDate,
+    };
+}
+
+export function getPeriodMonth(period: SelectedPeriod) {
+    return toMonthInputValue(parseDateValue(period.startDate));
+}
+
+export function formatPeriodLabel(period: SelectedPeriod) {
+    if (period.frequency === "monthly") {
+        return formatMonthLabel(getPeriodMonth(period));
+    }
+
+    const start = parseDateValue(period.startDate);
+    const end = parseDateValue(period.endDate);
+
+    if (period.startDate === period.endDate) {
+        return formatPickerDate(start);
+    }
+
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const dateOptions = {
+        month: "short",
+        day: "numeric",
+        year: sameYear ? undefined : "numeric",
+    } satisfies Intl.DateTimeFormatOptions;
+    const startLabel = start.toLocaleDateString("en-US", {
+        ...dateOptions,
+    });
+    const endLabel = end.toLocaleDateString("en-US", dateOptions);
+
+    return `${startLabel} - ${endLabel}`;
+}
+
 export function getDefaultTransactionDate(monthValue: string) {
     const today = toDateInputValue(new Date());
 

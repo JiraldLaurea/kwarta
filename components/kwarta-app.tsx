@@ -70,10 +70,12 @@ import {
   IoHomeOutline,
   IoPieChart,
   IoPieChartOutline,
+  IoPricetagsOutline,
   IoReceipt,
   IoReceiptOutline,
   IoSettings,
   IoSettingsOutline,
+  IoStatsChartOutline,
   IoWallet,
   IoWalletOutline,
 } from "react-icons/io5";
@@ -127,8 +129,10 @@ import type {
 } from "@/lib/types";
 import { cn, formatCurrency, formatDate, percent } from "@/lib/utils";
 import {
+  createMonthlyPeriod,
   formatMonthLabel,
   formatPickerDate,
+  formatPeriodLabel,
   formatTime,
   formatTransactionGroupDate,
   getAverageExpenseDayCount,
@@ -139,11 +143,12 @@ import {
   getFirstAccountId,
   getFirstCategoryId,
   getSubcategoriesForCategory,
+  getPeriodMonth,
   getTransactionFormValues,
   getTransactionGroupSummary,
   getUniqueCategoryId,
   handleDecimalInput,
-  isInMonth,
+  isInDateRange,
   isSameDay,
   normalizeTimeValue,
   normalizeTransactionType,
@@ -172,9 +177,9 @@ import {
   GoogleLogo,
   MetricCard,
   ModalBackButton,
-  MonthPickerInput,
   PageHeader,
   ProfileImage,
+  PeriodSelector,
   TransactionIcon,
   categoryIconChoices,
   colorChoices,
@@ -242,8 +247,8 @@ export function KwartaApp() {
   const [isDesktopLayout, setIsDesktopLayout] = useState(false);
   const [homeItemStyle, setHomeItemStyle] = useState<HomeItemStyle>("ios");
   const [budgetsEnabled, setBudgetsEnabled] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(() =>
-    toMonthInputValue(new Date()),
+  const [selectedPeriod, setSelectedPeriod] = useState(() =>
+    createMonthlyPeriod(toMonthInputValue(new Date())),
   );
   const [categories, setCategories] = useState<Category[]>(seedCategories);
   const [accounts, setAccounts] = useState<Account[]>(seedAccounts);
@@ -480,12 +485,17 @@ export function KwartaApp() {
     workspaceReady,
   ]);
 
-  const monthTransactions = useMemo(
+  const selectedMonth = getPeriodMonth(selectedPeriod);
+  const periodTransactions = useMemo(
     () =>
       transactions.filter((transaction) =>
-        isInMonth(transaction.date, selectedMonth),
+        isInDateRange(
+          transaction.date,
+          selectedPeriod.startDate,
+          selectedPeriod.endDate,
+        ),
       ),
-    [selectedMonth, transactions],
+    [selectedPeriod.endDate, selectedPeriod.startDate, transactions],
   );
   const monthBudgets = useMemo(
     () => budgets.filter((budget) => budget.month === selectedMonth),
@@ -493,10 +503,10 @@ export function KwartaApp() {
   );
 
   const totals = useMemo(() => {
-    const income = monthTransactions
+    const income = periodTransactions
       .filter((transaction) => transaction.type === "income")
       .reduce((sum, transaction) => sum + transaction.amount, 0);
-    const expenses = monthTransactions
+    const expenses = periodTransactions
       .filter((transaction) => transaction.type === "expense")
       .reduce((sum, transaction) => sum + transaction.amount, 0);
 
@@ -505,7 +515,7 @@ export function KwartaApp() {
       expenses,
       balance: income - expenses,
     };
-  }, [monthTransactions]);
+  }, [periodTransactions]);
 
   const expenseCategories = categories.filter(
     (category) => normalizeTransactionType(category.type) === "expense",
@@ -514,6 +524,15 @@ export function KwartaApp() {
     (category) => normalizeTransactionType(category.type) === "income",
   );
   const accountName = getAccountName(user);
+  const selectedPeriodLabel = formatPeriodLabel(selectedPeriod);
+  const todayDate = toDateInputValue(new Date());
+  const quickAddDefaultDate = isInDateRange(
+    todayDate,
+    selectedPeriod.startDate,
+    selectedPeriod.endDate,
+  )
+    ? todayDate
+    : selectedPeriod.startDate;
   const quickAddBudget = quickAddCategory
     ? monthBudgets.find((budget) => budget.categoryId === quickAddCategory.id)
     : undefined;
@@ -613,7 +632,7 @@ export function KwartaApp() {
     return expenseCategories
       .map((category) => ({
         name: category.name,
-        value: monthTransactions
+        value: periodTransactions
           .filter(
             (transaction) =>
               transaction.type === "expense" &&
@@ -623,10 +642,10 @@ export function KwartaApp() {
         color: category.color,
       }))
       .filter((item) => item.value > 0);
-  }, [expenseCategories, monthTransactions]);
+  }, [expenseCategories, periodTransactions]);
 
   const cashflowData = useMemo(() => {
-    return monthTransactions
+    return periodTransactions
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((transaction) => ({
@@ -637,7 +656,7 @@ export function KwartaApp() {
         income: transaction.type === "income" ? transaction.amount : 0,
         expense: transaction.type === "expense" ? transaction.amount : 0,
       }));
-  }, [monthTransactions]);
+  }, [periodTransactions]);
 
   async function applyTransactionImport(result: TransactionImportResult) {
     setCategories(result.categories);
@@ -815,6 +834,8 @@ export function KwartaApp() {
               category={quickAddCategory}
               mobileFocusBridgeRef={quickAddFocusBridgeRef}
               month={selectedMonth}
+              defaultDate={quickAddDefaultDate}
+              periodLabel={selectedPeriodLabel}
               presentation="page"
               onClose={closeQuickAdd}
               onSetBudget={handleQuickAddBudget}
@@ -833,11 +854,10 @@ export function KwartaApp() {
       <main className="min-h-screen bg-neutral-50">
       <header className="sticky top-0 z-30 border-b bg-white [backface-visibility:hidden] [transform:translateZ(0)]">
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-4">
-          <div className="w-[180px]">
-            <MonthPickerInput
-              ariaLabel="Select month"
-              value={selectedMonth}
-              onChange={setSelectedMonth}
+          <div className="w-full max-w-[36rem] md:w-auto md:max-w-none">
+            <PeriodSelector
+              value={selectedPeriod}
+              onChange={setSelectedPeriod}
             />
           </div>
 
@@ -863,7 +883,7 @@ export function KwartaApp() {
               )
             }
             onSelectCategory={openQuickAdd}
-            transactions={monthTransactions}
+            transactions={periodTransactions}
           />
         )}
 
@@ -913,7 +933,7 @@ export function KwartaApp() {
                 ...current,
               ]);
             }}
-            transactions={monthTransactions}
+            transactions={periodTransactions}
           />
         )}
 
@@ -925,6 +945,7 @@ export function KwartaApp() {
             categories={expenseCategories}
             editingId={editingBudgetId}
             month={selectedMonth}
+            periodLabel={selectedPeriodLabel}
             onCancelEdit={() => setEditingBudgetId(null)}
             onDelete={(id) =>
               setBudgets((current) =>
@@ -943,7 +964,7 @@ export function KwartaApp() {
 
               setBudgets((current) => upsertReusableBudgets(current, values));
             }}
-            transactions={monthTransactions}
+            transactions={periodTransactions}
           />
         )}
 
@@ -1053,7 +1074,7 @@ export function KwartaApp() {
             <div>
               <PageHeader
                 title="Reports"
-                description="Income, expenses, and spending insights for the selected month."
+                description={`Income, expenses, and spending insights for ${selectedPeriodLabel}.`}
               />
             </div>
             <section>
@@ -1080,10 +1101,10 @@ export function KwartaApp() {
             <DashboardView
               budgets={monthBudgets}
               budgetsEnabled={budgetsEnabled}
-              categories={categories}
+              categories={expenseCategories}
               cashflowData={cashflowData}
               spendingByCategory={spendingByCategory}
-              transactions={monthTransactions}
+              transactions={periodTransactions}
             />
           </div>
         )}
@@ -1145,6 +1166,8 @@ export function KwartaApp() {
           budgetsEnabled={budgetsEnabled}
           category={quickAddCategory}
           month={selectedMonth}
+          defaultDate={quickAddDefaultDate}
+          periodLabel={selectedPeriodLabel}
           onClose={closeQuickAdd}
           onSetBudget={handleQuickAddBudget}
           onSetReusableBudget={handleQuickAddReusableBudget}
@@ -1472,21 +1495,17 @@ function SettingsView({
             </p>
           </CardHeader>
           <CardContent>
-            <SettingsSwitch
-              checked={!budgetsEnabled}
-              description="Add expenses without setting category budgets."
-              id="disable-budget-tracking"
-              label="Disable Budget Tracking"
-              onChange={(checked) => onBudgetsEnabledChange(!checked)}
-            />
-            <div className="mt-5 space-y-3 border-t border-border pt-5">
+            <div className="space-y-3">
               <Button
                 className="w-full justify-between"
                 type="button"
                 variant="secondary"
                 onClick={onManageCategories}
               >
-                <span>Manage categories</span>
+                <span className="flex items-center gap-2">
+                  <IoPricetagsOutline className="h-4 w-4" aria-hidden />
+                  Manage categories
+                </span>
                 <ChevronRight className="h-4 w-4" aria-hidden />
               </Button>
               <Button
@@ -1495,9 +1514,21 @@ function SettingsView({
                 variant="secondary"
                 onClick={onViewReports}
               >
-                <span>Reports</span>
+                <span className="flex items-center gap-2">
+                  <IoStatsChartOutline className="h-4 w-4" aria-hidden />
+                  Reports
+                </span>
                 <ChevronRight className="h-4 w-4" aria-hidden />
               </Button>
+            </div>
+            <div className="mt-5 border-t border-border pt-5">
+              <SettingsSwitch
+                checked={!budgetsEnabled}
+                description="Add expenses without setting category budgets."
+                id="disable-budget-tracking"
+                label="Disable Budget Tracking"
+                onChange={(checked) => onBudgetsEnabledChange(!checked)}
+              />
             </div>
           </CardContent>
         </Card>
@@ -1518,7 +1549,7 @@ function SettingsView({
                 <button
                   key={option.value}
                   className={cn(
-                    "flex min-h-[70px] w-full items-center gap-3 rounded-md border border-border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-neutral-50",
+                    "flex min-h-[70px] w-full items-center gap-3 rounded-lg border border-border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-neutral-50",
                     selected && "border-primary bg-neutral-50",
                   )}
                   type="button"
@@ -1527,7 +1558,7 @@ function SettingsView({
                 >
                   <span
                     className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-white",
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white",
                       option.iconClassName,
                     )}
                   >
@@ -1590,7 +1621,7 @@ function SettingsView({
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="flex items-center gap-3 rounded-md border border-border bg-neutral-50 p-3">
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-neutral-50 p-3">
               <LogoMark size={40} />
               <div>
                 <p className="font-medium leading-5">Kwarta</p>
@@ -1685,7 +1716,7 @@ function BackupActionRow({
   onImportFile: (file: File) => void;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p className="text-sm font-medium leading-5">{label}</p>
         <p className="mt-1 text-sm leading-5 text-muted-foreground">

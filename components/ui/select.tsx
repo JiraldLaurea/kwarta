@@ -11,6 +11,7 @@ export type SelectOption = {
 };
 
 export type SelectProps = {
+  "aria-label"?: string;
   disabled?: boolean;
   id?: string;
   onValueChange: (value: string) => void;
@@ -20,6 +21,7 @@ export type SelectProps = {
 };
 
 export function Select({
+  "aria-label": ariaLabel,
   disabled,
   id,
   onValueChange,
@@ -48,6 +50,7 @@ export function Select({
       value={value}
     >
       <SelectPrimitive.Trigger
+        aria-label={ariaLabel}
         className={cn(
           "flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-white px-3 py-2 text-left text-base text-foreground transition-[border-color,box-shadow] duration-150 ease-out focus-visible:border-[#2563EB] focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgba(37,99,235,0.18)] data-[state=open]:border-[#2563EB] data-[state=open]:shadow-[0_0_0_3px_rgba(37,99,235,0.18)] disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
         )}

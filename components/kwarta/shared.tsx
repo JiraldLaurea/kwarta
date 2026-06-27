@@ -1,10 +1,7 @@
 "use client";
 
 import { type User } from "@supabase/supabase-js";
-import {
-    disableBodyScroll,
-    enableBodyScroll,
-} from "body-scroll-lock";
+import { disableBodyScroll, enableBodyScroll } from "body-scroll-lock";
 import { motion, useReducedMotion } from "framer-motion";
 import {
     BadgeDollarSign,
@@ -45,15 +42,24 @@ import {
 import { cn } from "@/lib/utils";
 import {
     formatPickerDate,
+    formatPeriodLabel,
+    createCustomPeriod,
+    createMonthlyPeriod,
+    createWeeklyPeriod,
     getCalendarDays,
+    getPeriodMonth,
+    getWeekRange,
     isSameDay,
     parseDateValue,
     parseMonthValue,
     toDateInputValue,
     toMonthInputValue,
+    type PeriodFrequency,
+    type SelectedPeriod,
 } from "@/lib/kwarta/helpers";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
+import { Select } from "@/components/ui/select";
 
 export const colorChoices = [
     "#171717",
@@ -115,6 +121,7 @@ const categoryIconMap = new Map(
 export function DatePickerInput({
     ariaLabel,
     displayTodayLabel = false,
+    label,
     id,
     onChange,
     popoverAlign = "left",
@@ -122,6 +129,7 @@ export function DatePickerInput({
 }: {
     ariaLabel?: string;
     displayTodayLabel?: boolean;
+    label?: string;
     id?: string;
     onChange: (value: string) => void;
     popoverAlign?: "left" | "right";
@@ -129,9 +137,10 @@ export function DatePickerInput({
 }) {
     const selectedDate = parseDateValue(value);
     const selectedLabel =
-        displayTodayLabel && isSameDay(selectedDate, new Date())
+        label ??
+        (displayTodayLabel && isSameDay(selectedDate, new Date())
             ? "Today"
-            : formatPickerDate(selectedDate);
+            : formatPickerDate(selectedDate));
     const selectedYear = selectedDate.getFullYear();
     const selectedMonthIndex = selectedDate.getMonth();
     const [isOpen, setIsOpen] = useState(false);
@@ -180,6 +189,11 @@ export function DatePickerInput({
         }
 
         setIsOpen((open) => !open);
+    }
+
+    function selectToday() {
+        onChange(toDateInputValue(new Date()));
+        setIsOpen(false);
     }
 
     return (
@@ -274,6 +288,16 @@ export function DatePickerInput({
                             );
                         })}
                     </div>
+                    <div className="mt-4 border-t border-border pt-3">
+                        <Button
+                            className="w-full justify-center"
+                            type="button"
+                            variant="secondary"
+                            onClick={selectToday}
+                        >
+                            Today
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>
@@ -332,6 +356,11 @@ export function MonthPickerInput({
         }
 
         setIsOpen((open) => !open);
+    }
+
+    function selectThisMonth() {
+        onChange(toMonthInputValue(new Date()));
+        setIsOpen(false);
     }
 
     return (
@@ -428,10 +457,302 @@ export function MonthPickerInput({
                             );
                         })}
                     </div>
+                    <div className="mt-4 border-t border-border pt-3">
+                        <Button
+                            className="w-full justify-center"
+                            type="button"
+                            variant="secondary"
+                            onClick={selectThisMonth}
+                        >
+                            This month
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>
     );
+}
+
+export function PeriodSelector({
+    onChange,
+    value,
+}: {
+    onChange: (value: SelectedPeriod) => void;
+    value: SelectedPeriod;
+}) {
+    function handleFrequencyChange(nextFrequency: string) {
+        const frequency = nextFrequency as PeriodFrequency;
+
+        if (frequency === "monthly") {
+            onChange(createMonthlyPeriod(getPeriodMonth(value)));
+            return;
+        }
+
+        if (frequency === "weekly") {
+            onChange(createWeeklyPeriod(value.startDate));
+            return;
+        }
+
+        onChange(createCustomPeriod(value.startDate, value.endDate));
+    }
+
+    return (
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+            <div className="w-[7.5rem] shrink-0 sm:w-32">
+                <Select
+                    aria-label="Select period frequency"
+                    onValueChange={handleFrequencyChange}
+                    options={[
+                        { label: "Monthly", value: "monthly" },
+                        { label: "Weekly", value: "weekly" },
+                        { label: "Custom", value: "custom" },
+                    ]}
+                    value={value.frequency}
+                />
+            </div>
+            {value.frequency === "monthly" && (
+                <div className="min-w-0 flex-1 sm:w-56 sm:flex-none">
+                    <MonthPickerInput
+                        ariaLabel="Select month"
+                        value={getPeriodMonth(value)}
+                        onChange={(month) =>
+                            onChange(createMonthlyPeriod(month))
+                        }
+                    />
+                </div>
+            )}
+            {value.frequency === "weekly" && (
+                <div className="min-w-0 flex-1 sm:w-64 sm:flex-none">
+                    <WeekPickerInput
+                        value={value.startDate}
+                        onChange={(date) => onChange(createWeeklyPeriod(date))}
+                    />
+                </div>
+            )}
+            {value.frequency === "custom" && (
+                <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:w-[26rem] sm:flex-none">
+                    <DatePickerInput
+                        ariaLabel="Select start date"
+                        value={value.startDate}
+                        onChange={(startDate) =>
+                            onChange(
+                                createCustomPeriod(startDate, value.endDate),
+                            )
+                        }
+                    />
+                    <DatePickerInput
+                        ariaLabel="Select end date"
+                        popoverAlign="right"
+                        value={value.endDate}
+                        onChange={(endDate) =>
+                            onChange(
+                                createCustomPeriod(value.startDate, endDate),
+                            )
+                        }
+                    />
+                </div>
+            )}
+            <span className="sr-only">{formatPeriodLabel(value)}</span>
+        </div>
+    );
+}
+
+function WeekPickerInput({
+    onChange,
+    value,
+}: {
+    onChange: (value: string) => void;
+    value: string;
+}) {
+    const selectedWeek = getWeekRange(value);
+    const selectedStart = parseDateValue(selectedWeek.startDate);
+    const selectedStartYear = selectedStart.getFullYear();
+    const selectedStartMonth = selectedStart.getMonth();
+    const [isOpen, setIsOpen] = useState(false);
+    const [popoverSide, setPopoverSide] = useState<"above" | "below">("below");
+    const [visibleMonth, setVisibleMonth] = useState(
+        new Date(selectedStartYear, selectedStartMonth, 1),
+    );
+    const pickerRef = useRef<HTMLDivElement>(null);
+    const days = getWeekPickerDays(visibleMonth);
+    const selectedLabel = formatPeriodLabel({
+        frequency: "weekly",
+        ...selectedWeek,
+    });
+
+    useEffect(() => {
+        setVisibleMonth(new Date(selectedStartYear, selectedStartMonth, 1));
+    }, [selectedStartMonth, selectedStartYear]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        function handlePointerDown(event: PointerEvent) {
+            if (
+                pickerRef.current &&
+                !pickerRef.current.contains(event.target as Node)
+            ) {
+                setIsOpen(false);
+            }
+        }
+
+        document.addEventListener("pointerdown", handlePointerDown);
+
+        return () => {
+            document.removeEventListener("pointerdown", handlePointerDown);
+        };
+    }, [isOpen]);
+
+    function changeMonth(offset: number) {
+        setVisibleMonth(
+            (current) =>
+                new Date(current.getFullYear(), current.getMonth() + offset, 1),
+        );
+    }
+
+    function togglePicker() {
+        if (!isOpen) {
+            setPopoverSide(getPopoverSide(pickerRef.current, 390));
+        }
+
+        setIsOpen((open) => !open);
+    }
+
+    function selectThisWeek() {
+        onChange(toDateInputValue(new Date()));
+        setIsOpen(false);
+    }
+
+    return (
+        <div className="relative" ref={pickerRef}>
+            <Button
+                aria-expanded={isOpen}
+                aria-haspopup="dialog"
+                aria-label="Select week"
+                className={cn(
+                    "w-full justify-start px-3 text-left font-normal",
+                    isOpen &&
+                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
+                )}
+                type="button"
+                variant="secondary"
+                onClick={togglePicker}
+            >
+                <Calendar className="h-4 w-4" aria-hidden />
+                {selectedLabel}
+            </Button>
+            {isOpen && (
+                <div
+                    className={cn(
+                        "absolute left-0 z-[70] w-full min-w-[344px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
+                        popoverSide === "above"
+                            ? "bottom-full mb-2"
+                            : "top-full mt-2",
+                    )}
+                >
+                    <div className="mb-4 flex items-center justify-between">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => changeMonth(-1)}
+                        >
+                            <ChevronLeft className="h-4 w-4" aria-hidden />
+                            <span className="sr-only">Previous month</span>
+                        </Button>
+                        <p className="text-base font-medium leading-6">
+                            {visibleMonth.toLocaleDateString("en-US", {
+                                month: "long",
+                                year: "numeric",
+                            })}
+                        </p>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => changeMonth(1)}
+                        >
+                            <ChevronRight className="h-4 w-4" aria-hidden />
+                            <span className="sr-only">Next month</span>
+                        </Button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 text-center text-sm">
+                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+                            (weekday) => (
+                                <span
+                                    key={weekday}
+                                    className="py-2 text-muted-foreground"
+                                >
+                                    {weekday}
+                                </span>
+                            ),
+                        )}
+                        {days.map((date) => {
+                            const dateValue = toDateInputValue(date);
+                            const isCurrentMonth =
+                                date.getMonth() === visibleMonth.getMonth();
+                            const isInWeek =
+                                dateValue >= selectedWeek.startDate &&
+                                dateValue <= selectedWeek.endDate;
+                            const isWeekStart =
+                                dateValue === selectedWeek.startDate;
+                            const isWeekEnd =
+                                dateValue === selectedWeek.endDate;
+
+                            return (
+                                <button
+                                    className={cn(
+                                        "h-11 rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                        !isCurrentMonth &&
+                                            "text-muted-foreground/50",
+                                        isCurrentMonth &&
+                                            "md:hover:bg-[#F2F2F2]",
+                                        isInWeek &&
+                                            "bg-[#E8F0FE] text-[#1D4ED8] md:hover:bg-[#DDEAFF]",
+                                        (isWeekStart || isWeekEnd) &&
+                                            "bg-[#2563EB] font-medium text-white md:hover:bg-[#2563EB]",
+                                    )}
+                                    key={dateValue}
+                                    type="button"
+                                    onClick={() => {
+                                        onChange(dateValue);
+                                        setIsOpen(false);
+                                    }}
+                                >
+                                    {date.getDate()}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="mt-4 border-t border-border pt-3">
+                        <Button
+                            className="w-full justify-center"
+                            type="button"
+                            variant="secondary"
+                            onClick={selectThisWeek}
+                        >
+                            This week
+                        </Button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function getWeekPickerDays(month: Date) {
+    const firstOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
+    const mondayOffset = (firstOfMonth.getDay() + 6) % 7;
+    const start = new Date(firstOfMonth);
+    start.setDate(firstOfMonth.getDate() - mondayOffset);
+
+    return Array.from({ length: 42 }, (_, index) => {
+        const date = new Date(start);
+        date.setDate(start.getDate() + index);
+        return date;
+    });
 }
 
 function getPopoverSide(element: HTMLElement | null, estimatedHeight: number) {
@@ -867,11 +1188,7 @@ function DesktopEditModal({
         setIsVisible(false);
         window.setTimeout(
             onClose,
-            prefersReducedMotion
-                ? 0
-                : window.innerWidth >= 640
-                  ? 100
-                  : 240,
+            prefersReducedMotion ? 0 : window.innerWidth >= 640 ? 100 : 240,
         );
     }, [onClose, prefersReducedMotion]);
     const {
@@ -927,16 +1244,13 @@ function DesktopEditModal({
             document.body.style.overscrollBehavior = "none";
 
             return () => {
-                document.documentElement.style.overflow =
-                    previousHtmlOverflow;
+                document.documentElement.style.overflow = previousHtmlOverflow;
                 document.body.style.overflow = previousBodyOverflow;
                 document.body.style.overscrollBehavior =
                     previousBodyOverscrollBehavior;
             };
         }
 
-        document.documentElement.style.overflow = "hidden";
-        document.body.style.overflow = "hidden";
         document.body.style.overscrollBehavior = "none";
 
         return () => {
@@ -1055,7 +1369,7 @@ function DesktopEditModal({
             <motion.div
                 ref={dialogRef}
                 className={cn(
-                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 shadow-[0_-12px_40px_rgba(0,0,0,0.12)] will-change-transform sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:rounded-2xl sm:border sm:border-border sm:transition-opacity sm:duration-100 sm:will-change-auto sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
+                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 shadow-[0_-12px_40px_rgba(0,0,0,0.12)] will-change-transform sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:overflow-visible sm:rounded-2xl sm:border sm:border-border sm:transition-opacity sm:duration-100 sm:will-change-auto sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
                     mobileMotion === "bottom" && "rounded-t-2xl",
                     !isVisible && "sm:opacity-0",
                     className,
@@ -1211,7 +1525,9 @@ export function AccountLogo({
     const provider = getAccountProvider(account.provider);
     const [logoFailed, setLogoFailed] = useState<string | null>(null);
     const logoSrc =
-        provider?.hasLogoFile && provider ? getProviderLogoSrc(provider.key) : undefined;
+        provider?.hasLogoFile && provider
+            ? getProviderLogoSrc(provider.key)
+            : undefined;
 
     if (provider && logoSrc && logoFailed !== provider.key) {
         return (
@@ -1249,7 +1565,10 @@ export function AccountLogo({
                     color: provider.textColor ?? "white",
                 }}
             >
-                <BrandIcon className={cn("h-4 w-4", iconClassName)} aria-hidden />
+                <BrandIcon
+                    className={cn("h-4 w-4", iconClassName)}
+                    aria-hidden
+                />
                 <span className="sr-only">{provider.label}</span>
             </span>
         );
