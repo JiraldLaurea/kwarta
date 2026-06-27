@@ -308,12 +308,14 @@ export function MonthPickerInput({
     ariaLabel,
     compact = false,
     id,
+    mobileFullWidth = false,
     onChange,
     value,
 }: {
     ariaLabel?: string;
     compact?: boolean;
     id?: string;
+    mobileFullWidth?: boolean;
     onChange: (value: string) => void;
     value: string;
 }) {
@@ -390,7 +392,9 @@ export function MonthPickerInput({
             {isOpen && (
                 <div
                     className={cn(
-                        "absolute left-0 z-[70] w-full min-w-[312px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
+                        mobileFullWidth
+                            ? "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-full sm:min-w-[312px]"
+                            : "absolute left-0 z-[70] w-full min-w-[312px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
                         popoverSide === "above"
                             ? "bottom-full mb-2"
                             : "top-full mt-2",
@@ -514,6 +518,7 @@ export function PeriodSelector({
                 <div className="min-w-0 flex-1 sm:w-56 sm:flex-none">
                     <MonthPickerInput
                         ariaLabel="Select month"
+                        mobileFullWidth
                         value={getPeriodMonth(value)}
                         onChange={(month) =>
                             onChange(createMonthlyPeriod(month))
@@ -646,7 +651,7 @@ function WeekPickerInput({
             {isOpen && (
                 <div
                     className={cn(
-                        "absolute left-0 z-[70] w-full min-w-[344px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
+                        "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-full sm:min-w-[344px]",
                         popoverSide === "above"
                             ? "bottom-full mb-2"
                             : "top-full mt-2",
