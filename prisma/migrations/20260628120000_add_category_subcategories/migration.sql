@@ -1,2 +1,0 @@
-ALTER TABLE "Category"
-ADD COLUMN "subcategories" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
