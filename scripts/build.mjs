@@ -1,5 +1,5 @@
-import { spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -11,10 +11,6 @@ function run(command, args, options = {}) {
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
   }
-}
-
-if (process.env.DATABASE_URL) {
-  run("npx", ["prisma", "migrate", "deploy"]);
 }
 
 const require = createRequire(import.meta.url);
