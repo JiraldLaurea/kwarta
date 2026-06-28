@@ -27,6 +27,7 @@ import {
     Ellipsis,
     GripVertical,
     Plus,
+    Tags,
     Trash2,
 } from "lucide-react";
 import {
@@ -547,6 +548,7 @@ export function ManageCategoriesView({
     onAddCategory,
     onBack,
     onEditCategory,
+    onManageSubcategories,
     onReorderCategory,
 }: {
     expenseCategories: Category[];
@@ -554,6 +556,7 @@ export function ManageCategoriesView({
     onAddCategory: () => void;
     onBack: () => void;
     onEditCategory: (category: Category) => void;
+    onManageSubcategories: () => void;
     onReorderCategory: (
         type: TransactionType,
         fromId: string,
@@ -590,14 +593,25 @@ export function ManageCategoriesView({
                         categories.
                     </p>
                 </div>
-                <Button
-                    className="w-full sm:w-auto"
-                    type="button"
-                    onClick={onAddCategory}
-                >
-                    <Plus className="h-4 w-4" aria-hidden />
-                    Add category
-                </Button>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                    <Button
+                        className="w-full sm:w-auto"
+                        type="button"
+                        variant="secondary"
+                        onClick={onManageSubcategories}
+                    >
+                        <Tags className="h-4 w-4" aria-hidden />
+                        Manage subcategories
+                    </Button>
+                    <Button
+                        className="w-full sm:w-auto"
+                        type="button"
+                        onClick={onAddCategory}
+                    >
+                        <Plus className="h-4 w-4" aria-hidden />
+                        Add category
+                    </Button>
+                </div>
             </div>
 
             <div className="grid items-start gap-5 md:grid-cols-2">

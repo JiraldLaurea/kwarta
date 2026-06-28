@@ -107,6 +107,7 @@ import {
   type AuthFormValues,
   type BudgetFormValues,
   type CategoryFormValues,
+  type SubcategoryFormValues,
   type TransactionFormValues,
   type AccountFormValues,
   type TransferFormValues,
@@ -129,8 +130,10 @@ import type {
 } from "@/lib/types";
 import { cn, formatCurrency, formatDate, percent } from "@/lib/utils";
 import {
-  createMonthlyPeriod,
   budgetMatchesPeriod,
+  createBudgetCyclePeriod,
+  createMonthlyPeriod,
+  defaultBudgetCycleSettings,
   formatMonthLabel,
   formatPickerDate,
   formatPeriodLabel,
@@ -153,6 +156,7 @@ import {
   handleDecimalInput,
   isInDateRange,
   isSameDay,
+  normalizeBudgetCycleSettings,
   normalizeTimeValue,
   normalizeTransactionType,
   parseDateValue,
@@ -164,6 +168,7 @@ import {
   toMonthInputValue,
   upsertReusableBudgets,
   withCategoryIcons,
+  type BudgetCycleSettings,
 } from "@/lib/kwarta/helpers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -191,7 +196,7 @@ import {
 import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
 import { BudgetsView } from "@/components/kwarta/budgets-view";
 import { AccountsView } from "@/components/kwarta/accounts-view";
-import { CategoryForm } from "@/components/kwarta/categories";
+import { CategoryForm, SubcategoryForm } from "@/components/kwarta/categories";
 import {
   ImportConfirmationModal,
   ImportLoadingModal,
@@ -250,6 +255,10 @@ export function KwartaApp() {
   const [isDesktopLayout, setIsDesktopLayout] = useState(false);
   const [homeItemStyle, setHomeItemStyle] = useState<HomeItemStyle>("ios");
   const [budgetsEnabled, setBudgetsEnabled] = useState(true);
+  const [budgetCycleSettings, setBudgetCycleSettings] =
+    useState<BudgetCycleSettings>(defaultBudgetCycleSettings);
+  const [budgetCycleSettingsReady, setBudgetCycleSettingsReady] =
+    useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState(() =>
     createMonthlyPeriod(toMonthInputValue(new Date())),
   );
@@ -274,6 +283,7 @@ export function KwartaApp() {
     null,
   );
   const [homeCategoryFormOpen, setHomeCategoryFormOpen] = useState(false);
+  const [subcategoryFormOpen, setSubcategoryFormOpen] = useState(false);
   const [categoryPendingDelete, setCategoryPendingDelete] =
     useState<Category | null>(null);
   const transactionImportInputRef = useRef<HTMLInputElement>(null);
@@ -357,6 +367,24 @@ export function KwartaApp() {
       setBudgetsEnabled(storedBudgetsEnabled === "true");
     }
 
+    const storedBudgetCycleSettings = window.localStorage.getItem(
+      "kwarta:budget-cycle-settings",
+    );
+
+    if (storedBudgetCycleSettings) {
+      try {
+        setBudgetCycleSettings(
+          normalizeBudgetCycleSettings(
+            JSON.parse(storedBudgetCycleSettings) as BudgetCycleSettings,
+          ),
+        );
+      } catch {
+        setBudgetCycleSettings(defaultBudgetCycleSettings);
+      }
+    }
+
+    setBudgetCycleSettingsReady(true);
+
     const params = new URLSearchParams(window.location.search);
     const urlAuthError = params.get("auth_error");
 
@@ -399,6 +427,17 @@ export function KwartaApp() {
       String(budgetsEnabled),
     );
   }, [budgetsEnabled]);
+
+  useEffect(() => {
+    if (!budgetCycleSettingsReady) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      "kwarta:budget-cycle-settings",
+      JSON.stringify(budgetCycleSettings),
+    );
+  }, [budgetCycleSettings, budgetCycleSettingsReady]);
 
   useEffect(() => {
     if (!isAuthed || !userId) {
@@ -539,7 +578,21 @@ export function KwartaApp() {
   const quickAddBudget = quickAddCategory
     ? periodBudgets.find((budget) => budget.categoryId === quickAddCategory.id)
     : undefined;
-  const selectedBudgetPeriod = getBudgetPeriodFields(selectedPeriod);
+  const selectedBudgetPeriod = getBudgetPeriodFields(
+    selectedPeriod,
+    budgetCycleSettings,
+  );
+
+  function updateBudgetCycleSettings(settings: BudgetCycleSettings) {
+    const normalized = normalizeBudgetCycleSettings(settings);
+
+    setBudgetCycleSettings(normalized);
+    setSelectedPeriod((current) =>
+      current.frequency === "cycle"
+        ? createBudgetCyclePeriod(current.startDate, normalized)
+        : current,
+    );
+  }
 
   function closeQuickAdd() {
     setQuickAddCategory(null);
@@ -630,6 +683,20 @@ export function KwartaApp() {
       ...current,
     ]);
     setQuickAddCategory(null);
+  }
+
+  function handleSubcategorySubmit(values: SubcategoryFormValues) {
+    setCategories((current) =>
+      current.map((category) =>
+        category.id === values.categoryId
+          ? {
+              ...category,
+              subcategories: values.subcategories,
+            }
+          : category,
+      ),
+    );
+    setSubcategoryFormOpen(false);
   }
 
   const spendingByCategory = useMemo(() => {
@@ -861,7 +928,9 @@ export function KwartaApp() {
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-5 md:py-4">
           <div className="w-full max-w-[36rem] md:w-auto md:max-w-none">
             <PeriodSelector
+              budgetCycleSettings={budgetCycleSettings}
               value={selectedPeriod}
+              onBudgetCycleSettingsChange={updateBudgetCycleSettings}
               onChange={setSelectedPeriod}
             />
           </div>
@@ -948,6 +1017,7 @@ export function KwartaApp() {
             budgets={periodBudgets}
             budgetsEnabled={budgetsEnabled}
             categories={expenseCategories}
+            cycleSettings={budgetCycleSettings}
             editingId={editingBudgetId}
             month={selectedMonth}
             period={selectedPeriod}
@@ -1159,6 +1229,7 @@ export function KwartaApp() {
             onAddCategory={() => setHomeCategoryFormOpen(true)}
             onBack={() => setView("settings")}
             onEditCategory={(category) => setEditingCategoryId(category.id)}
+            onManageSubcategories={() => setSubcategoryFormOpen(true)}
             onReorderCategory={(type, fromId, toId) =>
               setCategories((current) =>
                 reorderCategoriesByType(current, type, fromId, toId),
@@ -1198,6 +1269,19 @@ export function KwartaApp() {
               ]);
               setHomeCategoryFormOpen(false);
             }}
+          />
+        </EditModal>
+      )}
+      {subcategoryFormOpen && (
+        <EditModal
+          allowContentScroll
+          onClose={() => setSubcategoryFormOpen(false)}
+        >
+          <SubcategoryForm
+            categories={categories}
+            modal
+            onCancel={() => setSubcategoryFormOpen(false)}
+            onSubmit={handleSubcategorySubmit}
           />
         </EditModal>
       )}
@@ -1506,25 +1590,29 @@ function SettingsView({
           <CardContent>
             <div className="space-y-3">
               <Button
-                className="w-full justify-between"
+                className="h-auto min-h-[58px] w-full justify-between py-2"
                 type="button"
                 variant="secondary"
                 onClick={onManageCategories}
               >
                 <span className="flex items-center gap-2">
-                  <IoPricetagsOutline className="h-4 w-4" aria-hidden />
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#DB2777] text-white">
+                    <IoPricetagsOutline className="h-5 w-5" aria-hidden />
+                  </span>
                   Manage categories
                 </span>
                 <ChevronRight className="h-4 w-4" aria-hidden />
               </Button>
               <Button
-                className="w-full justify-between"
+                className="h-auto min-h-[58px] w-full justify-between py-2"
                 type="button"
                 variant="secondary"
                 onClick={onViewReports}
               >
                 <span className="flex items-center gap-2">
-                  <IoStatsChartOutline className="h-4 w-4" aria-hidden />
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0891B2] text-white">
+                    <IoStatsChartOutline className="h-5 w-5" aria-hidden />
+                  </span>
                   Reports
                 </span>
                 <ChevronRight className="h-4 w-4" aria-hidden />

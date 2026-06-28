@@ -12,6 +12,7 @@ import {
   transactionSchema,
   transferSchema
 } from "@/lib/schema";
+import { getSubcategoriesForCategory } from "@/lib/kwarta/helpers";
 
 const workspaceQuerySchema = z.object({
   userId: z.string().min(1)
@@ -28,10 +29,15 @@ const transferSaveSchema = z.object({
   time: z.string()
 });
 
+const categorySaveSchema = categorySchema.extend({
+  id: z.string().min(1),
+  subcategories: z.array(z.string()).default([])
+});
+
 const workspaceSaveSchema = z.object({
   userId: z.string().min(1),
   accounts: z.array(accountSchema.extend({ id: z.string().min(1) })),
-  categories: z.array(categorySchema.extend({ id: z.string().min(1) })),
+  categories: z.array(categorySaveSchema),
   transactions: z.array(transactionSchema.extend({ id: z.string().min(1) })),
   transfers: z.array(transferSaveSchema).default([]),
   budgets: z.array(budgetSchema.extend({ id: z.string().min(1) }))
@@ -96,6 +102,8 @@ export async function GET(request: Request) {
       id: category.id,
       color: category.color,
       name: category.name,
+      subcategories:
+        (category as { subcategories?: string[] }).subcategories ?? [],
       type: category.type
     })),
     transactions: transactions.map((transaction) => ({
@@ -164,9 +172,10 @@ export async function PUT(request: Request) {
           id: category.id,
           color: category.color,
           name: category.name,
+          subcategories: category.subcategories,
           type: category.type,
           userId
-        }))
+        })) as any
       });
     }
 
@@ -241,9 +250,10 @@ async function seedDefaultCategories(userId: string) {
       id: `${userId}-${category.id}`,
       color: category.color,
       name: category.name,
+      subcategories: getSubcategoriesForCategory(category),
       type: category.type,
       userId
-    }))
+    })) as any
   });
 }
 

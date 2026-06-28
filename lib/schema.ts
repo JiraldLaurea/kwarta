@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const MAX_CATEGORY_SUBCATEGORIES = 10;
+
 export const authSchema = z.object({
     email: z.string().email("Use a valid email address."),
     password: z.string().min(8, "Use at least 8 characters."),
@@ -67,21 +69,54 @@ export const categorySchema = z.object({
     icon: z.string().min(1, "Choose an icon.").default("receipt"),
 });
 
+export const subcategorySchema = z.object({
+    categoryId: z.string().min(1, "Choose a category."),
+    subcategories: z.preprocess(
+        (value) =>
+            Array.isArray(value)
+                ? value
+                      .map((item) =>
+                          typeof item === "string" ? item.trim() : "",
+                      )
+                      .filter(Boolean)
+                : value,
+        z
+            .array(z.string().min(1, "Enter a subcategory."))
+            .min(1, "Add at least one subcategory.")
+            .max(
+                MAX_CATEGORY_SUBCATEGORIES,
+                `Use ${MAX_CATEGORY_SUBCATEGORIES} subcategories or fewer.`,
+            )
+            .transform((values) =>
+                Array.from(
+                    new Set(
+                        values
+                            .map((value) => value.trim())
+                            .filter(Boolean),
+                    ),
+                ),
+            ),
+    ),
+});
+
 export const budgetSchema = z.object({
     categoryId: z.string().min(1, "Choose a category."),
     frequency: z
-        .enum(["monthly", "weekly", "cycle", "custom"])
+        .enum(["monthly", "weekly", "cycle"])
         .default("monthly"),
     limit: z.coerce.number().positive("Enter a budget greater than 0."),
     month: z.string().min(1, "Choose a month."),
     periodEnd: z.string().min(1, "Choose a period."),
     periodStart: z.string().min(1, "Choose a period."),
     reuseBudget: z.boolean().default(true),
+    cycleFirstStartDay: z.coerce.number().min(1).max(28).default(5),
+    cycleSecondStartDay: z.coerce.number().min(2).max(28).default(20),
 });
 
 export type AuthFormValues = z.infer<typeof authSchema>;
 export type TransactionFormValues = z.infer<typeof transactionSchema>;
 export type CategoryFormValues = z.infer<typeof categorySchema>;
+export type SubcategoryFormValues = z.infer<typeof subcategorySchema>;
 export type BudgetFormValues = z.infer<typeof budgetSchema>;
 export type AccountFormValues = z.infer<typeof accountSchema>;
 export type TransferFormValues = z.infer<typeof transferSchema>;

@@ -14,6 +14,7 @@ model Category {
   name         String
   type         String
   color        String
+  subcategories String[]      @default([])
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   budgets      Budget[]

@@ -42,7 +42,7 @@ const budgetBackupRecordSchema = z
         budget: z.unknown().optional(),
         value: z.unknown().optional(),
         date: z.string().optional(),
-        frequency: z.enum(["monthly", "weekly", "cycle", "custom"]).optional(),
+        frequency: z.enum(["monthly", "weekly", "cycle"]).optional(),
         month: z.string().optional(),
         period: z.string().optional(),
         periodEnd: z.string().optional(),
@@ -52,6 +52,7 @@ const budgetBackupRecordSchema = z
 
 const backupCategoryRecordSchema = categorySchema.extend({
     id: z.string().min(1),
+    subcategories: z.array(z.string()).optional(),
 });
 
 const transactionBackupSchema = z.union([
