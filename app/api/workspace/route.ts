@@ -172,6 +172,13 @@ export async function PUT(request: Request) {
   const { accounts, budgets, categories, transactions, transfers, userId } =
     parsed.data;
   const accountIds = new Set(accounts.map((account) => account.id));
+  const categoryIds = new Set(categories.map((category) => category.id));
+  const validTransactions = transactions.filter((transaction) =>
+    categoryIds.has(transaction.categoryId)
+  );
+  const validBudgets = budgets.filter((budget) =>
+    categoryIds.has(budget.categoryId)
+  );
 
   await prisma.$transaction(async (tx) => {
     await tx.budget.deleteMany({ where: { userId } });
@@ -210,9 +217,9 @@ export async function PUT(request: Request) {
       });
     }
 
-    if (transactions.length > 0) {
+    if (validTransactions.length > 0) {
       await tx.transaction.createMany({
-        data: transactions.map((transaction) => ({
+        data: validTransactions.map((transaction) => ({
           id: transaction.id,
           amount: transaction.amount,
           categoryId: transaction.categoryId,
@@ -251,9 +258,9 @@ export async function PUT(request: Request) {
       });
     }
 
-    if (budgets.length > 0) {
+    if (validBudgets.length > 0) {
       await tx.budget.createMany({
-        data: budgets.map((budget) => ({
+        data: validBudgets.map((budget) => ({
           id: budget.id,
           categoryId: budget.categoryId,
           frequency: budget.frequency,
