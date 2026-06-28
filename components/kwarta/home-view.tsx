@@ -1007,6 +1007,7 @@ export function QuickTransactionModal({
     month,
     onClose,
     periodLabel,
+    periodNoun = "period",
     presentation = "modal",
     onSetBudget,
     onSetReusableBudget,
@@ -1021,6 +1022,7 @@ export function QuickTransactionModal({
     month: string;
     onClose: () => void;
     periodLabel?: string;
+    periodNoun?: string;
     presentation?: "modal" | "page";
     onSetBudget: (limit: number) => void;
     onSetReusableBudget: (limit: number) => void;
@@ -1204,8 +1206,8 @@ export function QuickTransactionModal({
                                     />
                                 </button>
                                 <p className="text-sm leading-5 text-muted-foreground">
-                                    Reuse this same budget for succeeding
-                                    months.
+                                    Reuse this same budget for succeeding{" "}
+                                    {periodNoun}s.
                                 </p>
                             </div>
                         </div>

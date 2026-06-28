@@ -135,6 +135,7 @@ import {
   formatPickerDate,
   formatPeriodLabel,
   getBudgetPeriodFields,
+  getPeriodNoun,
   formatTime,
   formatTransactionGroupDate,
   getAverageExpenseDayCount,
@@ -839,6 +840,7 @@ export function KwartaApp() {
               month={selectedMonth}
               defaultDate={quickAddDefaultDate}
               periodLabel={selectedPeriodLabel}
+              periodNoun={getPeriodNoun(selectedPeriod)}
               presentation="page"
               onClose={closeQuickAdd}
               onSetBudget={handleQuickAddBudget}
@@ -1174,6 +1176,7 @@ export function KwartaApp() {
           month={selectedMonth}
           defaultDate={quickAddDefaultDate}
           periodLabel={selectedPeriodLabel}
+          periodNoun={getPeriodNoun(selectedPeriod)}
           onClose={closeQuickAdd}
           onSetBudget={handleQuickAddBudget}
           onSetReusableBudget={handleQuickAddReusableBudget}
@@ -1787,7 +1790,7 @@ function AuthScreen({
             A precise budget tracker for clearer everyday money decisions.
           </h1>
           <p className="mt-5 hidden max-w-xl text-base leading-7 text-muted-foreground sm:block">
-            Manage income, expenses, categories, and monthly limits in a focused
+            Manage income, expenses, categories, and budget limits in a focused
             product workspace designed for repeat use.
           </p>
         </section>

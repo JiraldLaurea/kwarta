@@ -23,6 +23,7 @@ export function BudgetProgressList({
     categories,
     onSelect,
     onSelectCategory,
+    periodNoun = "monthly",
     presentation = "card",
     transactions,
 }: {
@@ -32,6 +33,7 @@ export function BudgetProgressList({
     categories: Category[];
     onSelect?: (budget: Budget) => void;
     onSelectCategory?: (category: Category, budget?: Budget) => void;
+    periodNoun?: string;
     presentation?: "card" | "list";
     transactions: Transaction[];
 }) {
@@ -63,7 +65,7 @@ export function BudgetProgressList({
                     <EmptyState
                         className="mt-5 flex min-h-56 flex-col items-center justify-center rounded-md border border-dashed border-border"
                         title="No budgets yet"
-                        description="Create a monthly budget after adding expense categories."
+                        description={`Create a ${periodNoun} budget after adding expense categories.`}
                     />
                 ) : (
                     <div className="mt-5 overflow-hidden rounded-lg border border-border bg-white divide-y divide-border">
@@ -96,7 +98,8 @@ export function BudgetProgressList({
                     <div>
                         <CardTitle>Budget progress</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                            Monthly limits compared with posted spend.
+                            {capitalizeFirst(periodNoun)} limits compared with
+                            posted spend.
                         </p>
                     </div>
                     {backupMenu}
@@ -109,7 +112,7 @@ export function BudgetProgressList({
                     <EmptyState
                         className="flex min-h-56 flex-1 flex-col items-center justify-center md:min-h-72"
                         title="No budgets yet"
-                        description="Create a monthly budget after adding expense categories."
+                        description={`Create a ${periodNoun} budget after adding expense categories.`}
                     />
                 ) : (
                     items.map((item) => (
@@ -119,6 +122,10 @@ export function BudgetProgressList({
             </CardContent>
         </Card>
     );
+}
+
+function capitalizeFirst(value: string) {
+    return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function BudgetListRow({
