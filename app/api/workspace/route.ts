@@ -11,7 +11,7 @@ import {
   transactionSchema,
   transferSchema
 } from "@/lib/schema";
-import { getMonthRange, getSubcategoriesForCategory } from "@/lib/kwarta/helpers";
+import { getMonthRange } from "@/lib/kwarta/helpers";
 
 const workspaceQuerySchema = z.object({
   userId: z.string().min(1)
@@ -134,8 +134,7 @@ export async function GET(request: Request) {
       id: category.id,
       color: category.color,
       name: category.name,
-      subcategories:
-        (category as { subcategories?: string[] }).subcategories ?? [],
+      subcategories: [],
       type: category.type
     })),
     transactions: transactions.map((transaction) => ({
@@ -211,10 +210,9 @@ export async function PUT(request: Request) {
           id: category.id,
           color: category.color,
           name: category.name,
-          subcategories: category.subcategories,
           type: category.type,
           userId
-        })) as any
+        }))
       });
     }
 
@@ -264,13 +262,10 @@ export async function PUT(request: Request) {
         data: validBudgets.map((budget) => ({
           id: budget.id,
           categoryId: budget.categoryId,
-          frequency: budget.frequency,
           limit: budget.limit,
           month: budget.month,
-          periodEnd: budget.periodEnd,
-          periodStart: budget.periodStart,
           userId
-        })) as any
+        }))
       });
     }
   });
@@ -292,10 +287,9 @@ async function seedDefaultCategories(userId: string) {
       id: `${userId}-${category.id}`,
       color: category.color,
       name: category.name,
-      subcategories: getSubcategoriesForCategory(category),
       type: category.type,
       userId
-    })) as any
+    }))
   });
 }
 
