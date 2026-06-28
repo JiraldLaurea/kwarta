@@ -108,9 +108,11 @@ export async function GET(request: Request) {
       color: account.color,
       icon: account.icon,
       openingBalance: Number(account.openingBalance),
-      provider: account.provider ?? undefined,
-      externalId: account.externalId ?? undefined,
-      syncStatus: account.syncStatus
+      provider: (account as { provider?: string | null }).provider ?? undefined,
+      externalId:
+        (account as { externalId?: string | null }).externalId ?? undefined,
+      syncStatus:
+        (account as { syncStatus?: string | null }).syncStatus ?? "manual"
     })),
     budgets: budgets.map((budget) => {
       const periodBudget = budget as typeof budget & {
@@ -196,9 +198,6 @@ export async function PUT(request: Request) {
           color: account.color,
           icon: account.icon,
           openingBalance: account.openingBalance,
-          provider: account.provider || null,
-          externalId: account.externalId || null,
-          syncStatus: account.syncStatus,
           userId
         }))
       });
@@ -310,9 +309,6 @@ async function seedDefaultAccounts(userId: string) {
       color: account.color,
       icon: account.icon,
       openingBalance: account.openingBalance,
-      provider: account.provider || null,
-      externalId: account.externalId || null,
-      syncStatus: account.syncStatus ?? "manual",
       userId
     }))
   });
