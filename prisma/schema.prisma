@@ -85,8 +85,11 @@ model Transaction {
 model Budget {
   id         String   @id @default(cuid())
   userId     String
+  frequency  String   @default("monthly")
   limit      Decimal  @db.Decimal(12, 2)
   month      String
+  periodEnd  String?
+  periodStart String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   categoryId String

@@ -7,12 +7,11 @@ import {
 import { prisma } from "@/lib/prisma";
 import {
   accountSchema,
-  budgetSchema,
   categorySchema,
   transactionSchema,
   transferSchema
 } from "@/lib/schema";
-import { getSubcategoriesForCategory } from "@/lib/kwarta/helpers";
+import { getMonthRange, getSubcategoriesForCategory } from "@/lib/kwarta/helpers";
 
 const workspaceQuerySchema = z.object({
   userId: z.string().min(1)
@@ -34,13 +33,33 @@ const categorySaveSchema = categorySchema.extend({
   subcategories: z.array(z.string()).default([])
 });
 
+const budgetSaveSchema = z
+  .object({
+    id: z.string().min(1),
+    categoryId: z.string().min(1),
+    frequency: z.enum(["monthly", "weekly", "cycle"]).default("monthly"),
+    limit: z.coerce.number().positive(),
+    month: z.string().min(1),
+    periodEnd: z.string().optional(),
+    periodStart: z.string().optional()
+  })
+  .transform((budget) => {
+    const fallbackRange = getMonthRange(budget.month);
+
+    return {
+      ...budget,
+      periodEnd: budget.periodEnd ?? fallbackRange.endDate,
+      periodStart: budget.periodStart ?? fallbackRange.startDate
+    };
+  });
+
 const workspaceSaveSchema = z.object({
   userId: z.string().min(1),
   accounts: z.array(accountSchema.extend({ id: z.string().min(1) })),
   categories: z.array(categorySaveSchema),
   transactions: z.array(transactionSchema.extend({ id: z.string().min(1) })),
   transfers: z.array(transferSaveSchema).default([]),
-  budgets: z.array(budgetSchema.extend({ id: z.string().min(1) }))
+  budgets: z.array(budgetSaveSchema)
 });
 
 export async function GET(request: Request) {
@@ -92,12 +111,24 @@ export async function GET(request: Request) {
       externalId: account.externalId ?? undefined,
       syncStatus: account.syncStatus
     })),
-    budgets: budgets.map((budget) => ({
-      id: budget.id,
-      categoryId: budget.categoryId,
-      limit: Number(budget.limit),
-      month: budget.month
-    })),
+    budgets: budgets.map((budget) => {
+      const periodBudget = budget as typeof budget & {
+        frequency?: "monthly" | "weekly" | "cycle";
+        periodEnd?: string | null;
+        periodStart?: string | null;
+      };
+      const fallbackRange = getMonthRange(budget.month);
+
+      return {
+        id: budget.id,
+        categoryId: budget.categoryId,
+        frequency: periodBudget.frequency ?? "monthly",
+        limit: Number(budget.limit),
+        month: budget.month,
+        periodEnd: periodBudget.periodEnd ?? fallbackRange.endDate,
+        periodStart: periodBudget.periodStart ?? fallbackRange.startDate
+      };
+    }),
     categories: categories.map((category) => ({
       id: category.id,
       color: category.color,
@@ -225,10 +256,13 @@ export async function PUT(request: Request) {
         data: budgets.map((budget) => ({
           id: budget.id,
           categoryId: budget.categoryId,
+          frequency: budget.frequency,
           limit: budget.limit,
           month: budget.month,
+          periodEnd: budget.periodEnd,
+          periodStart: budget.periodStart,
           userId
-        }))
+        })) as any
       });
     }
   });
