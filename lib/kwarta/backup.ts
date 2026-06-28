@@ -8,6 +8,7 @@ import {
     slugifyCategoryValue,
     type PeriodFrequency,
     toMonthInputValue,
+    withCategoryIcons,
 } from "@/lib/kwarta/helpers";
 
 export type TransactionImportResult = {
@@ -158,7 +159,9 @@ export function parseTransactionBackupPayload(
     const backupCategories = Array.isArray(parsed.data)
         ? []
         : (parsed.data.categories ?? []);
-    const nextCategories = mergeBackupCategories(categories, backupCategories);
+    const nextCategories = withCategoryIcons(
+        mergeBackupCategories(categories, backupCategories),
+    );
 
     return {
         categories: nextCategories,

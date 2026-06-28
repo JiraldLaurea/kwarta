@@ -30,6 +30,7 @@ const transferSaveSchema = z.object({
 
 const categorySaveSchema = categorySchema.extend({
   id: z.string().min(1),
+  icon: z.string().min(1).default("receipt"),
   subcategories: z.array(z.string()).default([])
 });
 
