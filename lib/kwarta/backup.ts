@@ -35,6 +35,11 @@ export type WorkspaceBackup = {
     transfers: Transfer[];
 };
 
+export type WorkspaceBackupPayload = WorkspaceBackup & {
+    exportedAt: string;
+    type: "kwarta-workspace";
+};
+
 const transactionBackupRecordSchema = transactionSchema
     .extend({
         id: z.string().min(1),
@@ -467,11 +472,13 @@ export function parseWorkspaceBackupPayload(
     };
 }
 
-export function downloadWorkspaceBackupFile(workspace: WorkspaceBackup) {
+export function createWorkspaceBackupPayload(
+    workspace: WorkspaceBackup,
+): WorkspaceBackupPayload {
     const categoryLookup = new Map(
         workspace.categories.map((category) => [category.id, category]),
     );
-    const payload = {
+    return {
         type: "kwarta-workspace",
         exportedAt: new Date().toISOString(),
         accounts: workspace.accounts,
@@ -488,13 +495,23 @@ export function downloadWorkspaceBackupFile(workspace: WorkspaceBackup) {
         transactions: workspace.transactions,
         transfers: workspace.transfers,
     };
+}
+
+export function downloadWorkspaceBackupPayload(
+    payload: WorkspaceBackupPayload,
+    filenameDate = payload.exportedAt.slice(0, 10),
+) {
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: "application/json",
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `kwarta-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `kwarta-backup-${filenameDate}.json`;
     link.click();
     URL.revokeObjectURL(url);
+}
+
+export function downloadWorkspaceBackupFile(workspace: WorkspaceBackup) {
+    downloadWorkspaceBackupPayload(createWorkspaceBackupPayload(workspace));
 }

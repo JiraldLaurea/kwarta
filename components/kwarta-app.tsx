@@ -110,9 +110,12 @@ import {
     type TransferFormValues,
 } from "@/lib/schema";
 import {
+    createWorkspaceBackupPayload,
+    downloadWorkspaceBackupPayload,
     downloadWorkspaceBackupFile,
     parseWorkspaceBackupPayload,
     type WorkspaceBackup,
+    type WorkspaceBackupPayload,
 } from "@/lib/kwarta/backup";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type {
@@ -214,6 +217,11 @@ type PendingBackupImport = {
     workspace: StoredWorkspace;
 };
 
+type AutomaticBackupRecord = {
+    backup: WorkspaceBackupPayload;
+    createdAt: string;
+};
+
 async function persistWorkspace(workspace: StoredWorkspace, userId: string) {
     const response = await fetch("/api/workspace", {
         body: JSON.stringify({ ...workspace, userId }),
@@ -230,6 +238,54 @@ async function persistWorkspace(workspace: StoredWorkspace, userId: string) {
 
 function getCategorySubcategoriesStorageKey(userId: string) {
     return `kwarta:category-subcategories:${userId}`;
+}
+
+function getAutomaticBackupStorageKey(userId: string) {
+    return `kwarta:auto-backup:${userId}`;
+}
+
+function readAutomaticBackup(userId: string): AutomaticBackupRecord | null {
+    try {
+        const stored = window.localStorage.getItem(
+            getAutomaticBackupStorageKey(userId),
+        );
+
+        if (!stored) {
+            return null;
+        }
+
+        const parsed = JSON.parse(stored) as Partial<AutomaticBackupRecord>;
+
+        if (
+            !parsed.createdAt ||
+            !parsed.backup ||
+            parsed.backup.type !== "kwarta-workspace"
+        ) {
+            return null;
+        }
+
+        return parsed as AutomaticBackupRecord;
+    } catch {
+        return null;
+    }
+}
+
+function persistAutomaticBackupLocally(
+    userId: string,
+    workspace: StoredWorkspace,
+): AutomaticBackupRecord {
+    const backup = createWorkspaceBackupPayload(workspace);
+    const record = {
+        backup,
+        createdAt: backup.exportedAt,
+    };
+
+    window.localStorage.setItem(
+        getAutomaticBackupStorageKey(userId),
+        JSON.stringify(record),
+    );
+
+    return record;
 }
 
 function readStoredCategorySubcategories(userId: string) {
@@ -347,6 +403,8 @@ export function KwartaApp() {
     const [isImportingBackup, setIsImportingBackup] = useState(false);
     const [pendingBackupImport, setPendingBackupImport] =
         useState<PendingBackupImport | null>(null);
+    const [automaticBackup, setAutomaticBackup] =
+        useState<AutomaticBackupRecord | null>(null);
     const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
     const userId = user?.id ?? null;
@@ -493,11 +551,13 @@ export function KwartaApp() {
     useEffect(() => {
         if (!isAuthed || !userId) {
             setWorkspaceReady(false);
+            setAutomaticBackup(null);
             return;
         }
 
         let cancelled = false;
         const activeUserId = userId;
+        setAutomaticBackup(readAutomaticBackup(activeUserId));
 
         async function loadWorkspace() {
             try {
@@ -557,17 +617,25 @@ export function KwartaApp() {
 
         persistCategorySubcategoriesLocally(userId, categories);
 
+        const workspace = {
+            accounts,
+            budgets,
+            categories,
+            transactions,
+            transfers,
+        };
+        setAutomaticBackup((current) => {
+            const today = toDateInputValue(new Date());
+
+            if (current?.createdAt.slice(0, 10) === today) {
+                return current;
+            }
+
+            return persistAutomaticBackupLocally(userId, workspace);
+        });
+
         const timeout = window.setTimeout(() => {
-            persistWorkspace(
-                {
-                    accounts,
-                    budgets,
-                    categories,
-                    transactions,
-                    transfers,
-                },
-                userId,
-            ).catch(() => {
+            persistWorkspace(workspace, userId).catch(() => {
                 // The UI remains usable; the next successful change will retry persistence.
             });
         }, 350);
@@ -885,6 +953,37 @@ export function KwartaApp() {
         }
 
         setIsImportingBackup(false);
+    }
+
+    function handleAutomaticBackupDownload() {
+        if (!automaticBackup) {
+            return;
+        }
+
+        downloadWorkspaceBackupPayload(
+            automaticBackup.backup,
+            automaticBackup.createdAt.slice(0, 10),
+        );
+    }
+
+    function handleAutomaticBackupRestore() {
+        if (!automaticBackup) {
+            return;
+        }
+
+        try {
+            setPendingBackupImport({
+                workspace: parseWorkspaceBackupPayload(
+                    automaticBackup.backup,
+                    getCurrentWorkspace(),
+                ),
+            });
+            setBackupImportError(null);
+        } catch {
+            setBackupImportError(
+                "Automatic backup could not be restored. Please download it and import the file manually.",
+            );
+        }
     }
 
     if (!authReady || (isAuthed && !workspaceReady)) {
@@ -1307,6 +1406,7 @@ export function KwartaApp() {
                             email={user?.email ?? "Account session"}
                             backupImportError={backupImportError}
                             backupImportInputRef={backupImportInputRef}
+                            automaticBackup={automaticBackup}
                             budgetsEnabled={budgetsEnabled}
                             homeItemStyle={homeItemStyle}
                             user={user}
@@ -1324,6 +1424,12 @@ export function KwartaApp() {
                                 backupImportInputRef.current?.click()
                             }
                             onBackupImportFile={handleBackupImportFile}
+                            onAutomaticBackupDownload={
+                                handleAutomaticBackupDownload
+                            }
+                            onAutomaticBackupRestore={
+                                handleAutomaticBackupRestore
+                            }
                             onHomeItemStyleChange={setHomeItemStyle}
                             onSignOut={async () => {
                                 await supabase?.auth.signOut();
@@ -1644,6 +1750,7 @@ function MobileTabBar({
 
 function SettingsView({
     accountName,
+    automaticBackup,
     backupImportError,
     backupImportInputRef,
     budgetsEnabled,
@@ -1653,6 +1760,8 @@ function SettingsView({
     onBackupExport,
     onBackupImportClick,
     onBackupImportFile,
+    onAutomaticBackupDownload,
+    onAutomaticBackupRestore,
     onBudgetsEnabledChange,
     onHomeItemStyleChange,
     onManageCategories,
@@ -1660,6 +1769,7 @@ function SettingsView({
     onSignOut,
 }: {
     accountName: string;
+    automaticBackup: AutomaticBackupRecord | null;
     backupImportError: string | null;
     backupImportInputRef: RefObject<HTMLInputElement>;
     budgetsEnabled: boolean;
@@ -1669,6 +1779,8 @@ function SettingsView({
     onBackupExport: () => void;
     onBackupImportClick: () => void;
     onBackupImportFile: (file: File) => void;
+    onAutomaticBackupDownload: () => void;
+    onAutomaticBackupRestore: () => void;
     onBudgetsEnabledChange: (enabled: boolean) => void;
     onHomeItemStyleChange: (style: HomeItemStyle) => void;
     onManageCategories: () => void;
@@ -1817,7 +1929,7 @@ function SettingsView({
                             JSON backup.
                         </p>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="space-y-3">
                         <BackupActionRow
                             description="Transactions, budgets, accounts, categories, and subcategories."
                             error={backupImportError}
@@ -1826,6 +1938,11 @@ function SettingsView({
                             onExport={onBackupExport}
                             onImportClick={onBackupImportClick}
                             onImportFile={onBackupImportFile}
+                        />
+                        <AutomaticBackupSummary
+                            backup={automaticBackup}
+                            onDownload={onAutomaticBackupDownload}
+                            onRestore={onAutomaticBackupRestore}
                         />
                     </CardContent>
                 </Card>
@@ -1913,6 +2030,69 @@ function SettingsSwitch({
                     )}
                 />
             </button>
+        </div>
+    );
+}
+
+function AutomaticBackupSummary({
+    backup,
+    onDownload,
+    onRestore,
+}: {
+    backup: AutomaticBackupRecord | null;
+    onDownload: () => void;
+    onRestore: () => void;
+}) {
+    const details = backup
+        ? [
+              `${backup.backup.transactions.length} transactions`,
+              `${backup.backup.budgets.length} budgets`,
+              `${backup.backup.accounts.length} accounts`,
+              `${backup.backup.categories.length} categories`,
+          ].join(", ")
+        : "A latest daily snapshot will appear here after the workspace loads.";
+    const createdAt = backup
+        ? new Date(backup.createdAt).toLocaleString("en-US", {
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              month: "short",
+              year: "numeric",
+          })
+        : null;
+
+    return (
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-neutral-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+                <p className="text-sm font-medium leading-5">
+                    Latest automatic backup
+                </p>
+                <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                    {createdAt ? `Created ${createdAt}. ${details}.` : details}
+                </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+                <Button
+                    className="w-full sm:w-auto"
+                    disabled={!backup}
+                    type="button"
+                    variant="secondary"
+                    onClick={onRestore}
+                >
+                    <Upload className="h-4 w-4" aria-hidden />
+                    Restore
+                </Button>
+                <Button
+                    className="w-full sm:w-auto"
+                    disabled={!backup}
+                    type="button"
+                    variant="secondary"
+                    onClick={onDownload}
+                >
+                    <Download className="h-4 w-4" aria-hidden />
+                    Download
+                </Button>
+            </div>
         </div>
     );
 }
