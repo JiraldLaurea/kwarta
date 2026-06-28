@@ -15,15 +15,16 @@ import {
 } from "@dnd-kit/core";
 import {
     arrayMove,
+    rectSortingStrategy,
     SortableContext,
     sortableKeyboardCoordinates,
     useSortable,
-    verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Edit3, GripVertical, Plus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import {
     MAX_CATEGORY_SUBCATEGORIES,
@@ -49,6 +50,18 @@ import {
     categoryIconChoices,
     colorChoices,
 } from "@/components/kwarta/shared";
+
+let subcategoryRowIdCounter = 0;
+
+function createSubcategoryRowId() {
+    subcategoryRowIdCounter += 1;
+    return `subcategory-row-${subcategoryRowIdCounter}`;
+}
+
+function createSubcategoryRowIds(count: number) {
+    return Array.from({ length: count }, createSubcategoryRowId);
+}
+
 export function CategoriesView({
     categories,
     editingId,
@@ -289,12 +302,7 @@ export function CategoryForm({
                             Cancel
                         </Button>
                     )}
-                    <div
-                        className={cn(
-                            "flex gap-2",
-                            isModal && "ml-auto",
-                        )}
-                    >
+                    <div className={cn("flex gap-2", isModal && "ml-auto")}>
                         {editing && onDelete && (
                             <Button
                                 className="border-red-300 bg-white text-destructive md:hover:bg-red-50"
@@ -352,15 +360,21 @@ export function SubcategoryForm({
     const [activeSubcategoryId, setActiveSubcategoryId] = useState<
         string | null
     >(null);
+    const [activeSubcategoryWidth, setActiveSubcategoryWidth] = useState<
+        number | null
+    >(null);
+    const [subcategoryRowIds, setSubcategoryRowIds] = useState(() =>
+        createSubcategoryRowIds(
+            selectedInitialCategory
+                ? getSubcategoriesForCategory(selectedInitialCategory).length
+                : 1,
+        ),
+    );
     const sensors = useSensors(
         useSensor(PointerSensor),
         useSensor(KeyboardSensor, {
             coordinateGetter: sortableKeyboardCoordinates,
         }),
-    );
-    const subcategoryIds = useMemo(
-        () => subcategories.map((_, index) => getSubcategoryDragId(index)),
-        [subcategories],
     );
     const isModal = modal;
     const hasEmptySubcategory = subcategories.some(
@@ -382,6 +396,11 @@ export function SubcategoryForm({
                 shouldValidate: true,
             },
         );
+        setSubcategoryRowIds(
+            createSubcategoryRowIds(
+                getSubcategoriesForCategory(selectedCategory).length,
+            ),
+        );
     }, [form, selectedCategory]);
 
     function addSubcategory() {
@@ -393,6 +412,7 @@ export function SubcategoryForm({
             shouldDirty: true,
             shouldValidate: true,
         });
+        setSubcategoryRowIds((ids) => [...ids, createSubcategoryRowId()]);
     }
 
     function removeSubcategory(index: number) {
@@ -403,6 +423,9 @@ export function SubcategoryForm({
                 shouldDirty: true,
                 shouldValidate: true,
             },
+        );
+        setSubcategoryRowIds((ids) =>
+            ids.filter((_, itemIndex) => itemIndex !== index),
         );
     }
 
@@ -421,6 +444,9 @@ export function SubcategoryForm({
 
     function handleDragStart(event: DragStartEvent) {
         setActiveSubcategoryId(String(event.active.id));
+        setActiveSubcategoryWidth(
+            event.active.rect.current.initial?.width ?? null,
+        );
     }
 
     function handleDragEnd(event: DragEndEvent) {
@@ -428,8 +454,8 @@ export function SubcategoryForm({
         const overId = event.over ? String(event.over.id) : null;
 
         if (overId && activeId !== overId) {
-            const activeIndex = getSubcategoryIndexFromDragId(activeId);
-            const overIndex = getSubcategoryIndexFromDragId(overId);
+            const activeIndex = subcategoryRowIds.indexOf(activeId);
+            const overIndex = subcategoryRowIds.indexOf(overId);
 
             if (activeIndex >= 0 && overIndex >= 0) {
                 form.setValue(
@@ -440,11 +466,40 @@ export function SubcategoryForm({
                         shouldValidate: true,
                     },
                 );
+                setSubcategoryRowIds((ids) =>
+                    arrayMove(ids, activeIndex, overIndex),
+                );
             }
         }
 
         setActiveSubcategoryId(null);
+        setActiveSubcategoryWidth(null);
     }
+
+    const activeSubcategoryIndex = activeSubcategoryId
+        ? subcategoryRowIds.indexOf(activeSubcategoryId)
+        : -1;
+    const dragOverlay = (
+        <DragOverlay adjustScale={false} dropAnimation={null}>
+            {activeSubcategoryIndex >= 0 ? (
+                <SubcategoryRowContent
+                    disabled={subcategories.length <= 1}
+                    index={activeSubcategoryIndex}
+                    isOverlay
+                    overlayStyle={{
+                        width: activeSubcategoryWidth ?? undefined,
+                    }}
+                    subcategory={subcategories[activeSubcategoryIndex] ?? ""}
+                    onRemove={removeSubcategory}
+                    onUpdate={updateSubcategory}
+                />
+            ) : null}
+        </DragOverlay>
+    );
+    const shouldPortalDragOverlay =
+        typeof document !== "undefined" &&
+        typeof window !== "undefined" &&
+        window.innerWidth >= 640;
 
     return (
         <Card
@@ -510,9 +565,7 @@ export function SubcategoryForm({
                         />
                     </FieldError>
                     <FieldError
-                        message={
-                            form.formState.errors.subcategories?.message
-                        }
+                        message={form.formState.errors.subcategories?.message}
                     >
                         <div className="flex items-center justify-between gap-3">
                             <Label>Subcategories</Label>
@@ -521,53 +574,39 @@ export function SubcategoryForm({
                             sensors={sensors}
                             collisionDetection={closestCenter}
                             onDragStart={handleDragStart}
-                            onDragCancel={() => setActiveSubcategoryId(null)}
+                            onDragCancel={() => {
+                                setActiveSubcategoryId(null);
+                                setActiveSubcategoryWidth(null);
+                            }}
                             onDragEnd={handleDragEnd}
                         >
                             <SortableContext
-                                items={subcategoryIds}
-                                strategy={verticalListSortingStrategy}
+                                items={subcategoryRowIds}
+                                strategy={rectSortingStrategy}
                             >
                                 <div className="space-y-2">
-                                    {subcategories.map(
-                                        (subcategory, index) => (
-                                            <SortableSubcategoryRow
-                                                key={getSubcategoryDragId(
-                                                    index,
-                                                )}
-                                                disabled={
-                                                    subcategories.length <= 1
-                                                }
-                                                id={getSubcategoryDragId(index)}
-                                                index={index}
-                                                subcategory={subcategory}
-                                                onRemove={removeSubcategory}
-                                                onUpdate={updateSubcategory}
-                                            />
-                                        ),
-                                    )}
+                                    {subcategories.map((subcategory, index) => (
+                                        <SortableSubcategoryRow
+                                            key={
+                                                subcategoryRowIds[index] ??
+                                                `subcategory-fallback-${index}`
+                                            }
+                                            disabled={subcategories.length <= 1}
+                                            id={
+                                                subcategoryRowIds[index] ??
+                                                `subcategory-fallback-${index}`
+                                            }
+                                            index={index}
+                                            subcategory={subcategory}
+                                            onRemove={removeSubcategory}
+                                            onUpdate={updateSubcategory}
+                                        />
+                                    ))}
                                 </div>
                             </SortableContext>
-                            <DragOverlay adjustScale={false} dropAnimation={null}>
-                                {activeSubcategoryId ? (
-                                    <SubcategoryRowContent
-                                        disabled={subcategories.length <= 1}
-                                        index={getSubcategoryIndexFromDragId(
-                                            activeSubcategoryId,
-                                        )}
-                                        isOverlay
-                                        subcategory={
-                                            subcategories[
-                                                getSubcategoryIndexFromDragId(
-                                                    activeSubcategoryId,
-                                                )
-                                            ] ?? ""
-                                        }
-                                        onRemove={removeSubcategory}
-                                        onUpdate={updateSubcategory}
-                                    />
-                                ) : null}
-                            </DragOverlay>
+                            {shouldPortalDragOverlay
+                                ? createPortal(dragOverlay, document.body)
+                                : dragOverlay}
                         </DndContext>
                         <p className="text-xs leading-4 text-muted-foreground">
                             Up to {MAX_CATEGORY_SUBCATEGORIES} subcategories.
@@ -618,8 +657,7 @@ export function SubcategoryForm({
                     <div className="flex gap-2">
                         <Button
                             disabled={
-                                hasEmptySubcategory ||
-                                hasMaximumSubcategories
+                                hasEmptySubcategory || hasMaximumSubcategories
                             }
                             type="button"
                             variant="secondary"
@@ -628,10 +666,7 @@ export function SubcategoryForm({
                             <Plus className="h-4 w-4" aria-hidden />
                             Add
                         </Button>
-                        <Button
-                            disabled={hasEmptySubcategory}
-                            type="submit"
-                        >
+                        <Button disabled={hasEmptySubcategory} type="submit">
                             Save changes
                         </Button>
                     </div>
@@ -639,15 +674,6 @@ export function SubcategoryForm({
             </form>
         </Card>
     );
-}
-
-function getSubcategoryDragId(index: number) {
-    return `subcategory-${index}`;
-}
-
-function getSubcategoryIndexFromDragId(id: string) {
-    const index = Number(id.replace("subcategory-", ""));
-    return Number.isFinite(index) ? index : -1;
 }
 
 function SortableSubcategoryRow({
@@ -684,7 +710,7 @@ function SortableSubcategoryRow({
     return (
         <div
             ref={setNodeRef}
-            className={cn(isDragging && "opacity-30")}
+            className="relative"
             style={style}
         >
             <SubcategoryRowContent
@@ -710,6 +736,7 @@ function SubcategoryRowContent({
     listeners,
     onRemove,
     onUpdate,
+    overlayStyle,
     subcategory,
 }: {
     attributes?: DraggableAttributes;
@@ -720,27 +747,28 @@ function SubcategoryRowContent({
     listeners?: DraggableSyntheticListeners;
     onRemove: (index: number) => void;
     onUpdate: (index: number, value: string) => void;
+    overlayStyle?: CSSProperties;
     subcategory: string;
 }) {
     return (
         <div
             className={cn(
-                "flex items-center gap-2",
-                isOverlay &&
-                    "w-[min(620px,calc(100vw-48px))] rounded-lg bg-white shadow-[0_18px_45px_rgba(0,0,0,0.16)]",
+                "flex w-full items-center gap-2 rounded-lg",
+                isOverlay && "",
+                isDragging && "opacity-0"
             )}
+            style={overlayStyle}
         >
             <Input
                 aria-label={`Subcategory ${index + 1}`}
+                className="min-w-0 flex-1"
                 value={subcategory}
-                onChange={(event) =>
-                    onUpdate(index, event.currentTarget.value)
-                }
+                onChange={(event) => onUpdate(index, event.currentTarget.value)}
             />
             <Button
                 aria-label={`Reorder ${subcategory || "subcategory"}`}
                 className={cn(
-                    "h-11 w-11 shrink-0 border-dashed bg-white p-0 text-muted-foreground md:hover:bg-neutral-100",
+                    "h-10 w-10 shrink-0 border-dashed bg-white p-0 text-muted-foreground md:hover:bg-neutral-100",
                     !disabled && "cursor-grab active:cursor-grabbing",
                     isDragging && "cursor-grabbing",
                 )}
@@ -754,7 +782,7 @@ function SubcategoryRowContent({
             </Button>
             <Button
                 aria-label={`Remove ${subcategory || "subcategory"}`}
-                className="h-11 w-11 shrink-0 border-red-300 bg-white p-0 text-destructive md:hover:bg-red-50"
+                className="h-10 w-10 shrink-0 border-red-300 bg-white p-0 text-destructive md:hover:bg-red-50"
                 disabled={disabled}
                 type="button"
                 variant="secondary"
@@ -831,15 +859,3 @@ export function CategoryList({
         </Card>
     );
 }
-
-
-
-
-
-
-
-
-
-
-
-

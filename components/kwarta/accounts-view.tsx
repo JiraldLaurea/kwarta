@@ -160,9 +160,9 @@ export function AccountsView({
                     title="Accounts"
                     description="Track balances across your banks, e-wallets, and cash."
                     actions={
-                        <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:flex-none sm:grid-cols-none sm:flex">
+                        <div className="flex w-full gap-2 sm:w-auto">
                             <Button
-                                className="w-full sm:w-auto"
+                                className="min-w-0 flex-1 sm:flex-none"
                                 type="button"
                                 variant="secondary"
                                 disabled={!canTransfer}
@@ -175,7 +175,7 @@ export function AccountsView({
                                 Transfer
                             </Button>
                             <Button
-                                className="w-full sm:w-auto"
+                                className="min-w-0 flex-1 sm:flex-none"
                                 type="button"
                                 onClick={() => setIsAddingAccount(true)}
                             >

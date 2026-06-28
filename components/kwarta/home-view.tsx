@@ -593,9 +593,9 @@ export function ManageCategoriesView({
                         categories.
                     </p>
                 </div>
-                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <div className="flex w-full gap-2 sm:w-auto">
                     <Button
-                        className="w-full sm:w-auto"
+                        className="min-w-0 flex-1 sm:flex-none"
                         type="button"
                         variant="secondary"
                         onClick={onManageSubcategories}
@@ -604,7 +604,7 @@ export function ManageCategoriesView({
                         Manage subcategories
                     </Button>
                     <Button
-                        className="w-full sm:w-auto"
+                        className="min-w-0 flex-1 sm:flex-none"
                         type="button"
                         onClick={onAddCategory}
                     >

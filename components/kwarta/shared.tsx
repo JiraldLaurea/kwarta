@@ -831,7 +831,7 @@ export function BudgetCyclePickerInput({
                             </div>
                         </div>
                     ) : (
-                        <div className="grid gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                             {[firstCycle, secondCycle].map((cycle) => {
                                 const isSelected =
                                     cycle.startDate ===
