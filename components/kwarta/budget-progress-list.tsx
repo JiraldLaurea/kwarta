@@ -184,33 +184,35 @@ function BudgetRowContent({
                     <p className="min-w-0 flex-1 truncate text-sm font-medium leading-5">
                         {category.name}
                     </p>
-                    {budget ? (
-                        <p className="shrink-0 whitespace-nowrap text-sm font-medium leading-5">
-                            {formatCurrency(spent)} of{" "}
-                            {formatCurrency(budget.limit)}
-                        </p>
-                    ) : (
+                    {!budget && (
                         <p className="shrink-0 whitespace-nowrap text-sm font-medium leading-5">
                             {formatCurrency(0)}
                         </p>
                     )}
                 </div>
+                {budget && (
+                    <div className="mt-1 flex items-center justify-between gap-3 text-xs leading-4 text-muted-foreground">
+                        <span className="min-w-0 truncate">
+                            {formatCurrency(spent)} of{" "}
+                            {formatCurrency(budget.limit)}
+                        </span>
+                        <span
+                            className={cn(
+                                "shrink-0 whitespace-nowrap text-right",
+                                isOverBudget && "text-destructive",
+                            )}
+                        >
+                            {formatCurrency(Math.abs(remaining))}{" "}
+                            {isOverBudget ? "excess" : "left"}
+                        </span>
+                    </div>
+                )}
                 <Progress
                     className="mt-2 h-1.5"
                     indicatorStyle={{ backgroundColor: indicatorColor }}
                     value={usage}
                 />
-                {budget ? (
-                    <p
-                        className={cn(
-                            "mt-1 text-xs leading-4 text-muted-foreground",
-                            isOverBudget && "text-destructive",
-                        )}
-                    >
-                        {formatCurrency(Math.abs(remaining))}{" "}
-                        {isOverBudget ? "excess" : "remaining"}
-                    </p>
-                ) : (
+                {!budget && (
                     <p className="mt-1 text-xs leading-4 text-muted-foreground">
                         No budget set
                     </p>

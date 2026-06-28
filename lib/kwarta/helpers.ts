@@ -143,6 +143,10 @@ export function withCategoryIcons(categories: Category[]) {
 }
 
 export function getSubcategoriesForCategory(category: Category) {
+    if (category.subcategories && category.subcategories.length > 0) {
+        return category.subcategories;
+    }
+
     const categoryKey = slugifyCategoryValue(category.id || category.name);
     const nameKey = slugifyCategoryValue(category.name);
 
@@ -323,7 +327,17 @@ export function isInMonth(dateValue: string, monthValue: string) {
     return dateValue.startsWith(monthValue);
 }
 
-export type PeriodFrequency = "monthly" | "weekly" | "cycle" | "custom";
+export type PeriodFrequency = "monthly" | "weekly" | "cycle";
+
+export type BudgetCycleSettings = {
+    firstStartDay: number;
+    secondStartDay: number;
+};
+
+export const defaultBudgetCycleSettings: BudgetCycleSettings = {
+    firstStartDay: 5,
+    secondStartDay: 20,
+};
 
 export type SelectedPeriod = {
     frequency: PeriodFrequency;
@@ -364,7 +378,39 @@ export function getWeekRange(dateValue: string) {
     };
 }
 
-export function getBudgetCycleRange(dateValue: string) {
+export function normalizeBudgetCycleSettings(
+    settings: BudgetCycleSettings,
+): BudgetCycleSettings {
+    const firstStartDay = clampCycleDay(settings.firstStartDay);
+    const secondStartDay = clampCycleDay(settings.secondStartDay);
+
+    if (firstStartDay === secondStartDay) {
+        return firstStartDay < 28
+            ? { firstStartDay, secondStartDay: firstStartDay + 1 }
+            : { firstStartDay: 27, secondStartDay: 28 };
+    }
+
+    return firstStartDay < secondStartDay
+        ? { firstStartDay, secondStartDay }
+        : {
+              firstStartDay: secondStartDay,
+              secondStartDay: firstStartDay,
+          };
+}
+
+function clampCycleDay(day: number) {
+    if (!Number.isFinite(day)) {
+        return 1;
+    }
+
+    return Math.min(Math.max(Math.round(day), 1), 28);
+}
+
+export function getBudgetCycleRange(
+    dateValue: string,
+    settings = defaultBudgetCycleSettings,
+) {
+    const cycleSettings = normalizeBudgetCycleSettings(settings);
     const date = parseDateValue(dateValue);
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -372,15 +418,15 @@ export function getBudgetCycleRange(dateValue: string) {
     let start: Date;
     let end: Date;
 
-    if (day < 5) {
-        start = new Date(year, month - 1, 20);
-        end = new Date(year, month, 4);
-    } else if (day < 20) {
-        start = new Date(year, month, 5);
-        end = new Date(year, month, 19);
+    if (day < cycleSettings.firstStartDay) {
+        start = new Date(year, month - 1, cycleSettings.secondStartDay);
+        end = new Date(year, month, cycleSettings.firstStartDay - 1);
+    } else if (day < cycleSettings.secondStartDay) {
+        start = new Date(year, month, cycleSettings.firstStartDay);
+        end = new Date(year, month, cycleSettings.secondStartDay - 1);
     } else {
-        start = new Date(year, month, 20);
-        end = new Date(year, month + 1, 4);
+        start = new Date(year, month, cycleSettings.secondStartDay);
+        end = new Date(year, month + 1, cycleSettings.firstStartDay - 1);
     }
 
     return {
@@ -396,10 +442,13 @@ export function createMonthlyPeriod(monthValue: string): SelectedPeriod {
     };
 }
 
-export function createBudgetCyclePeriod(dateValue: string): SelectedPeriod {
+export function createBudgetCyclePeriod(
+    dateValue: string,
+    settings = defaultBudgetCycleSettings,
+): SelectedPeriod {
     return {
         frequency: "cycle",
-        ...getBudgetCycleRange(dateValue),
+        ...getBudgetCycleRange(dateValue, settings),
     };
 }
 
@@ -410,23 +459,17 @@ export function createWeeklyPeriod(dateValue: string): SelectedPeriod {
     };
 }
 
-export function createCustomPeriod(
-    startDate: string,
-    endDate: string,
-): SelectedPeriod {
-    return {
-        frequency: "custom",
-        startDate,
-        endDate: endDate < startDate ? startDate : endDate,
-    };
-}
-
 export function getPeriodMonth(period: SelectedPeriod) {
     return toMonthInputValue(parseDateValue(period.startDate));
 }
 
-export function getBudgetPeriodFields(period: SelectedPeriod) {
+export function getBudgetPeriodFields(
+    period: SelectedPeriod,
+    cycleSettings = defaultBudgetCycleSettings,
+) {
     return {
+        cycleFirstStartDay: cycleSettings.firstStartDay,
+        cycleSecondStartDay: cycleSettings.secondStartDay,
         frequency: period.frequency as BudgetFrequency,
         month: getPeriodMonth(period),
         periodEnd: period.endDate,
@@ -487,10 +530,6 @@ export function getPeriodNoun(period: SelectedPeriod) {
 
     if (period.frequency === "cycle") {
         return "budget cycle";
-    }
-
-    if (period.frequency === "custom") {
-        return "period";
     }
 
     return "monthly";
@@ -570,15 +609,22 @@ function getReuseBudgetPeriods(values: BudgetFormValues) {
     }
 
     if (values.frequency === "cycle") {
+        const cycleSettings = normalizeBudgetCycleSettings({
+            firstStartDay: values.cycleFirstStartDay,
+            secondStartDay: values.cycleSecondStartDay,
+        });
         const start = parseDateValue(values.periodStart);
 
         return Array.from({ length: REUSED_BUDGET_MONTH_COUNT }, (_, index) => {
             const nextStart = new Date(start);
 
-            if (start.getDate() === 5) {
+            if (start.getDate() === cycleSettings.firstStartDay) {
                 const cycleIndex = index;
                 const monthOffset = Math.floor(cycleIndex / 2);
-                const day = cycleIndex % 2 === 0 ? 5 : 20;
+                const day =
+                    cycleIndex % 2 === 0
+                        ? cycleSettings.firstStartDay
+                        : cycleSettings.secondStartDay;
                 nextStart.setFullYear(
                     start.getFullYear(),
                     start.getMonth() + monthOffset,
@@ -587,7 +633,10 @@ function getReuseBudgetPeriods(values: BudgetFormValues) {
             } else {
                 const cycleIndex = index + 1;
                 const monthOffset = Math.floor(cycleIndex / 2);
-                const day = cycleIndex % 2 === 1 ? 20 : 5;
+                const day =
+                    cycleIndex % 2 === 1
+                        ? cycleSettings.secondStartDay
+                        : cycleSettings.firstStartDay;
                 nextStart.setFullYear(
                     start.getFullYear(),
                     start.getMonth() + monthOffset,
@@ -595,7 +644,10 @@ function getReuseBudgetPeriods(values: BudgetFormValues) {
                 );
             }
 
-            const cycle = getBudgetCycleRange(toDateInputValue(nextStart));
+            const cycle = getBudgetCycleRange(
+                toDateInputValue(nextStart),
+                cycleSettings,
+            );
 
             return {
                 frequency: "cycle" as const,
@@ -604,17 +656,6 @@ function getReuseBudgetPeriods(values: BudgetFormValues) {
                 periodStart: cycle.startDate,
             };
         });
-    }
-
-    if (values.frequency === "custom") {
-        return [
-            {
-                frequency: "custom" as const,
-                month: values.month,
-                periodEnd: values.periodEnd,
-                periodStart: values.periodStart,
-            },
-        ];
     }
 
     return getReuseBudgetMonths(values.month).map((month) => {

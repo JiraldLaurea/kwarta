@@ -1,5 +1,5 @@
 export type TransactionType = "income" | "expense";
-export type BudgetFrequency = "monthly" | "weekly" | "cycle" | "custom";
+export type BudgetFrequency = "monthly" | "weekly" | "cycle";
 
 export type AccountType = "bank" | "ewallet" | "cash";
 
@@ -26,6 +26,7 @@ export type Category = {
   type: TransactionType;
   color: string;
   icon: string;
+  subcategories?: string[];
 };
 
 export type Transaction = {

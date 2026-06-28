@@ -7,12 +7,11 @@ import { budgetSchema, type BudgetFormValues } from "@/lib/schema";
 import type { Budget, Category, Transaction } from "@/lib/types";
 import { cn, formatCurrency, percent } from "@/lib/utils";
 import {
-    createCustomPeriod,
+    type BudgetCycleSettings,
     createMonthlyPeriod,
     createWeeklyPeriod,
     createBudgetCyclePeriod,
     formatMonthLabel,
-    getAverageExpenseDayCount,
     getPeriodMonth,
     getPeriodNoun,
     handleDecimalInput,
@@ -26,7 +25,6 @@ import { Label } from "@/components/ui/label";
 import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
 import {
     CategoryIconBadge,
-    DatePickerInput,
     BudgetCyclePickerInput,
     EditModal,
     FieldError,
@@ -41,6 +39,7 @@ export function BudgetsView({
     budgets,
     budgetsEnabled,
     categories,
+    cycleSettings,
     editingId,
     month,
     onCancelEdit,
@@ -55,6 +54,7 @@ export function BudgetsView({
     budgets: Budget[];
     budgetsEnabled: boolean;
     categories: Category[];
+    cycleSettings: BudgetCycleSettings;
     editingId: string | null;
     month: string;
     periodLabel: string;
@@ -101,7 +101,6 @@ export function BudgetsView({
                 <MonthlyBudgetSummary
                     budgets={budgets}
                     categories={categories}
-                    month={month}
                     periodLabel={periodLabel}
                     transactions={transactions.filter(
                         (transaction) => transaction.type === "expense",
@@ -127,9 +126,10 @@ export function BudgetsView({
             </div>
             {addingBudgetCategory && (
                 <EditModal onClose={() => setAddingBudgetCategory(null)}>
-                    <BudgetForm
-                        category={addingBudgetCategory}
-                        modal
+                        <BudgetForm
+                            category={addingBudgetCategory}
+                            cycleSettings={cycleSettings}
+                            modal
                         month={month}
                         period={period}
                         onCancel={() => setAddingBudgetCategory(null)}
@@ -144,6 +144,7 @@ export function BudgetsView({
                 <EditModal onClose={onCancelEdit}>
                     <BudgetForm
                         category={editingCategory}
+                        cycleSettings={cycleSettings}
                         editing={editing}
                         modal
                         month={month}
@@ -164,13 +165,11 @@ export function BudgetsView({
 function MonthlyBudgetSummary({
     budgets,
     categories,
-    month,
     periodLabel,
     transactions,
 }: {
     budgets: Budget[];
     categories: Category[];
-    month: string;
     periodLabel: string;
     transactions: Transaction[];
 }) {
@@ -182,7 +181,6 @@ function MonthlyBudgetSummary({
     const remaining = totalBudget - totalSpent;
     const isOverBudget = remaining < 0;
     const usage = percent(totalSpent, totalBudget);
-    const averageExpensePerDay = totalSpent / getAverageExpenseDayCount(month);
     const segments = budgets
         .map((budget) => {
             const category = categories.find(
@@ -222,10 +220,17 @@ function MonthlyBudgetSummary({
                 <div>
                     <div className="mb-2 flex items-center justify-between gap-3">
                         <span className="font-medium">
-                            {formatCurrency(totalSpent)} spent
+                            {formatCurrency(totalSpent)} of{" "}
+                            {formatCurrency(totalBudget)}
                         </span>
-                        <span className="font-medium">
-                            {formatCurrency(totalBudget)} total budget
+                        <span
+                            className={cn(
+                                "font-medium",
+                                isOverBudget && "text-destructive",
+                            )}
+                        >
+                            {formatCurrency(Math.abs(remaining))}{" "}
+                            {isOverBudget ? "excess" : "left"}
                         </span>
                     </div>
                     <div className="h-4 overflow-hidden rounded-sm bg-neutral-100">
@@ -258,20 +263,6 @@ function MonthlyBudgetSummary({
                             )}
                         </div>
                     </div>
-                    <div className="mt-2 flex items-center justify-between gap-3 text-sm text-muted-foreground leading-5">
-                        <span>
-                            ~{formatCurrency(averageExpensePerDay)} per day
-                        </span>
-                        <span
-                            className={cn(
-                                "text-right",
-                                isOverBudget && "text-destructive",
-                            )}
-                        >
-                            {formatCurrency(Math.abs(remaining))}{" "}
-                            {isOverBudget ? "excess" : "left"}
-                        </span>
-                    </div>
                     {segments.length > 0 && (
                         <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
                             {segments.map((segment) => (
@@ -299,6 +290,7 @@ function MonthlyBudgetSummary({
 
 function BudgetForm({
     category,
+    cycleSettings,
     editing,
     modal = false,
     month,
@@ -308,6 +300,7 @@ function BudgetForm({
     onSubmit,
 }: {
     category: Category;
+    cycleSettings: BudgetCycleSettings;
     editing?: Budget;
     modal?: boolean;
     month: string;
@@ -325,6 +318,8 @@ function BudgetForm({
             periodEnd: editing?.periodEnd ?? period.endDate,
             periodStart: editing?.periodStart ?? period.startDate,
             reuseBudget: true,
+            cycleFirstStartDay: cycleSettings.firstStartDay,
+            cycleSecondStartDay: cycleSettings.secondStartDay,
         }),
         [
             category.id,
@@ -337,6 +332,8 @@ function BudgetForm({
             period.endDate,
             period.frequency,
             period.startDate,
+            cycleSettings.firstStartDay,
+            cycleSettings.secondStartDay,
         ],
     );
     const form = useForm<BudgetFormValues>({
@@ -415,7 +412,10 @@ function BudgetForm({
                                 })}
                             />
                         </FieldError>
-                        <BudgetPeriodInput form={form} />
+                        <BudgetPeriodInput
+                            cycleSettings={cycleSettings}
+                            form={form}
+                        />
                     </div>
                     <div>
                         <Label htmlFor="reuse-budget">Reuse budget</Label>
@@ -505,8 +505,10 @@ function BudgetForm({
 }
 
 function BudgetPeriodInput({
+    cycleSettings,
     form,
 }: {
+    cycleSettings: BudgetCycleSettings;
     form: ReturnType<typeof useForm<BudgetFormValues>>;
 }) {
     const frequency = form.watch("frequency");
@@ -543,46 +545,14 @@ function BudgetPeriodInput({
             <FieldError message={form.formState.errors.periodStart?.message}>
                 <Label htmlFor="budget-cycle">Cycle</Label>
                 <BudgetCyclePickerInput
+                    settings={cycleSettings}
                     value={form.watch("periodStart")}
                     onChange={(date) =>
-                        setBudgetPeriod(createBudgetCyclePeriod(date))
+                        setBudgetPeriod(
+                            createBudgetCyclePeriod(date, cycleSettings),
+                        )
                     }
                 />
-            </FieldError>
-        );
-    }
-
-    if (frequency === "custom") {
-        return (
-            <FieldError message={form.formState.errors.periodStart?.message}>
-                <Label htmlFor="budget-period">Period</Label>
-                <div className="grid grid-cols-2 gap-2">
-                    <DatePickerInput
-                        ariaLabel="Select budget period start"
-                        value={form.watch("periodStart")}
-                        onChange={(startDate) =>
-                            setBudgetPeriod(
-                                createCustomPeriod(
-                                    startDate,
-                                    form.watch("periodEnd"),
-                                ),
-                            )
-                        }
-                    />
-                    <DatePickerInput
-                        ariaLabel="Select budget period end"
-                        popoverAlign="right"
-                        value={form.watch("periodEnd")}
-                        onChange={(endDate) =>
-                            setBudgetPeriod(
-                                createCustomPeriod(
-                                    form.watch("periodStart"),
-                                    endDate,
-                                ),
-                            )
-                        }
-                    />
-                </div>
             </FieldError>
         );
     }

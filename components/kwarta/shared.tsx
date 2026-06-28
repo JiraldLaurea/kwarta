@@ -20,6 +20,7 @@ import {
     Landmark,
     Minus,
     PiggyBank,
+    Pencil,
     Plus,
     Receipt,
     Repeat,
@@ -44,7 +45,6 @@ import {
     formatPickerDate,
     formatPeriodLabel,
     createBudgetCyclePeriod,
-    createCustomPeriod,
     createMonthlyPeriod,
     createWeeklyPeriod,
     getBudgetCycleRange,
@@ -56,6 +56,7 @@ import {
     parseMonthValue,
     toDateInputValue,
     toMonthInputValue,
+    type BudgetCycleSettings,
     type PeriodFrequency,
     type SelectedPeriod,
 } from "@/lib/kwarta/helpers";
@@ -480,9 +481,13 @@ export function MonthPickerInput({
 }
 
 export function PeriodSelector({
+    budgetCycleSettings,
+    onBudgetCycleSettingsChange,
     onChange,
     value,
 }: {
+    budgetCycleSettings: BudgetCycleSettings;
+    onBudgetCycleSettingsChange: (value: BudgetCycleSettings) => void;
     onChange: (value: SelectedPeriod) => void;
     value: SelectedPeriod;
 }) {
@@ -500,11 +505,14 @@ export function PeriodSelector({
         }
 
         if (frequency === "cycle") {
-            onChange(createBudgetCyclePeriod(toDateInputValue(new Date())));
+            onChange(
+                createBudgetCyclePeriod(
+                    toDateInputValue(new Date()),
+                    budgetCycleSettings,
+                ),
+            );
             return;
         }
-
-        onChange(createCustomPeriod(value.startDate, value.endDate));
     }
 
     return (
@@ -517,7 +525,6 @@ export function PeriodSelector({
                         { label: "Monthly", value: "monthly" },
                         { label: "Weekly", value: "weekly" },
                         { label: "Cycle", value: "cycle" },
-                        { label: "Custom", value: "custom" },
                     ]}
                     value={value.frequency}
                 />
@@ -545,31 +552,26 @@ export function PeriodSelector({
             {value.frequency === "cycle" && (
                 <div className="min-w-0 flex-1 sm:w-64 sm:flex-none">
                     <BudgetCyclePickerInput
+                        settings={budgetCycleSettings}
                         value={value.startDate}
+                        onSettingsChange={(settings) => {
+                            onBudgetCycleSettingsChange(settings);
+
+                            if (value.frequency === "cycle") {
+                                onChange(
+                                    createBudgetCyclePeriod(
+                                        value.startDate,
+                                        settings,
+                                    ),
+                                );
+                            }
+                        }}
                         onChange={(date) =>
-                            onChange(createBudgetCyclePeriod(date))
-                        }
-                    />
-                </div>
-            )}
-            {value.frequency === "custom" && (
-                <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:w-[26rem] sm:flex-none">
-                    <DatePickerInput
-                        ariaLabel="Select start date"
-                        value={value.startDate}
-                        onChange={(startDate) =>
                             onChange(
-                                createCustomPeriod(startDate, value.endDate),
-                            )
-                        }
-                    />
-                    <DatePickerInput
-                        ariaLabel="Select end date"
-                        popoverAlign="right"
-                        value={value.endDate}
-                        onChange={(endDate) =>
-                            onChange(
-                                createCustomPeriod(value.startDate, endDate),
+                                createBudgetCyclePeriod(
+                                    date,
+                                    budgetCycleSettings,
+                                ),
                             )
                         }
                     />
@@ -582,12 +584,16 @@ export function PeriodSelector({
 
 export function BudgetCyclePickerInput({
     onChange,
+    onSettingsChange,
+    settings,
     value,
 }: {
     onChange: (value: string) => void;
+    onSettingsChange?: (value: BudgetCycleSettings) => void;
+    settings: BudgetCycleSettings;
     value: string;
 }) {
-    const selectedCycle = getBudgetCycleRange(value);
+    const selectedCycle = getBudgetCycleRange(value, settings);
     const selectedStart = parseDateValue(selectedCycle.startDate);
     const selectedStartYear = selectedStart.getFullYear();
     const selectedStartMonth = selectedStart.getMonth();
@@ -596,6 +602,13 @@ export function BudgetCyclePickerInput({
     const [visibleMonth, setVisibleMonth] = useState(
         new Date(selectedStartYear, selectedStartMonth, 1),
     );
+    const [isEditingCycle, setIsEditingCycle] = useState(false);
+    const [draftFirstStartDay, setDraftFirstStartDay] = useState(
+        String(settings.firstStartDay),
+    );
+    const [draftSecondStartDay, setDraftSecondStartDay] = useState(
+        String(settings.secondStartDay),
+    );
     const pickerRef = useRef<HTMLDivElement>(null);
     const selectedLabel = formatPeriodLabel({
         frequency: "cycle",
@@ -603,18 +616,33 @@ export function BudgetCyclePickerInput({
     });
     const firstCycle = getBudgetCycleRange(
         toDateInputValue(
-            new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 5),
+            new Date(
+                visibleMonth.getFullYear(),
+                visibleMonth.getMonth(),
+                settings.firstStartDay,
+            ),
         ),
+        settings,
     );
     const secondCycle = getBudgetCycleRange(
         toDateInputValue(
-            new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 20),
+            new Date(
+                visibleMonth.getFullYear(),
+                visibleMonth.getMonth(),
+                settings.secondStartDay,
+            ),
         ),
+        settings,
     );
 
     useEffect(() => {
         setVisibleMonth(new Date(selectedStartYear, selectedStartMonth, 1));
     }, [selectedStartMonth, selectedStartYear]);
+
+    useEffect(() => {
+        setDraftFirstStartDay(String(settings.firstStartDay));
+        setDraftSecondStartDay(String(settings.secondStartDay));
+    }, [settings.firstStartDay, settings.secondStartDay]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -662,6 +690,27 @@ export function BudgetCyclePickerInput({
         setIsOpen(false);
     }
 
+    function applyCycleSettings() {
+        const firstStartDay = Number(draftFirstStartDay);
+        const secondStartDay = Number(draftSecondStartDay);
+
+        if (
+            !Number.isFinite(firstStartDay) ||
+            !Number.isFinite(secondStartDay) ||
+            firstStartDay < 1 ||
+            secondStartDay > 28 ||
+            firstStartDay >= secondStartDay
+        ) {
+            return;
+        }
+
+        onSettingsChange?.({
+            firstStartDay,
+            secondStartDay,
+        });
+        setIsEditingCycle(false);
+    }
+
     return (
         <div className="relative" ref={pickerRef}>
             <Button
@@ -689,72 +738,152 @@ export function BudgetCyclePickerInput({
                             : "top-full mt-2",
                     )}
                 >
-                    <div className="mb-4 flex items-center justify-between">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => changeMonth(-1)}
-                        >
-                            <ChevronLeft className="h-4 w-4" aria-hidden />
-                            <span className="sr-only">Previous month</span>
-                        </Button>
-                        <p className="text-base font-medium leading-6">
-                            {visibleMonth.toLocaleDateString("en-US", {
-                                month: "long",
-                                year: "numeric",
-                            })}
-                        </p>
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => changeMonth(1)}
-                        >
-                            <ChevronRight className="h-4 w-4" aria-hidden />
-                            <span className="sr-only">Next month</span>
-                        </Button>
-                    </div>
-                    <div className="grid gap-2">
-                        {[firstCycle, secondCycle].map((cycle) => {
-                            const isSelected =
-                                cycle.startDate === selectedCycle.startDate &&
-                                cycle.endDate === selectedCycle.endDate;
-
-                            return (
-                                <button
-                                    className={cn(
-                                        "flex h-12 items-center justify-between rounded-md border border-border px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[#F2F2F2]",
-                                        isSelected &&
-                                            "border-[#2563EB] bg-[#2563EB] text-white md:hover:bg-[#2563EB]",
-                                    )}
-                                    key={cycle.startDate}
+                    {!isEditingCycle && (
+                        <div className="mb-4 flex items-center justify-between">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => changeMonth(-1)}
+                            >
+                                <ChevronLeft className="h-4 w-4" aria-hidden />
+                                <span className="sr-only">Previous month</span>
+                            </Button>
+                            <p className="text-base font-medium leading-6">
+                                {visibleMonth.toLocaleDateString("en-US", {
+                                    month: "long",
+                                    year: "numeric",
+                                })}
+                            </p>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => changeMonth(1)}
+                            >
+                                <ChevronRight className="h-4 w-4" aria-hidden />
+                                <span className="sr-only">Next month</span>
+                            </Button>
+                        </div>
+                    )}
+                    {isEditingCycle ? (
+                        <div className="grid gap-3">
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="grid gap-2 text-sm font-medium">
+                                    1st cycle
+                                    <input
+                                        className="h-11 rounded-md border border-border px-3 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20"
+                                        inputMode="numeric"
+                                        max={27}
+                                        min={1}
+                                        type="number"
+                                        value={draftFirstStartDay}
+                                        onChange={(event) =>
+                                            setDraftFirstStartDay(
+                                                event.currentTarget.value,
+                                            )
+                                        }
+                                    />
+                                </label>
+                                <label className="grid gap-2 text-sm font-medium">
+                                    2nd cycle
+                                    <input
+                                        className="h-11 rounded-md border border-border px-3 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20"
+                                        inputMode="numeric"
+                                        max={28}
+                                        min={2}
+                                        type="number"
+                                        value={draftSecondStartDay}
+                                        onChange={(event) =>
+                                            setDraftSecondStartDay(
+                                                event.currentTarget.value,
+                                            )
+                                        }
+                                    />
+                                </label>
+                            </div>
+                            <p className="text-sm leading-5 text-muted-foreground">
+                                The second cycle ends the day before the first
+                                cycle starts next month.
+                            </p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button
                                     type="button"
-                                    onClick={() =>
-                                        selectCycle({
+                                    variant="secondary"
+                                    onClick={() => {
+                                        setDraftFirstStartDay(
+                                            String(settings.firstStartDay),
+                                        );
+                                        setDraftSecondStartDay(
+                                            String(settings.secondStartDay),
+                                        );
+                                        setIsEditingCycle(false);
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={applyCycleSettings}
+                                >
+                                    Apply
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid gap-2">
+                            {[firstCycle, secondCycle].map((cycle) => {
+                                const isSelected =
+                                    cycle.startDate ===
+                                        selectedCycle.startDate &&
+                                    cycle.endDate === selectedCycle.endDate;
+
+                                return (
+                                    <button
+                                        className={cn(
+                                            "flex h-12 items-center justify-between rounded-md border border-border px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[#F2F2F2]",
+                                            isSelected &&
+                                                "border-[#2563EB] bg-[#2563EB] text-white md:hover:bg-[#2563EB]",
+                                        )}
+                                        key={cycle.startDate}
+                                        type="button"
+                                        onClick={() =>
+                                            selectCycle({
+                                                frequency: "cycle",
+                                                ...cycle,
+                                            })
+                                        }
+                                    >
+                                        {formatPeriodLabel({
                                             frequency: "cycle",
                                             ...cycle,
-                                        })
-                                    }
-                                >
-                                    {formatPeriodLabel({
-                                        frequency: "cycle",
-                                        ...cycle,
-                                    })}
-                                </button>
-                            );
-                        })}
-                    </div>
-                    <div className="mt-4 border-t border-border pt-3">
-                        <Button
-                            className="w-full justify-center"
-                            type="button"
-                            variant="secondary"
-                            onClick={selectThisCycle}
-                        >
-                            This cycle
-                        </Button>
-                    </div>
+                                        })}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                    {!isEditingCycle && (
+                        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-3">
+                            <Button
+                                className="w-full justify-center"
+                                type="button"
+                                variant="secondary"
+                                onClick={() => setIsEditingCycle(true)}
+                            >
+                                <Pencil className="h-4 w-4" aria-hidden />
+                                Edit cycle
+                            </Button>
+                            <Button
+                                className="w-full justify-center"
+                                type="button"
+                                variant="secondary"
+                                onClick={selectThisCycle}
+                            >
+                                This cycle
+                            </Button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -1121,6 +1250,7 @@ export function useIsMobileViewport() {
  */
 export function EditModal(props: {
     animateMobileEnter?: boolean;
+    allowContentScroll?: boolean;
     children: React.ReactNode;
     className?: string;
     mobileMotion?: MobileModalMotion;
@@ -1137,11 +1267,13 @@ export function EditModal(props: {
 }
 
 function MobileFormPage({
+    allowContentScroll = false,
     children,
     className,
     onOpenComplete,
     onClose,
 }: {
+    allowContentScroll?: boolean;
     children: React.ReactNode;
     className?: string;
     onOpenComplete?: () => void;
@@ -1189,14 +1321,18 @@ function MobileFormPage({
         });
         window.addEventListener("scroll", lockViewport, { passive: true });
         window.addEventListener("resize", lockViewport);
-        target.addEventListener("scroll", lockViewport, { passive: true });
+        if (!allowContentScroll) {
+            target.addEventListener("scroll", lockViewport, { passive: true });
+        }
         window.visualViewport?.addEventListener("resize", lockViewport);
         window.visualViewport?.addEventListener("scroll", lockViewport);
 
         return () => {
             window.removeEventListener("scroll", lockViewport);
             window.removeEventListener("resize", lockViewport);
-            target.removeEventListener("scroll", lockViewport);
+            if (!allowContentScroll) {
+                target.removeEventListener("scroll", lockViewport);
+            }
             window.visualViewport?.removeEventListener("resize", lockViewport);
             window.visualViewport?.removeEventListener("scroll", lockViewport);
             enableBodyScroll(target);
@@ -1205,7 +1341,7 @@ function MobileFormPage({
             document.body.style.overscrollBehavior =
                 previousBodyOverscrollBehavior;
         };
-    }, []);
+    }, [allowContentScroll]);
 
     useEffect(() => {
         // While an input is focused, the mobile browser scrolls it into view
@@ -1321,6 +1457,7 @@ function MobileFormPage({
                 ref={scrollRef}
                 className={cn(
                     "h-full overflow-hidden overscroll-none bg-white [&>*]:!min-h-0 [&>*]:!border-0 [&>*]:!rounded-none [&>*]:!shadow-none",
+                    allowContentScroll && "overflow-y-auto overscroll-contain",
                     className,
                 )}
                 role="dialog"
@@ -1342,6 +1479,10 @@ function MobileFormPage({
                     window.setTimeout(() => window.scrollTo(0, 0), 80);
                 }}
                 onTouchMoveCapture={(event) => {
+                    if (allowContentScroll) {
+                        return;
+                    }
+
                     event.preventDefault();
                 }}
                 onClickCapture={(event) => {
@@ -1364,6 +1505,7 @@ function MobileFormPage({
 
 function DesktopEditModal({
     animateMobileEnter = true,
+    allowContentScroll = false,
     children,
     className,
     mobileMotion = "right",
@@ -1371,6 +1513,7 @@ function DesktopEditModal({
     onClose,
 }: {
     animateMobileEnter?: boolean;
+    allowContentScroll?: boolean;
     children: React.ReactNode;
     className?: string;
     mobileMotion?: MobileModalMotion;
@@ -1574,6 +1717,7 @@ function DesktopEditModal({
                 ref={dialogRef}
                 className={cn(
                     "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 shadow-[0_-12px_40px_rgba(0,0,0,0.12)] will-change-transform sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:overflow-visible sm:rounded-2xl sm:border sm:border-border sm:transition-opacity sm:duration-100 sm:will-change-auto sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
+                    allowContentScroll && "sm:overflow-hidden",
                     mobileMotion === "bottom" && "rounded-t-2xl",
                     !isVisible && "sm:opacity-0",
                     className,
@@ -1604,7 +1748,10 @@ function DesktopEditModal({
                     </div>
                 )}
                 <div
-                    className="min-h-0 flex-1 overflow-y-auto overscroll-contain sm:overflow-visible [&>*]:!border-0 max-sm:[&>*]:!min-h-0 max-sm:[&>*]:!rounded-none"
+                    className={cn(
+                        "min-h-0 flex-1 overflow-y-auto overscroll-contain sm:overflow-visible [&>*]:!border-0 max-sm:[&>*]:!min-h-0 max-sm:[&>*]:!rounded-none",
+                        allowContentScroll && "sm:overflow-y-auto",
+                    )}
                     data-bottom-sheet-scroll
                     style={
                         isMobileInputFocused
