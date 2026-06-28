@@ -1,6 +1,17 @@
 import { z } from "zod";
-import { categorySchema, transactionSchema } from "@/lib/schema";
-import type { Budget, Category, Transaction, TransactionType } from "@/lib/types";
+import {
+    accountSchema,
+    categorySchema,
+    transactionSchema,
+} from "@/lib/schema";
+import type {
+    Account,
+    Budget,
+    Category,
+    Transaction,
+    TransactionType,
+    Transfer,
+} from "@/lib/types";
 import {
     getMonthRange,
     normalizeTimeValue,
@@ -14,6 +25,14 @@ import {
 export type TransactionImportResult = {
     categories: Category[];
     transactions: Transaction[];
+};
+
+export type WorkspaceBackup = {
+    accounts: Account[];
+    budgets: Budget[];
+    categories: Category[];
+    transactions: Transaction[];
+    transfers: Transfer[];
 };
 
 const transactionBackupRecordSchema = transactionSchema
@@ -56,6 +75,23 @@ const backupCategoryRecordSchema = categorySchema.extend({
     subcategories: z.array(z.string()).optional(),
 });
 
+const accountBackupRecordSchema = accountSchema.extend({
+    id: z.string().min(1),
+});
+
+const transferBackupRecordSchema = z
+    .object({
+        id: z.string().min(1),
+        fromAccountId: z.string().min(1),
+        toAccountId: z.string().min(1),
+        amount: z.coerce.number().positive(),
+        fee: z.coerce.number().min(0).default(0),
+        note: z.string().optional(),
+        date: z.string().min(1),
+        time: z.string().regex(/^\d{2}:\d{2}$/),
+    })
+    .refine((values) => values.fromAccountId !== values.toAccountId);
+
 const transactionBackupSchema = z.union([
     z.array(transactionBackupRecordSchema),
     z.object({
@@ -75,6 +111,16 @@ const budgetBackupSchema = z.union([
         budgets: z.array(budgetBackupRecordSchema),
     }),
 ]);
+
+const workspaceBackupSchema = z.object({
+    type: z.string().optional(),
+    exportedAt: z.string().optional(),
+    accounts: z.array(accountBackupRecordSchema),
+    budgets: z.array(budgetBackupRecordSchema),
+    categories: z.array(backupCategoryRecordSchema),
+    transactions: z.array(transactionBackupRecordSchema),
+    transfers: z.array(transferBackupRecordSchema).default([]),
+});
 
 function findMatchingCategoryId(
     categoryId: string,
@@ -278,38 +324,177 @@ export function parseBudgetBackupPayload(
     return budgets;
 }
 
-export function downloadBackupFile(
-    label: "transactions" | "budgets",
-    records: Transaction[] | Budget[],
+function normalizeBackupBudgets(
+    records: z.infer<typeof budgetBackupRecordSchema>[],
     categories: Category[],
+    backupCategories: Category[] = [],
 ) {
-    const categoryLookup = new Map(
-        categories.map((category) => [category.id, category]),
-    );
-    const payload =
-        label === "budgets"
-            ? (records as Budget[]).map((budget) => {
-                  const category = categoryLookup.get(budget.categoryId);
+    return records.map((budget) => {
+        const categoryKey =
+            budget.categoryName ??
+            budget.category ??
+            budget.name ??
+            budget.categoryId ??
+            "";
+        const limit = parseBackupAmount(
+            budget.limit ?? budget.amount ?? budget.budget ?? budget.value,
+        );
+        const frequency = (budget.frequency ?? "monthly") as PeriodFrequency;
+        const month = normalizeBackupMonth(
+            budget.month ?? budget.period ?? budget.periodStart ?? budget.date,
+        );
+        const fallbackRange = getMonthRange(month);
 
-                  return {
-                      ...budget,
-                      categoryName: category?.name ?? "",
-                      categoryType: category?.type ?? "expense",
-                  };
-              })
-            : {
-                  type: "kwarta-transactions",
-                  exportedAt: new Date().toISOString(),
-                  categories,
-                  transactions: records,
-              };
+        return {
+            id: crypto.randomUUID(),
+            categoryId: findMatchingCategoryId(
+                categoryKey,
+                "expense",
+                categories,
+                backupCategories,
+            ),
+            frequency,
+            limit,
+            month,
+            periodEnd: budget.periodEnd ?? fallbackRange.endDate,
+            periodStart: budget.periodStart ?? fallbackRange.startDate,
+        };
+    });
+}
+
+export function parseWorkspaceBackupPayload(
+    payload: unknown,
+    currentWorkspace: WorkspaceBackup,
+): WorkspaceBackup {
+    const parsed = workspaceBackupSchema.safeParse(payload);
+
+    if (!parsed.success) {
+        const transactionBackup = transactionBackupSchema.safeParse(payload);
+
+        if (transactionBackup.success) {
+            const transactionImport = parseTransactionBackupPayload(
+                payload,
+                currentWorkspace.categories,
+            );
+
+            return {
+                ...currentWorkspace,
+                categories: transactionImport.categories,
+                transactions: transactionImport.transactions,
+            };
+        }
+
+        const budgetBackup = budgetBackupSchema.safeParse(payload);
+
+        if (budgetBackup.success) {
+            return {
+                ...currentWorkspace,
+                budgets: parseBudgetBackupPayload(
+                    payload,
+                    currentWorkspace.categories,
+                ),
+            };
+        }
+
+        throw new Error("Invalid workspace backup.");
+    }
+
+    const backupCategories = withCategoryIcons(parsed.data.categories);
+    const sourceCategories = backupCategories.length
+        ? backupCategories
+        : currentWorkspace.categories;
+    const categoryIdMap = new Map(
+        sourceCategories.map((category) => [category.id, crypto.randomUUID()]),
+    );
+    const categories = sourceCategories.map((category) => ({
+        ...category,
+        id: categoryIdMap.get(category.id) ?? crypto.randomUUID(),
+    }));
+    const categoryIds = new Set(categories.map((category) => category.id));
+    const accountIdMap = new Map(
+        parsed.data.accounts.map((account) => [account.id, crypto.randomUUID()]),
+    );
+    const accounts = parsed.data.accounts.map((account) => ({
+        ...account,
+        id: accountIdMap.get(account.id) ?? crypto.randomUUID(),
+    }));
+    const transactions = parsed.data.transactions
+        .map((transaction) => ({
+            ...transaction,
+            categoryId: categoryIdMap.get(transaction.categoryId) ?? "",
+        }))
+        .filter((transaction) => categoryIds.has(transaction.categoryId))
+        .map((transaction) => ({
+            ...transaction,
+            id: crypto.randomUUID(),
+            accountId:
+                transaction.accountId && accountIdMap.has(transaction.accountId)
+                    ? accountIdMap.get(transaction.accountId)
+                    : undefined,
+            note: transaction.note ?? "",
+            time: normalizeTimeValue(transaction.time),
+        }));
+    const budgets = normalizeBackupBudgets(
+        parsed.data.budgets,
+        categories,
+        backupCategories,
+    ).filter(
+        (budget) =>
+            categoryIds.has(budget.categoryId) &&
+            Number.isFinite(budget.limit) &&
+            budget.limit > 0 &&
+            budget.month,
+    );
+    const transfers = parsed.data.transfers.filter(
+        (transfer) =>
+            accountIdMap.has(transfer.fromAccountId) &&
+            accountIdMap.has(transfer.toAccountId) &&
+            transfer.fromAccountId !== transfer.toAccountId,
+    ).map((transfer) => ({
+        ...transfer,
+        id: crypto.randomUUID(),
+        fromAccountId:
+            accountIdMap.get(transfer.fromAccountId) ?? transfer.fromAccountId,
+        toAccountId: accountIdMap.get(transfer.toAccountId) ?? transfer.toAccountId,
+    }));
+
+    return {
+        accounts,
+        budgets,
+        categories,
+        transactions,
+        transfers,
+    };
+}
+
+export function downloadWorkspaceBackupFile(workspace: WorkspaceBackup) {
+    const categoryLookup = new Map(
+        workspace.categories.map((category) => [category.id, category]),
+    );
+    const payload = {
+        type: "kwarta-workspace",
+        exportedAt: new Date().toISOString(),
+        accounts: workspace.accounts,
+        budgets: workspace.budgets.map((budget) => {
+            const category = categoryLookup.get(budget.categoryId);
+
+            return {
+                ...budget,
+                categoryName: category?.name ?? "",
+                categoryType: category?.type ?? "expense",
+            };
+        }),
+        categories: workspace.categories,
+        transactions: workspace.transactions,
+        transfers: workspace.transfers,
+    };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: "application/json",
     });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `kwarta-${label}-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `kwarta-backup-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
 }

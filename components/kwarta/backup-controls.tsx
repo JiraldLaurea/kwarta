@@ -3,9 +3,8 @@
 import { Download, Upload } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { EditModal } from "@/components/kwarta/shared";
 
-export function TransactionBackupActions({
+export function BackupActions({
     error,
     importInputRef,
     onExport,
@@ -62,29 +61,25 @@ export function TransactionBackupActions({
 }
 
 export function ImportConfirmationModal({
-    count,
-    itemLabel,
     onCancel,
     onConfirm,
 }: {
-    count: number;
-    itemLabel: "transactions" | "budgets";
     onCancel: () => void;
     onConfirm: () => void;
 }) {
     return (
-        <EditModal className="sm:max-w-[380px]" onClose={onCancel}>
-            <Card className="w-full overflow-hidden bg-white">
+        <StaticBackupModal maxWidthClassName="sm:max-w-[380px]">
+            <Card className="w-full overflow-hidden rounded-2xl border border-border bg-white">
                 <div className="px-6 pb-6 pt-5">
                     <CardTitle className="text-2xl font-medium leading-8">
-                        Replace {itemLabel}?
+                        Replace workspace?
                     </CardTitle>
                     <p className="mt-2 text-base leading-6 text-muted-foreground">
-                        This backup contains {count} {itemLabel}. Importing it
-                        will replace your existing {itemLabel}.
+                        Importing this backup will replace your transactions,
+                        budgets, accounts, categories, and subcategories.
                     </p>
                 </div>
-                <div className="flex items-center justify-between border-t border-border bg-neutral-50 px-5 py-4">
+                <div className="flex items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4">
                     <Button
                         data-modal-close
                         type="button"
@@ -94,43 +89,51 @@ export function ImportConfirmationModal({
                         Cancel
                     </Button>
                     <Button type="button" onClick={onConfirm}>
-                        Replace {itemLabel}
+                        Replace workspace
                     </Button>
                 </div>
             </Card>
-        </EditModal>
+        </StaticBackupModal>
     );
 }
 
-export function ImportLoadingModal({
-    itemLabel,
-}: {
-    itemLabel: "transactions" | "budgets";
-}) {
+export function ImportLoadingModal() {
     return (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:px-4 sm:py-6">
-            <div className="absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm" />
+        <StaticBackupModal maxWidthClassName="sm:max-w-[360px]">
             <Card
-                className="relative w-full animate-[kwarta-sheet-in_220ms_ease-out] rounded-b-none rounded-t-2xl bg-white p-6 text-center shadow-[0_-12px_40px_rgba(0,0,0,0.12)] sm:max-w-[360px] sm:rounded-2xl sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
+                className="w-full rounded-2xl border border-border bg-white p-6 text-center shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
                 role="dialog"
                 aria-modal="true"
                 aria-live="polite"
             >
                 <span
-                    className="mx-auto mb-5 block h-1 w-10 rounded-full bg-neutral-300 sm:hidden"
-                    aria-hidden
-                />
-                <span
                     className="mx-auto flex h-10 w-10 animate-spin rounded-full border-2 border-neutral-200 border-t-foreground"
                     aria-hidden
                 />
                 <CardTitle className="mt-4 text-xl font-medium leading-7">
-                    Importing {itemLabel}
+                    Importing backup
                 </CardTitle>
                 <p className="mt-2 text-sm leading-5 text-muted-foreground">
                     Reading the backup and saving it to your account...
                 </p>
             </Card>
+        </StaticBackupModal>
+    );
+}
+
+function StaticBackupModal({
+    children,
+    maxWidthClassName,
+}: {
+    children: React.ReactNode;
+    maxWidthClassName: string;
+}) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+            <div className="absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm" />
+            <div className={`relative w-full ${maxWidthClassName}`}>
+                {children}
+            </div>
         </div>
     );
 }

@@ -110,10 +110,9 @@ import {
     type TransferFormValues,
 } from "@/lib/schema";
 import {
-    downloadBackupFile,
-    parseBudgetBackupPayload,
-    parseTransactionBackupPayload,
-    type TransactionImportResult,
+    downloadWorkspaceBackupFile,
+    parseWorkspaceBackupPayload,
+    type WorkspaceBackup,
 } from "@/lib/kwarta/backup";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type {
@@ -195,9 +194,9 @@ import { BudgetsView } from "@/components/kwarta/budgets-view";
 import { AccountsView } from "@/components/kwarta/accounts-view";
 import { CategoryForm, SubcategoryForm } from "@/components/kwarta/categories";
 import {
+    BackupActions,
     ImportConfirmationModal,
     ImportLoadingModal,
-    TransactionBackupActions,
 } from "@/components/kwarta/backup-controls";
 
 type View =
@@ -209,23 +208,11 @@ type View =
     | "settings"
     | "manage-categories";
 
-type StoredWorkspace = {
-    accounts: Account[];
-    budgets: Budget[];
-    categories: Category[];
-    transactions: Transaction[];
-    transfers: Transfer[];
-};
+type StoredWorkspace = WorkspaceBackup;
 
-type PendingBackupImport =
-    | {
-          itemLabel: "transactions";
-          result: TransactionImportResult;
-      }
-    | {
-          budgets: Budget[];
-          itemLabel: "budgets";
-      };
+type PendingBackupImport = {
+    workspace: StoredWorkspace;
+};
 
 async function persistWorkspace(workspace: StoredWorkspace, userId: string) {
     const response = await fetch("/api/workspace", {
@@ -239,6 +226,72 @@ async function persistWorkspace(workspace: StoredWorkspace, userId: string) {
     if (!response.ok) {
         throw new Error("Unable to save workspace.");
     }
+}
+
+function getCategorySubcategoriesStorageKey(userId: string) {
+    return `kwarta:category-subcategories:${userId}`;
+}
+
+function readStoredCategorySubcategories(userId: string) {
+    try {
+        const stored = window.localStorage.getItem(
+            getCategorySubcategoriesStorageKey(userId),
+        );
+
+        if (!stored) {
+            return new Map<string, string[]>();
+        }
+
+        const parsed = JSON.parse(stored) as Record<string, string[]>;
+
+        return new Map(
+            Object.entries(parsed).filter(
+                (entry): entry is [string, string[]] =>
+                    Array.isArray(entry[1]),
+            ),
+        );
+    } catch {
+        return new Map<string, string[]>();
+    }
+}
+
+function persistCategorySubcategoriesLocally(
+    userId: string,
+    categories: Category[],
+) {
+    const payload = Object.fromEntries(
+        categories.map((category) => [
+            category.id,
+            category.subcategories ?? [],
+        ]),
+    );
+
+    window.localStorage.setItem(
+        getCategorySubcategoriesStorageKey(userId),
+        JSON.stringify(payload),
+    );
+}
+
+function mergeStoredCategorySubcategories(
+    categories: Category[],
+    userId: string,
+) {
+    const stored = readStoredCategorySubcategories(userId);
+
+    if (stored.size === 0) {
+        return categories;
+    }
+
+    return categories.map((category) => {
+        const subcategories = stored.get(category.id);
+
+        return subcategories
+            ? {
+                  ...category,
+                  subcategories,
+              }
+            : category;
+    });
 }
 
 export function KwartaApp() {
@@ -285,19 +338,13 @@ export function KwartaApp() {
     const [subcategoryFormOpen, setSubcategoryFormOpen] = useState(false);
     const [categoryPendingDelete, setCategoryPendingDelete] =
         useState<Category | null>(null);
-    const transactionImportInputRef = useRef<HTMLInputElement>(null);
-    const budgetImportInputRef = useRef<HTMLInputElement>(null);
+    const backupImportInputRef = useRef<HTMLInputElement>(null);
     const quickAddPageRef = useRef<HTMLElement>(null);
     const quickAddFocusBridgeRef = useRef<HTMLInputElement>(null);
-    const [transactionImportError, setTransactionImportError] = useState<
-        string | null
-    >(null);
-    const [budgetImportError, setBudgetImportError] = useState<string | null>(
+    const [backupImportError, setBackupImportError] = useState<string | null>(
         null,
     );
-    const [isImportingBackup, setIsImportingBackup] = useState<
-        "transactions" | "budgets" | null
-    >(null);
+    const [isImportingBackup, setIsImportingBackup] = useState(false);
     const [pendingBackupImport, setPendingBackupImport] =
         useState<PendingBackupImport | null>(null);
     const supabase = useMemo(() => createSupabaseBrowserClient(), []);
@@ -469,7 +516,12 @@ export function KwartaApp() {
                     return;
                 }
 
-                setCategories(withCategoryIcons(workspace.categories));
+                setCategories(
+                    mergeStoredCategorySubcategories(
+                        withCategoryIcons(workspace.categories),
+                        activeUserId,
+                    ),
+                );
                 setAccounts(workspace.accounts);
                 setTransactions(workspace.transactions);
                 setTransfers(workspace.transfers ?? []);
@@ -502,6 +554,8 @@ export function KwartaApp() {
         if (!workspaceReady || !userId) {
             return;
         }
+
+        persistCategorySubcategoriesLocally(userId, categories);
 
         const timeout = window.setTimeout(() => {
             persistWorkspace(
@@ -741,115 +795,76 @@ export function KwartaApp() {
             }));
     }, [periodTransactions]);
 
-    async function applyTransactionImport(result: TransactionImportResult) {
-        setCategories(result.categories);
-        setTransactions(result.transactions);
-        setEditingTransactionId(null);
-        setTransactionImportError(null);
-
-        if (userId) {
-            await persistWorkspace(
-                {
-                    accounts,
-                    budgets,
-                    categories: result.categories,
-                    transactions: result.transactions,
-                    transfers,
-                },
-                userId,
-            );
-        }
+    function getCurrentWorkspace(): StoredWorkspace {
+        return {
+            accounts,
+            budgets,
+            categories,
+            transactions,
+            transfers,
+        };
     }
 
-    async function applyBudgetImport(nextBudgets: Budget[]) {
-        setBudgets(nextBudgets);
+    async function applyWorkspaceImport(nextWorkspace: StoredWorkspace) {
+        const nextCategories = withCategoryIcons(nextWorkspace.categories);
+
+        if (userId) {
+            persistCategorySubcategoriesLocally(userId, nextCategories);
+        }
+
+        setAccounts(nextWorkspace.accounts);
+        setBudgets(nextWorkspace.budgets);
+        setCategories(nextCategories);
+        setTransactions(nextWorkspace.transactions);
+        setTransfers(nextWorkspace.transfers);
         setEditingBudgetId(null);
-        setBudgetImportError(null);
+        setEditingTransactionId(null);
+        setBackupImportError(null);
 
         if (userId) {
-            await persistWorkspace(
-                {
-                    accounts,
-                    budgets: nextBudgets,
-                    categories,
-                    transactions,
-                    transfers,
-                },
-                userId,
-            );
+            await persistWorkspace(nextWorkspace, userId);
         }
     }
 
-    async function handleTransactionImportFile(file: File) {
-        setIsImportingBackup("transactions");
-        let nextImport: TransactionImportResult;
+    async function handleBackupImportFile(file: File) {
+        setIsImportingBackup(true);
+        let nextWorkspace: StoredWorkspace;
 
         try {
-            nextImport = parseTransactionBackupPayload(
+            nextWorkspace = parseWorkspaceBackupPayload(
                 JSON.parse(await file.text()),
-                categories,
+                getCurrentWorkspace(),
             );
         } catch {
-            setTransactionImportError(
-                "Transactions could not be imported. Check that this is a Kwarta transactions JSON backup.",
+            setBackupImportError(
+                "Backup could not be imported. Check that this is a Kwarta JSON backup.",
             );
-            setIsImportingBackup(null);
+            setIsImportingBackup(false);
             return;
         }
 
-        if (transactions.length > 0) {
+        if (
+            accounts.length > 0 ||
+            budgets.length > 0 ||
+            categories.length > 0 ||
+            transactions.length > 0 ||
+            transfers.length > 0
+        ) {
             setPendingBackupImport({
-                itemLabel: "transactions",
-                result: nextImport,
+                workspace: nextWorkspace,
             });
-            setIsImportingBackup(null);
+            setIsImportingBackup(false);
             return;
         }
 
         try {
-            await applyTransactionImport(nextImport);
+            await applyWorkspaceImport(nextWorkspace);
         } catch {
-            setTransactionImportError(
-                "Transactions were loaded but could not be saved. Please try importing again.",
+            setBackupImportError(
+                "Backup was loaded but could not be saved. Please try importing again.",
             );
         }
-        setIsImportingBackup(null);
-    }
-
-    async function handleBudgetImportFile(file: File) {
-        setIsImportingBackup("budgets");
-        let nextBudgets: Budget[];
-
-        try {
-            nextBudgets = parseBudgetBackupPayload(
-                JSON.parse(await file.text()),
-                categories,
-            );
-        } catch {
-            setBudgetImportError(
-                "Budgets could not be imported. Check that this is a Kwarta budgets JSON backup.",
-            );
-            setIsImportingBackup(null);
-            return;
-        }
-
-        if (budgets.length > 0) {
-            setPendingBackupImport({
-                budgets: nextBudgets,
-                itemLabel: "budgets",
-            });
-            setIsImportingBackup(null);
-            return;
-        }
-
-        try {
-            await applyBudgetImport(nextBudgets);
-        } catch {
-            setBudgetImportError(
-                "Budgets were loaded but could not be saved. Please try importing again.",
-            );
-        }
-        setIsImportingBackup(null);
+        setIsImportingBackup(false);
     }
 
     async function confirmBackupImport() {
@@ -859,27 +874,17 @@ export function KwartaApp() {
 
         const nextImport = pendingBackupImport;
         setPendingBackupImport(null);
-        setIsImportingBackup(nextImport.itemLabel);
+        setIsImportingBackup(true);
 
-        if (nextImport.itemLabel === "transactions") {
-            try {
-                await applyTransactionImport(nextImport.result);
-            } catch {
-                setTransactionImportError(
-                    "Transactions were loaded but could not be saved. Please try importing again.",
-                );
-            }
-        } else {
-            try {
-                await applyBudgetImport(nextImport.budgets);
-            } catch {
-                setBudgetImportError(
-                    "Budgets were loaded but could not be saved. Please try importing again.",
-                );
-            }
+        try {
+            await applyWorkspaceImport(nextImport.workspace);
+        } catch {
+            setBackupImportError(
+                "Backup was loaded but could not be saved. Please try importing again.",
+            );
         }
 
-        setIsImportingBackup(null);
+        setIsImportingBackup(false);
     }
 
     if (!authReady || (isAuthed && !workspaceReady)) {
@@ -1300,53 +1305,33 @@ export function KwartaApp() {
                         <SettingsView
                             accountName={accountName}
                             email={user?.email ?? "Account session"}
+                            backupImportError={backupImportError}
+                            backupImportInputRef={backupImportInputRef}
                             budgetsEnabled={budgetsEnabled}
-                            budgetImportError={budgetImportError}
                             homeItemStyle={homeItemStyle}
-                            budgetImportInputRef={budgetImportInputRef}
-                            transactionImportError={transactionImportError}
-                            transactionImportInputRef={
-                                transactionImportInputRef
-                            }
                             user={user}
                             onManageCategories={() =>
                                 setView("manage-categories")
                             }
                             onViewReports={() => setView("reports")}
                             onBudgetsEnabledChange={setBudgetsEnabled}
-                            onBudgetExport={() =>
-                                downloadBackupFile(
-                                    "budgets",
-                                    budgets,
-                                    categories,
+                            onBackupExport={() =>
+                                downloadWorkspaceBackupFile(
+                                    getCurrentWorkspace(),
                                 )
                             }
-                            onBudgetImportClick={() =>
-                                budgetImportInputRef.current?.click()
+                            onBackupImportClick={() =>
+                                backupImportInputRef.current?.click()
                             }
-                            onBudgetImportFile={handleBudgetImportFile}
+                            onBackupImportFile={handleBackupImportFile}
                             onHomeItemStyleChange={setHomeItemStyle}
                             onSignOut={async () => {
                                 await supabase?.auth.signOut();
                                 setUser(null);
                                 setIsAuthed(false);
                             }}
-                            onTransactionExport={() =>
-                                downloadBackupFile(
-                                    "transactions",
-                                    transactions,
-                                    categories,
-                                )
-                            }
-                            onTransactionImportClick={() =>
-                                transactionImportInputRef.current?.click()
-                            }
-                            onTransactionImportFile={
-                                handleTransactionImportFile
-                            }
                         />
                     )}
-
                     {view === "manage-categories" && (
                         <ManageCategoriesView
                             expenseCategories={expenseCategories}
@@ -1503,19 +1488,11 @@ export function KwartaApp() {
                 )}
                 {pendingBackupImport && (
                     <ImportConfirmationModal
-                        count={
-                            pendingBackupImport.itemLabel === "transactions"
-                                ? pendingBackupImport.result.transactions.length
-                                : pendingBackupImport.budgets.length
-                        }
-                        itemLabel={pendingBackupImport.itemLabel}
                         onCancel={() => setPendingBackupImport(null)}
                         onConfirm={confirmBackupImport}
                     />
                 )}
-                {isImportingBackup && (
-                    <ImportLoadingModal itemLabel={isImportingBackup} />
-                )}
+                {isImportingBackup && <ImportLoadingModal />}
                 <MobileTabBar activeView={view} onSelect={setView} />
             </main>
         </>
@@ -1667,46 +1644,36 @@ function MobileTabBar({
 
 function SettingsView({
     accountName,
-    budgetImportError,
-    budgetImportInputRef,
+    backupImportError,
+    backupImportInputRef,
     budgetsEnabled,
     email,
     homeItemStyle,
-    transactionImportError,
-    transactionImportInputRef,
     user,
-    onBudgetExport,
-    onBudgetImportClick,
-    onBudgetImportFile,
+    onBackupExport,
+    onBackupImportClick,
+    onBackupImportFile,
     onBudgetsEnabledChange,
     onHomeItemStyleChange,
     onManageCategories,
     onViewReports,
     onSignOut,
-    onTransactionExport,
-    onTransactionImportClick,
-    onTransactionImportFile,
 }: {
     accountName: string;
-    budgetImportError: string | null;
-    budgetImportInputRef: RefObject<HTMLInputElement>;
+    backupImportError: string | null;
+    backupImportInputRef: RefObject<HTMLInputElement>;
     budgetsEnabled: boolean;
     email: string;
     homeItemStyle: HomeItemStyle;
-    transactionImportError: string | null;
-    transactionImportInputRef: RefObject<HTMLInputElement>;
     user: User | null;
-    onBudgetExport: () => void;
-    onBudgetImportClick: () => void;
-    onBudgetImportFile: (file: File) => void;
+    onBackupExport: () => void;
+    onBackupImportClick: () => void;
+    onBackupImportFile: (file: File) => void;
     onBudgetsEnabledChange: (enabled: boolean) => void;
     onHomeItemStyleChange: (style: HomeItemStyle) => void;
     onManageCategories: () => void;
     onViewReports: () => void;
     onSignOut: () => void;
-    onTransactionExport: () => void;
-    onTransactionImportClick: () => void;
-    onTransactionImportFile: (file: File) => void;
 }) {
     const options: Array<{
         description: string;
@@ -1846,27 +1813,19 @@ function SettingsView({
                     <CardHeader>
                         <CardTitle>Backup</CardTitle>
                         <p className="text-sm leading-5 text-muted-foreground">
-                            Import or export your Kwarta data as JSON backups.
+                            Import or export your full Kwarta workspace as a
+                            JSON backup.
                         </p>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent>
                         <BackupActionRow
-                            description="Posted income and expense entries."
-                            error={transactionImportError}
-                            importInputRef={transactionImportInputRef}
-                            label="Transactions"
-                            onExport={onTransactionExport}
-                            onImportClick={onTransactionImportClick}
-                            onImportFile={onTransactionImportFile}
-                        />
-                        <BackupActionRow
-                            description="Monthly category spending limits."
-                            error={budgetImportError}
-                            importInputRef={budgetImportInputRef}
-                            label="Budgets"
-                            onExport={onBudgetExport}
-                            onImportClick={onBudgetImportClick}
-                            onImportFile={onBudgetImportFile}
+                            description="Transactions, budgets, accounts, categories, and subcategories."
+                            error={backupImportError}
+                            importInputRef={backupImportInputRef}
+                            label="Workspace data"
+                            onExport={onBackupExport}
+                            onImportClick={onBackupImportClick}
+                            onImportFile={onBackupImportFile}
                         />
                     </CardContent>
                 </Card>
@@ -1983,7 +1942,7 @@ function BackupActionRow({
                     {description}
                 </p>
             </div>
-            <TransactionBackupActions
+            <BackupActions
                 error={error}
                 importInputRef={importInputRef}
                 onExport={onExport}
