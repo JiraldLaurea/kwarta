@@ -3,6 +3,13 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const SELECT_TRIGGER_EVENT = "kwarta-select-trigger-pointerdown";
+
+type SelectTriggerEventDetail = {
+  id: string;
+  open: boolean;
+};
+
 export type SelectOption = {
   disabled?: boolean;
   icon?: React.ReactNode;
@@ -29,6 +36,27 @@ export function Select({
   placeholder = "Select an option",
   value
 }: SelectProps) {
+  const selectId = React.useId();
+  const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    function handleSelectTrigger(event: Event) {
+      const detail = (event as CustomEvent<SelectTriggerEventDetail>).detail;
+
+      if (!detail) {
+        return;
+      }
+
+      setOpen(detail.id === selectId ? detail.open : false);
+    }
+
+    window.addEventListener(SELECT_TRIGGER_EVENT, handleSelectTrigger);
+
+    return () => {
+      window.removeEventListener(SELECT_TRIGGER_EVENT, handleSelectTrigger);
+    };
+  }, [selectId]);
+
   function blurFocusedTextInput() {
     const activeElement = document.activeElement;
 
@@ -40,12 +68,27 @@ export function Select({
     }
   }
 
+  function handleTriggerPointerDownCapture() {
+    blurFocusedTextInput();
+
+    window.dispatchEvent(
+      new CustomEvent<SelectTriggerEventDetail>(SELECT_TRIGGER_EVENT, {
+        detail: {
+          id: selectId,
+          open: !open,
+        },
+      }),
+    );
+  }
+
   const selectedOption = options.find((option) => option.value === value);
   const hasIcons = options.some((option) => option.icon);
 
   return (
     <SelectPrimitive.Root
       disabled={disabled}
+      open={open}
+      onOpenChange={setOpen}
       onValueChange={onValueChange}
       value={value}
     >
@@ -55,7 +98,7 @@ export function Select({
           "flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-white px-3 py-2 text-left text-base text-foreground transition-[border-color,box-shadow] duration-150 ease-out focus-visible:border-[#2563EB] focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgba(37,99,235,0.18)] data-[state=open]:border-[#2563EB] data-[state=open]:shadow-[0_0_0_3px_rgba(37,99,235,0.18)] disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
         )}
         id={id}
-        onPointerDown={blurFocusedTextInput}
+        onPointerDownCapture={handleTriggerPointerDownCapture}
       >
         <span className="flex min-w-0 items-center gap-2">
           {hasIcons && selectedOption?.icon ? (
