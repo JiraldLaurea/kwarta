@@ -2,9 +2,11 @@ import { z } from "zod";
 import { categorySchema, transactionSchema } from "@/lib/schema";
 import type { Budget, Category, Transaction, TransactionType } from "@/lib/types";
 import {
+    getMonthRange,
     normalizeTimeValue,
     normalizeTransactionType,
     slugifyCategoryValue,
+    type PeriodFrequency,
     toMonthInputValue,
 } from "@/lib/kwarta/helpers";
 
@@ -40,8 +42,11 @@ const budgetBackupRecordSchema = z
         budget: z.unknown().optional(),
         value: z.unknown().optional(),
         date: z.string().optional(),
+        frequency: z.enum(["monthly", "weekly", "custom"]).optional(),
         month: z.string().optional(),
         period: z.string().optional(),
+        periodEnd: z.string().optional(),
+        periodStart: z.string().optional(),
     })
     .passthrough();
 
@@ -232,9 +237,11 @@ export function parseBudgetBackupPayload(
         const limit = parseBackupAmount(
             budget.limit ?? budget.amount ?? budget.budget ?? budget.value,
         );
+        const frequency = (budget.frequency ?? "monthly") as PeriodFrequency;
         const month = normalizeBackupMonth(
-            budget.month ?? budget.period ?? budget.date,
+            budget.month ?? budget.period ?? budget.periodStart ?? budget.date,
         );
+        const fallbackRange = getMonthRange(month);
 
         return {
             id: crypto.randomUUID(),
@@ -244,8 +251,11 @@ export function parseBudgetBackupPayload(
                 categories,
                 backupCategories,
             ),
+            frequency,
             limit,
             month,
+            periodEnd: budget.periodEnd ?? fallbackRange.endDate,
+            periodStart: budget.periodStart ?? fallbackRange.startDate,
         };
     });
 

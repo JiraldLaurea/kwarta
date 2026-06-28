@@ -1,4 +1,5 @@
 export type TransactionType = "income" | "expense";
+export type BudgetFrequency = "monthly" | "weekly" | "custom";
 
 export type AccountType = "bank" | "ewallet" | "cash";
 
@@ -42,8 +43,11 @@ export type Transaction = {
 export type Budget = {
   id: string;
   categoryId: string;
+  frequency?: BudgetFrequency;
   limit: number;
   month: string;
+  periodEnd?: string;
+  periodStart?: string;
 };
 
 export type Transfer = {

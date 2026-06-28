@@ -493,7 +493,7 @@ export function PeriodSelector({
         }
 
         if (frequency === "weekly") {
-            onChange(createWeeklyPeriod(value.startDate));
+            onChange(createWeeklyPeriod(toDateInputValue(new Date())));
             return;
         }
 
@@ -562,7 +562,7 @@ export function PeriodSelector({
     );
 }
 
-function WeekPickerInput({
+export function WeekPickerInput({
     onChange,
     value,
 }: {

@@ -6,6 +6,7 @@ import type {
     Account,
     AccountType,
     Budget,
+    BudgetFrequency,
     Category,
     Transaction,
     Transfer,
@@ -392,6 +393,35 @@ export function getPeriodMonth(period: SelectedPeriod) {
     return toMonthInputValue(parseDateValue(period.startDate));
 }
 
+export function getBudgetPeriodFields(period: SelectedPeriod) {
+    return {
+        frequency: period.frequency as BudgetFrequency,
+        month: getPeriodMonth(period),
+        periodEnd: period.endDate,
+        periodStart: period.startDate,
+    };
+}
+
+export function getBudgetFrequency(budget: Budget): BudgetFrequency {
+    return budget.frequency ?? "monthly";
+}
+
+export function getBudgetPeriodStart(budget: Budget) {
+    return budget.periodStart ?? getMonthRange(budget.month).startDate;
+}
+
+export function getBudgetPeriodEnd(budget: Budget) {
+    return budget.periodEnd ?? getMonthRange(budget.month).endDate;
+}
+
+export function budgetMatchesPeriod(budget: Budget, period: SelectedPeriod) {
+    return (
+        getBudgetFrequency(budget) === period.frequency &&
+        getBudgetPeriodStart(budget) === period.startDate &&
+        getBudgetPeriodEnd(budget) === period.endDate
+    );
+}
+
 export function formatPeriodLabel(period: SelectedPeriod) {
     if (period.frequency === "monthly") {
         return formatMonthLabel(getPeriodMonth(period));
@@ -472,11 +502,56 @@ export function getReuseBudgetMonths(monthValue: string) {
     );
 }
 
+function getReuseBudgetPeriods(values: BudgetFormValues) {
+    if (values.frequency === "weekly") {
+        const start = parseDateValue(values.periodStart);
+
+        return Array.from({ length: REUSED_BUDGET_MONTH_COUNT }, (_, index) => {
+            const weekStart = new Date(start);
+            weekStart.setDate(start.getDate() + index * 7);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+
+            return {
+                frequency: "weekly" as const,
+                month: toMonthInputValue(weekStart),
+                periodEnd: toDateInputValue(weekEnd),
+                periodStart: toDateInputValue(weekStart),
+            };
+        });
+    }
+
+    if (values.frequency === "custom") {
+        return [
+            {
+                frequency: "custom" as const,
+                month: values.month,
+                periodEnd: values.periodEnd,
+                periodStart: values.periodStart,
+            },
+        ];
+    }
+
+    return getReuseBudgetMonths(values.month).map((month) => {
+        const range = getMonthRange(month);
+
+        return {
+            frequency: "monthly" as const,
+            month,
+            periodEnd: range.endDate,
+            periodStart: range.startDate,
+        };
+    });
+}
+
 export function toBudgetRecord(values: BudgetFormValues): Omit<Budget, "id"> {
     return {
         categoryId: values.categoryId,
+        frequency: values.frequency,
         limit: values.limit,
         month: values.month,
+        periodEnd: values.periodEnd,
+        periodStart: values.periodStart,
     };
 }
 
@@ -500,22 +575,27 @@ export function upsertReusableBudgets(
             : [{ id: crypto.randomUUID(), ...baseBudget }, ...budgets];
     }
 
-    const months = getReuseBudgetMonths(values.month);
+    const periods = getReuseBudgetPeriods(values);
     const remainingBudgets = editingId
         ? budgets.filter((budget) => budget.id !== editingId)
         : budgets.slice();
     const nextBudgets = remainingBudgets.slice();
 
-    months.forEach((month) => {
+    periods.forEach((period) => {
         const existingIndex = nextBudgets.findIndex(
             (budget) =>
                 budget.categoryId === values.categoryId &&
-                budget.month === month,
+                getBudgetFrequency(budget) === period.frequency &&
+                getBudgetPeriodStart(budget) === period.periodStart &&
+                getBudgetPeriodEnd(budget) === period.periodEnd,
         );
         const nextBudget = {
             categoryId: values.categoryId,
+            frequency: period.frequency,
             limit: values.limit,
-            month,
+            month: period.month,
+            periodEnd: period.periodEnd,
+            periodStart: period.periodStart,
         };
 
         if (existingIndex >= 0) {

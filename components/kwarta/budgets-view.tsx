@@ -7,10 +7,15 @@ import { budgetSchema, type BudgetFormValues } from "@/lib/schema";
 import type { Budget, Category, Transaction } from "@/lib/types";
 import { cn, formatCurrency, percent } from "@/lib/utils";
 import {
+    createCustomPeriod,
+    createMonthlyPeriod,
+    createWeeklyPeriod,
     formatMonthLabel,
     getAverageExpenseDayCount,
+    getPeriodMonth,
     handleDecimalInput,
     parseDecimalInput,
+    type SelectedPeriod,
 } from "@/lib/kwarta/helpers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,12 +24,15 @@ import { Label } from "@/components/ui/label";
 import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
 import {
     CategoryIconBadge,
+    DatePickerInput,
     EditModal,
     FieldError,
     ModalBackButton,
     MonthPickerInput,
     PageHeader,
+    WeekPickerInput,
 } from "@/components/kwarta/shared";
+
 export function BudgetsView({
     allBudgets,
     budgets,
@@ -35,6 +43,7 @@ export function BudgetsView({
     onCancelEdit,
     onDelete,
     onEdit,
+    period,
     periodLabel,
     onSubmit,
     transactions,
@@ -49,6 +58,7 @@ export function BudgetsView({
     onCancelEdit: () => void;
     onDelete: (id: string) => void;
     onEdit: (budget: Budget) => void;
+    period: SelectedPeriod;
     onSubmit: (values: BudgetFormValues) => void;
     transactions: Transaction[];
 }) {
@@ -63,15 +73,14 @@ export function BudgetsView({
             <div className="space-y-4 md:space-y-5">
                 <PageHeader
                     title="Budgets"
-                    description="Set monthly limits and track category spending."
+                    description={`Set ${getPeriodNoun(period)} limits and track category spending.`}
                 />
                 <Card className="bg-white">
                     <CardHeader>
                         <CardTitle>Budgets are disabled</CardTitle>
                         <p className="text-sm leading-5 text-muted-foreground">
                             Turn budgets back on in Settings to set limits,
-                            reuse monthly budgets, and track remaining or excess
-                            spending.
+                            reuse budgets, and track remaining or excess spending.
                         </p>
                     </CardHeader>
                 </Card>
@@ -118,6 +127,7 @@ export function BudgetsView({
                         category={addingBudgetCategory}
                         modal
                         month={month}
+                        period={period}
                         onCancel={() => setAddingBudgetCategory(null)}
                         onSubmit={(values) => {
                             onSubmit(values);
@@ -133,6 +143,7 @@ export function BudgetsView({
                         editing={editing}
                         modal
                         month={month}
+                        period={period}
                         onCancel={onCancelEdit}
                         onDelete={() => {
                             onDelete(editing.id);
@@ -181,7 +192,7 @@ function MonthlyBudgetSummary({
                 .reduce((sum, transaction) => sum + transaction.amount, 0);
 
             return category && spent > 0
-                  ? {
+                ? {
                       category,
                       spent,
                       width: percent(spent, totalBudget),
@@ -189,10 +200,10 @@ function MonthlyBudgetSummary({
                 : null;
         })
         .filter(Boolean) as Array<{
-            category: Category;
-            spent: number;
-            width: number;
-        }>;
+        category: Category;
+        spent: number;
+        width: number;
+    }>;
     segments.sort((first, second) => second.spent - first.spent);
 
     return (
@@ -200,8 +211,7 @@ function MonthlyBudgetSummary({
             <CardHeader>
                 <CardTitle>Total budget</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                    Spending for {periodLabel} against the{" "}
-                    {formatMonthLabel(month)} budget.
+                    Spending for {periodLabel}
                 </p>
             </CardHeader>
             <CardContent>
@@ -233,7 +243,10 @@ function MonthlyBudgetSummary({
                                     className="h-full shrink-0 bg-destructive transition-all"
                                     style={{
                                         width: `${Math.min(
-                                            percent(Math.abs(remaining), totalBudget),
+                                            percent(
+                                                Math.abs(remaining),
+                                                totalBudget,
+                                            ),
                                             100,
                                         )}%`,
                                     }}
@@ -285,6 +298,7 @@ function BudgetForm({
     editing,
     modal = false,
     month,
+    period,
     onCancel,
     onDelete,
     onSubmit,
@@ -293,6 +307,7 @@ function BudgetForm({
     editing?: Budget;
     modal?: boolean;
     month: string;
+    period: SelectedPeriod;
     onCancel: () => void;
     onDelete?: () => void;
     onSubmit: (values: BudgetFormValues) => void;
@@ -302,10 +317,17 @@ function BudgetForm({
         values: {
             ...(editing ?? {
                 categoryId: category.id,
+                frequency: period.frequency,
                 limit: 0,
                 month,
+                periodEnd: period.endDate,
+                periodStart: period.startDate,
             }),
             categoryId: category.id,
+            frequency: period.frequency,
+            month,
+            periodEnd: period.endDate,
+            periodStart: period.startDate,
             reuseBudget: true,
         },
     });
@@ -314,6 +336,7 @@ function BudgetForm({
     const isModal = modal || isEditing;
     const reuseBudget = form.watch("reuseBudget");
     const submitLabel = editing ? "Save budget" : "Set budget";
+    const periodNoun = getPeriodNoun(period);
 
     return (
         <Card
@@ -353,7 +376,7 @@ function BudgetForm({
                         )}
                     >
                         {editing
-                            ? `Set a monthly limit for ${category.name}.`
+                            ? `Set a ${periodNoun} limit for ${category.name}.`
                             : `Set a limit for ${category.name} before adding transactions.`}
                     </p>
                 </CardHeader>
@@ -361,7 +384,9 @@ function BudgetForm({
                     className={cn("space-y-4", isModal && "px-6 pb-6 pt-0")}
                 >
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
-                        <FieldError message={form.formState.errors.limit?.message}>
+                        <FieldError
+                            message={form.formState.errors.limit?.message}
+                        >
                             <Label htmlFor="limit">Limit</Label>
                             <Input
                                 id="limit"
@@ -374,18 +399,7 @@ function BudgetForm({
                                 })}
                             />
                         </FieldError>
-                        <FieldError message={form.formState.errors.month?.message}>
-                            <Label htmlFor="month">Month</Label>
-                            <MonthPickerInput
-                                id="month"
-                                value={form.watch("month")}
-                                onChange={(value) =>
-                                    form.setValue("month", value, {
-                                        shouldValidate: true,
-                                    })
-                                }
-                            />
-                        </FieldError>
+                        <BudgetPeriodInput form={form} period={period} />
                     </div>
                     <div>
                         <Label htmlFor="reuse-budget">Reuse budget</Label>
@@ -416,7 +430,7 @@ function BudgetForm({
                                 />
                             </button>
                             <p className="text-sm leading-5 text-muted-foreground">
-                                Reuse this same budget for succeeding months.
+                                Reuse this same budget for succeeding periods.
                             </p>
                         </div>
                     </div>
@@ -455,12 +469,7 @@ function BudgetForm({
                             Cancel
                         </Button>
                     )}
-                    <div
-                        className={cn(
-                            "flex gap-2",
-                            isModal && "ml-auto",
-                        )}
-                    >
+                    <div className={cn("flex gap-2", isModal && "ml-auto")}>
                         {editing && onDelete && (
                             <Button
                                 className="border-red-300 bg-white text-destructive md:hover:bg-red-50"
@@ -471,12 +480,103 @@ function BudgetForm({
                                 Delete
                             </Button>
                         )}
-                        <Button type="submit">
-                            {submitLabel}
-                        </Button>
+                        <Button type="submit">{submitLabel}</Button>
                     </div>
                 </div>
             </form>
         </Card>
     );
+}
+
+function BudgetPeriodInput({
+    form,
+    period,
+}: {
+    form: ReturnType<typeof useForm<BudgetFormValues>>;
+    period: SelectedPeriod;
+}) {
+    function setBudgetPeriod(nextPeriod: SelectedPeriod) {
+        form.setValue("frequency", nextPeriod.frequency, {
+            shouldValidate: true,
+        });
+        form.setValue("month", getPeriodMonth(nextPeriod), {
+            shouldValidate: true,
+        });
+        form.setValue("periodStart", nextPeriod.startDate, {
+            shouldValidate: true,
+        });
+        form.setValue("periodEnd", nextPeriod.endDate, {
+            shouldValidate: true,
+        });
+    }
+
+    if (period.frequency === "weekly") {
+        return (
+            <FieldError message={form.formState.errors.periodStart?.message}>
+                <Label htmlFor="budget-week">Week</Label>
+                <WeekPickerInput
+                    value={form.watch("periodStart")}
+                    onChange={(date) => setBudgetPeriod(createWeeklyPeriod(date))}
+                />
+            </FieldError>
+        );
+    }
+
+    if (period.frequency === "custom") {
+        return (
+            <FieldError message={form.formState.errors.periodStart?.message}>
+                <Label htmlFor="budget-period">Period</Label>
+                <div className="grid grid-cols-2 gap-2">
+                    <DatePickerInput
+                        ariaLabel="Select budget period start"
+                        value={form.watch("periodStart")}
+                        onChange={(startDate) =>
+                            setBudgetPeriod(
+                                createCustomPeriod(
+                                    startDate,
+                                    form.watch("periodEnd"),
+                                ),
+                            )
+                        }
+                    />
+                    <DatePickerInput
+                        ariaLabel="Select budget period end"
+                        popoverAlign="right"
+                        value={form.watch("periodEnd")}
+                        onChange={(endDate) =>
+                            setBudgetPeriod(
+                                createCustomPeriod(
+                                    form.watch("periodStart"),
+                                    endDate,
+                                ),
+                            )
+                        }
+                    />
+                </div>
+            </FieldError>
+        );
+    }
+
+    return (
+        <FieldError message={form.formState.errors.month?.message}>
+            <Label htmlFor="month">Month</Label>
+            <MonthPickerInput
+                id="month"
+                value={form.watch("month")}
+                onChange={(value) => setBudgetPeriod(createMonthlyPeriod(value))}
+            />
+        </FieldError>
+    );
+}
+
+function getPeriodNoun(period: SelectedPeriod) {
+    if (period.frequency === "weekly") {
+        return "weekly";
+    }
+
+    if (period.frequency === "custom") {
+        return "period";
+    }
+
+    return "monthly";
 }

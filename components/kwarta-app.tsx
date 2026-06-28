@@ -130,9 +130,11 @@ import type {
 import { cn, formatCurrency, formatDate, percent } from "@/lib/utils";
 import {
   createMonthlyPeriod,
+  budgetMatchesPeriod,
   formatMonthLabel,
   formatPickerDate,
   formatPeriodLabel,
+  getBudgetPeriodFields,
   formatTime,
   formatTransactionGroupDate,
   getAverageExpenseDayCount,
@@ -497,9 +499,9 @@ export function KwartaApp() {
       ),
     [selectedPeriod.endDate, selectedPeriod.startDate, transactions],
   );
-  const monthBudgets = useMemo(
-    () => budgets.filter((budget) => budget.month === selectedMonth),
-    [budgets, selectedMonth],
+  const periodBudgets = useMemo(
+    () => budgets.filter((budget) => budgetMatchesPeriod(budget, selectedPeriod)),
+    [budgets, selectedPeriod],
   );
 
   const totals = useMemo(() => {
@@ -534,8 +536,9 @@ export function KwartaApp() {
     ? todayDate
     : selectedPeriod.startDate;
   const quickAddBudget = quickAddCategory
-    ? monthBudgets.find((budget) => budget.categoryId === quickAddCategory.id)
+    ? periodBudgets.find((budget) => budget.categoryId === quickAddCategory.id)
     : undefined;
+  const selectedBudgetPeriod = getBudgetPeriodFields(selectedPeriod);
 
   function closeQuickAdd() {
     setQuickAddCategory(null);
@@ -558,7 +561,7 @@ export function KwartaApp() {
       const existingBudget = current.find(
         (budget) =>
           budget.categoryId === quickAddCategory.id &&
-          budget.month === selectedMonth,
+          budgetMatchesPeriod(budget, selectedPeriod),
       );
 
       if (existingBudget) {
@@ -571,8 +574,8 @@ export function KwartaApp() {
         {
           id: crypto.randomUUID(),
           categoryId: quickAddCategory.id,
+          ...selectedBudgetPeriod,
           limit,
-          month: selectedMonth,
         },
         ...current,
       ];
@@ -588,8 +591,8 @@ export function KwartaApp() {
     setBudgets((current) =>
       upsertReusableBudgets(current, {
         categoryId: quickAddCategory.id,
+        ...selectedBudgetPeriod,
         limit,
-        month: selectedMonth,
         reuseBudget: true,
       }),
     );
@@ -870,7 +873,7 @@ export function KwartaApp() {
       <div className="mx-auto w-full max-w-7xl px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 md:px-5 md:py-7">
         {view === "dashboard" && (
           <HomeView
-            budgets={monthBudgets}
+            budgets={periodBudgets}
             budgetsEnabled={budgetsEnabled}
             expenseCategories={expenseCategories}
             homeItemStyle={homeItemStyle}
@@ -940,11 +943,12 @@ export function KwartaApp() {
         {view === "budgets" && (
           <BudgetsView
             allBudgets={budgets}
-            budgets={monthBudgets}
+            budgets={periodBudgets}
             budgetsEnabled={budgetsEnabled}
             categories={expenseCategories}
             editingId={editingBudgetId}
             month={selectedMonth}
+            period={selectedPeriod}
             periodLabel={selectedPeriodLabel}
             onCancelEdit={() => setEditingBudgetId(null)}
             onDelete={(id) =>
@@ -962,7 +966,9 @@ export function KwartaApp() {
                 return;
               }
 
-              setBudgets((current) => upsertReusableBudgets(current, values));
+              setBudgets((current) =>
+                upsertReusableBudgets(current, values),
+              );
             }}
             transactions={periodTransactions}
           />
@@ -1099,7 +1105,7 @@ export function KwartaApp() {
             </section>
 
             <DashboardView
-              budgets={monthBudgets}
+              budgets={periodBudgets}
               budgetsEnabled={budgetsEnabled}
               categories={expenseCategories}
               cashflowData={cashflowData}
