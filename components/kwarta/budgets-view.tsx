@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { budgetSchema, type BudgetFormValues } from "@/lib/schema";
 import type { Budget, Category, Transaction } from "@/lib/types";
@@ -10,9 +10,11 @@ import {
     createCustomPeriod,
     createMonthlyPeriod,
     createWeeklyPeriod,
+    createBudgetCyclePeriod,
     formatMonthLabel,
     getAverageExpenseDayCount,
     getPeriodMonth,
+    getPeriodNoun,
     handleDecimalInput,
     parseDecimalInput,
     type SelectedPeriod,
@@ -25,6 +27,7 @@ import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
 import {
     CategoryIconBadge,
     DatePickerInput,
+    BudgetCyclePickerInput,
     EditModal,
     FieldError,
     ModalBackButton,
@@ -93,7 +96,7 @@ export function BudgetsView({
             <div className="space-y-4 md:space-y-5">
                 <PageHeader
                     title="Budgets"
-                    description="Set monthly limits and track category spending."
+                    description={`Set ${getPeriodNoun(period)} limits and track category spending.`}
                 />
                 <MonthlyBudgetSummary
                     budgets={budgets}
@@ -115,6 +118,7 @@ export function BudgetsView({
 
                         setAddingBudgetCategory(category);
                     }}
+                    periodNoun={getPeriodNoun(period)}
                     presentation="list"
                     transactions={transactions.filter(
                         (transaction) => transaction.type === "expense",
@@ -312,25 +316,37 @@ function BudgetForm({
     onDelete?: () => void;
     onSubmit: (values: BudgetFormValues) => void;
 }) {
+    const formDefaults = useMemo<BudgetFormValues>(
+        () => ({
+            categoryId: category.id,
+            frequency: editing?.frequency ?? period.frequency,
+            limit: editing?.limit ?? 0,
+            month: editing?.month ?? month,
+            periodEnd: editing?.periodEnd ?? period.endDate,
+            periodStart: editing?.periodStart ?? period.startDate,
+            reuseBudget: true,
+        }),
+        [
+            category.id,
+            editing?.frequency,
+            editing?.limit,
+            editing?.month,
+            editing?.periodEnd,
+            editing?.periodStart,
+            month,
+            period.endDate,
+            period.frequency,
+            period.startDate,
+        ],
+    );
     const form = useForm<BudgetFormValues>({
         resolver: zodResolver(budgetSchema),
-        values: {
-            ...(editing ?? {
-                categoryId: category.id,
-                frequency: period.frequency,
-                limit: 0,
-                month,
-                periodEnd: period.endDate,
-                periodStart: period.startDate,
-            }),
-            categoryId: category.id,
-            frequency: period.frequency,
-            month,
-            periodEnd: period.endDate,
-            periodStart: period.startDate,
-            reuseBudget: true,
-        },
+        defaultValues: formDefaults,
     });
+
+    useEffect(() => {
+        form.reset(formDefaults);
+    }, [form, formDefaults]);
 
     const isEditing = Boolean(editing);
     const isModal = modal || isEditing;
@@ -399,7 +415,7 @@ function BudgetForm({
                                 })}
                             />
                         </FieldError>
-                        <BudgetPeriodInput form={form} period={period} />
+                        <BudgetPeriodInput form={form} />
                     </div>
                     <div>
                         <Label htmlFor="reuse-budget">Reuse budget</Label>
@@ -490,11 +506,11 @@ function BudgetForm({
 
 function BudgetPeriodInput({
     form,
-    period,
 }: {
     form: ReturnType<typeof useForm<BudgetFormValues>>;
-    period: SelectedPeriod;
 }) {
+    const frequency = form.watch("frequency");
+
     function setBudgetPeriod(nextPeriod: SelectedPeriod) {
         form.setValue("frequency", nextPeriod.frequency, {
             shouldValidate: true,
@@ -510,7 +526,7 @@ function BudgetPeriodInput({
         });
     }
 
-    if (period.frequency === "weekly") {
+    if (frequency === "weekly") {
         return (
             <FieldError message={form.formState.errors.periodStart?.message}>
                 <Label htmlFor="budget-week">Week</Label>
@@ -522,7 +538,21 @@ function BudgetPeriodInput({
         );
     }
 
-    if (period.frequency === "custom") {
+    if (frequency === "cycle") {
+        return (
+            <FieldError message={form.formState.errors.periodStart?.message}>
+                <Label htmlFor="budget-cycle">Cycle</Label>
+                <BudgetCyclePickerInput
+                    value={form.watch("periodStart")}
+                    onChange={(date) =>
+                        setBudgetPeriod(createBudgetCyclePeriod(date))
+                    }
+                />
+            </FieldError>
+        );
+    }
+
+    if (frequency === "custom") {
         return (
             <FieldError message={form.formState.errors.periodStart?.message}>
                 <Label htmlFor="budget-period">Period</Label>
@@ -567,16 +597,4 @@ function BudgetPeriodInput({
             />
         </FieldError>
     );
-}
-
-function getPeriodNoun(period: SelectedPeriod) {
-    if (period.frequency === "weekly") {
-        return "weekly";
-    }
-
-    if (period.frequency === "custom") {
-        return "period";
-    }
-
-    return "monthly";
 }

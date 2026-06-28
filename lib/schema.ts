@@ -69,7 +69,9 @@ export const categorySchema = z.object({
 
 export const budgetSchema = z.object({
     categoryId: z.string().min(1, "Choose a category."),
-    frequency: z.enum(["monthly", "weekly", "custom"]).default("monthly"),
+    frequency: z
+        .enum(["monthly", "weekly", "cycle", "custom"])
+        .default("monthly"),
     limit: z.coerce.number().positive("Enter a budget greater than 0."),
     month: z.string().min(1, "Choose a month."),
     periodEnd: z.string().min(1, "Choose a period."),

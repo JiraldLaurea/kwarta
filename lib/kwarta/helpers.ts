@@ -323,7 +323,7 @@ export function isInMonth(dateValue: string, monthValue: string) {
     return dateValue.startsWith(monthValue);
 }
 
-export type PeriodFrequency = "monthly" | "weekly" | "custom";
+export type PeriodFrequency = "monthly" | "weekly" | "cycle" | "custom";
 
 export type SelectedPeriod = {
     frequency: PeriodFrequency;
@@ -364,10 +364,42 @@ export function getWeekRange(dateValue: string) {
     };
 }
 
+export function getBudgetCycleRange(dateValue: string) {
+    const date = parseDateValue(dateValue);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const day = date.getDate();
+    let start: Date;
+    let end: Date;
+
+    if (day < 5) {
+        start = new Date(year, month - 1, 20);
+        end = new Date(year, month, 4);
+    } else if (day < 20) {
+        start = new Date(year, month, 5);
+        end = new Date(year, month, 19);
+    } else {
+        start = new Date(year, month, 20);
+        end = new Date(year, month + 1, 4);
+    }
+
+    return {
+        startDate: toDateInputValue(start),
+        endDate: toDateInputValue(end),
+    };
+}
+
 export function createMonthlyPeriod(monthValue: string): SelectedPeriod {
     return {
         frequency: "monthly",
         ...getMonthRange(monthValue),
+    };
+}
+
+export function createBudgetCyclePeriod(dateValue: string): SelectedPeriod {
+    return {
+        frequency: "cycle",
+        ...getBudgetCycleRange(dateValue),
     };
 }
 
@@ -448,6 +480,22 @@ export function formatPeriodLabel(period: SelectedPeriod) {
     return `${startLabel} - ${endLabel}`;
 }
 
+export function getPeriodNoun(period: SelectedPeriod) {
+    if (period.frequency === "weekly") {
+        return "weekly";
+    }
+
+    if (period.frequency === "cycle") {
+        return "budget cycle";
+    }
+
+    if (period.frequency === "custom") {
+        return "period";
+    }
+
+    return "monthly";
+}
+
 export function getDefaultTransactionDate(monthValue: string) {
     const today = toDateInputValue(new Date());
 
@@ -517,6 +565,43 @@ function getReuseBudgetPeriods(values: BudgetFormValues) {
                 month: toMonthInputValue(weekStart),
                 periodEnd: toDateInputValue(weekEnd),
                 periodStart: toDateInputValue(weekStart),
+            };
+        });
+    }
+
+    if (values.frequency === "cycle") {
+        const start = parseDateValue(values.periodStart);
+
+        return Array.from({ length: REUSED_BUDGET_MONTH_COUNT }, (_, index) => {
+            const nextStart = new Date(start);
+
+            if (start.getDate() === 5) {
+                const cycleIndex = index;
+                const monthOffset = Math.floor(cycleIndex / 2);
+                const day = cycleIndex % 2 === 0 ? 5 : 20;
+                nextStart.setFullYear(
+                    start.getFullYear(),
+                    start.getMonth() + monthOffset,
+                    day,
+                );
+            } else {
+                const cycleIndex = index + 1;
+                const monthOffset = Math.floor(cycleIndex / 2);
+                const day = cycleIndex % 2 === 1 ? 20 : 5;
+                nextStart.setFullYear(
+                    start.getFullYear(),
+                    start.getMonth() + monthOffset,
+                    day,
+                );
+            }
+
+            const cycle = getBudgetCycleRange(toDateInputValue(nextStart));
+
+            return {
+                frequency: "cycle" as const,
+                month: toMonthInputValue(parseDateValue(cycle.startDate)),
+                periodEnd: cycle.endDate,
+                periodStart: cycle.startDate,
             };
         });
     }

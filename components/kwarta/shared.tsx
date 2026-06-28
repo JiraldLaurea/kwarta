@@ -43,9 +43,11 @@ import { cn } from "@/lib/utils";
 import {
     formatPickerDate,
     formatPeriodLabel,
+    createBudgetCyclePeriod,
     createCustomPeriod,
     createMonthlyPeriod,
     createWeeklyPeriod,
+    getBudgetCycleRange,
     getCalendarDays,
     getPeriodMonth,
     getWeekRange,
@@ -497,6 +499,11 @@ export function PeriodSelector({
             return;
         }
 
+        if (frequency === "cycle") {
+            onChange(createBudgetCyclePeriod(toDateInputValue(new Date())));
+            return;
+        }
+
         onChange(createCustomPeriod(value.startDate, value.endDate));
     }
 
@@ -509,6 +516,7 @@ export function PeriodSelector({
                     options={[
                         { label: "Monthly", value: "monthly" },
                         { label: "Weekly", value: "weekly" },
+                        { label: "Cycle", value: "cycle" },
                         { label: "Custom", value: "custom" },
                     ]}
                     value={value.frequency}
@@ -531,6 +539,16 @@ export function PeriodSelector({
                     <WeekPickerInput
                         value={value.startDate}
                         onChange={(date) => onChange(createWeeklyPeriod(date))}
+                    />
+                </div>
+            )}
+            {value.frequency === "cycle" && (
+                <div className="min-w-0 flex-1 sm:w-64 sm:flex-none">
+                    <BudgetCyclePickerInput
+                        value={value.startDate}
+                        onChange={(date) =>
+                            onChange(createBudgetCyclePeriod(date))
+                        }
                     />
                 </div>
             )}
@@ -558,6 +576,187 @@ export function PeriodSelector({
                 </div>
             )}
             <span className="sr-only">{formatPeriodLabel(value)}</span>
+        </div>
+    );
+}
+
+export function BudgetCyclePickerInput({
+    onChange,
+    value,
+}: {
+    onChange: (value: string) => void;
+    value: string;
+}) {
+    const selectedCycle = getBudgetCycleRange(value);
+    const selectedStart = parseDateValue(selectedCycle.startDate);
+    const selectedStartYear = selectedStart.getFullYear();
+    const selectedStartMonth = selectedStart.getMonth();
+    const [isOpen, setIsOpen] = useState(false);
+    const [popoverSide, setPopoverSide] = useState<"above" | "below">("below");
+    const [visibleMonth, setVisibleMonth] = useState(
+        new Date(selectedStartYear, selectedStartMonth, 1),
+    );
+    const pickerRef = useRef<HTMLDivElement>(null);
+    const selectedLabel = formatPeriodLabel({
+        frequency: "cycle",
+        ...selectedCycle,
+    });
+    const firstCycle = getBudgetCycleRange(
+        toDateInputValue(
+            new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 5),
+        ),
+    );
+    const secondCycle = getBudgetCycleRange(
+        toDateInputValue(
+            new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 20),
+        ),
+    );
+
+    useEffect(() => {
+        setVisibleMonth(new Date(selectedStartYear, selectedStartMonth, 1));
+    }, [selectedStartMonth, selectedStartYear]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        function handlePointerDown(event: PointerEvent) {
+            if (
+                pickerRef.current &&
+                !pickerRef.current.contains(event.target as Node)
+            ) {
+                setIsOpen(false);
+            }
+        }
+
+        document.addEventListener("pointerdown", handlePointerDown);
+
+        return () => {
+            document.removeEventListener("pointerdown", handlePointerDown);
+        };
+    }, [isOpen]);
+
+    function changeMonth(offset: number) {
+        setVisibleMonth(
+            (current) =>
+                new Date(current.getFullYear(), current.getMonth() + offset, 1),
+        );
+    }
+
+    function togglePicker() {
+        if (!isOpen) {
+            setPopoverSide(getPopoverSide(pickerRef.current, 260));
+        }
+
+        setIsOpen((open) => !open);
+    }
+
+    function selectCycle(cycle: SelectedPeriod) {
+        onChange(cycle.startDate);
+        setIsOpen(false);
+    }
+
+    function selectThisCycle() {
+        onChange(toDateInputValue(new Date()));
+        setIsOpen(false);
+    }
+
+    return (
+        <div className="relative" ref={pickerRef}>
+            <Button
+                aria-expanded={isOpen}
+                aria-haspopup="dialog"
+                aria-label="Select budget cycle"
+                className={cn(
+                    "w-full justify-start px-3 text-left font-normal",
+                    isOpen &&
+                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
+                )}
+                type="button"
+                variant="secondary"
+                onClick={togglePicker}
+            >
+                <Calendar className="h-4 w-4" aria-hidden />
+                {selectedLabel}
+            </Button>
+            {isOpen && (
+                <div
+                    className={cn(
+                        "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-full sm:min-w-[344px]",
+                        popoverSide === "above"
+                            ? "bottom-full mb-2"
+                            : "top-full mt-2",
+                    )}
+                >
+                    <div className="mb-4 flex items-center justify-between">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => changeMonth(-1)}
+                        >
+                            <ChevronLeft className="h-4 w-4" aria-hidden />
+                            <span className="sr-only">Previous month</span>
+                        </Button>
+                        <p className="text-base font-medium leading-6">
+                            {visibleMonth.toLocaleDateString("en-US", {
+                                month: "long",
+                                year: "numeric",
+                            })}
+                        </p>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => changeMonth(1)}
+                        >
+                            <ChevronRight className="h-4 w-4" aria-hidden />
+                            <span className="sr-only">Next month</span>
+                        </Button>
+                    </div>
+                    <div className="grid gap-2">
+                        {[firstCycle, secondCycle].map((cycle) => {
+                            const isSelected =
+                                cycle.startDate === selectedCycle.startDate &&
+                                cycle.endDate === selectedCycle.endDate;
+
+                            return (
+                                <button
+                                    className={cn(
+                                        "flex h-12 items-center justify-between rounded-md border border-border px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[#F2F2F2]",
+                                        isSelected &&
+                                            "border-[#2563EB] bg-[#2563EB] text-white md:hover:bg-[#2563EB]",
+                                    )}
+                                    key={cycle.startDate}
+                                    type="button"
+                                    onClick={() =>
+                                        selectCycle({
+                                            frequency: "cycle",
+                                            ...cycle,
+                                        })
+                                    }
+                                >
+                                    {formatPeriodLabel({
+                                        frequency: "cycle",
+                                        ...cycle,
+                                    })}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="mt-4 border-t border-border pt-3">
+                        <Button
+                            className="w-full justify-center"
+                            type="button"
+                            variant="secondary"
+                            onClick={selectThisCycle}
+                        >
+                            This cycle
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

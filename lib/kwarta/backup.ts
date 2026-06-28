@@ -42,7 +42,7 @@ const budgetBackupRecordSchema = z
         budget: z.unknown().optional(),
         value: z.unknown().optional(),
         date: z.string().optional(),
-        frequency: z.enum(["monthly", "weekly", "custom"]).optional(),
+        frequency: z.enum(["monthly", "weekly", "cycle", "custom"]).optional(),
         month: z.string().optional(),
         period: z.string().optional(),
         periodEnd: z.string().optional(),

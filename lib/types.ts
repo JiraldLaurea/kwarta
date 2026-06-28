@@ -1,5 +1,5 @@
 export type TransactionType = "income" | "expense";
-export type BudgetFrequency = "monthly" | "weekly" | "custom";
+export type BudgetFrequency = "monthly" | "weekly" | "cycle" | "custom";
 
 export type AccountType = "bank" | "ewallet" | "cash";
 
