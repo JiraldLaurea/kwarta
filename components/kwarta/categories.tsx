@@ -231,7 +231,7 @@ export function CategoryForm({
                     className={cn(
                       "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition-colors md:hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       isSelected &&
-                        "border-ring bg-accent-muted text-accent-muted-foreground ring-2 ring-ring/20",
+                        "border-ring text-foreground ring-2 ring-ring/20",
                     )}
                     type="button"
                     onClick={() =>

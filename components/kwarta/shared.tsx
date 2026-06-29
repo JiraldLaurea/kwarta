@@ -4,36 +4,40 @@ import { type User } from "@supabase/supabase-js";
 import { disableBodyScroll, enableBodyScroll } from "body-scroll-lock";
 import { motion, useReducedMotion } from "framer-motion";
 import {
-    BadgeDollarSign,
-    Banknote,
-    BriefcaseBusiness,
     Calendar,
-    Car,
     ChevronLeft,
     ChevronRight,
     CircleDollarSign,
-    Clapperboard,
-    GraduationCap,
-    HeartPulse,
-    Home,
-    Laptop,
-    Landmark,
     Minus,
-    PiggyBank,
     Pencil,
     Plus,
     Receipt,
-    Repeat,
-    ShoppingBag,
-    Smartphone,
-    Utensils,
-    Wallet,
-    Zap,
-    type LucideIcon,
 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { IconType } from "react-icons";
+import {
+    FaBagShopping,
+    FaBolt,
+    FaBriefcase,
+    FaCarSide,
+    FaClapperboard,
+    FaGraduationCap,
+    FaHeartPulse,
+    FaHouse,
+    FaLaptop,
+    FaMobileScreenButton,
+    FaMoneyBillWave,
+    FaPiggyBank,
+    FaReceipt,
+    FaWallet,
+} from "react-icons/fa6";
+import {
+    IoBusinessOutline,
+    IoRestaurantOutline,
+    IoRepeatOutline,
+} from "react-icons/io5";
 import { RemoveScroll } from "react-remove-scroll";
 import type { Category, TransactionType } from "@/lib/types";
 import {
@@ -77,25 +81,25 @@ export const colorChoices = [
 ];
 
 export const categoryIconChoices = [
-    { value: "home", label: "Home", icon: Home },
-    { value: "utensils", label: "Food", icon: Utensils },
-    { value: "car", label: "Transport", icon: Car },
-    { value: "zap", label: "Utilities", icon: Zap },
-    { value: "heart-pulse", label: "Health", icon: HeartPulse },
-    { value: "shopping-bag", label: "Shopping", icon: ShoppingBag },
-    { value: "repeat", label: "Subscriptions", icon: Repeat },
-    { value: "briefcase", label: "Work", icon: BriefcaseBusiness },
-    { value: "laptop", label: "Freelance", icon: Laptop },
-    { value: "banknote", label: "Cash", icon: Banknote },
-    { value: "landmark", label: "Bank", icon: Landmark },
-    { value: "piggy-bank", label: "Savings", icon: PiggyBank },
-    { value: "receipt", label: "Bills", icon: Receipt },
-    { value: "smartphone", label: "Phone", icon: Smartphone },
-    { value: "graduation-cap", label: "Education", icon: GraduationCap },
-    { value: "clapperboard", label: "Entertainment", icon: Clapperboard },
-    { value: "badge-dollar-sign", label: "Income", icon: BadgeDollarSign },
-    { value: "wallet", label: "Wallet", icon: Wallet },
-] satisfies Array<{ value: string; label: string; icon: LucideIcon }>;
+    { value: "home", label: "Home", icon: FaHouse },
+    { value: "utensils", label: "Food", icon: IoRestaurantOutline },
+    { value: "car", label: "Transport", icon: FaCarSide },
+    { value: "zap", label: "Utilities", icon: FaBolt },
+    { value: "heart-pulse", label: "Health", icon: FaHeartPulse },
+    { value: "shopping-bag", label: "Shopping", icon: FaBagShopping },
+    { value: "repeat", label: "Subscriptions", icon: IoRepeatOutline },
+    { value: "briefcase", label: "Work", icon: FaBriefcase },
+    { value: "laptop", label: "Freelance", icon: FaLaptop },
+    { value: "banknote", label: "Cash", icon: FaMoneyBillWave },
+    { value: "landmark", label: "Bank", icon: IoBusinessOutline },
+    { value: "piggy-bank", label: "Savings", icon: FaPiggyBank },
+    { value: "receipt", label: "Bills", icon: FaReceipt },
+    { value: "smartphone", label: "Phone", icon: FaMobileScreenButton },
+    { value: "graduation-cap", label: "Education", icon: FaGraduationCap },
+    { value: "clapperboard", label: "Entertainment", icon: FaClapperboard },
+    { value: "badge-dollar-sign", label: "Income", icon: FaMoneyBillWave },
+    { value: "wallet", label: "Wallet", icon: FaWallet },
+] satisfies Array<{ value: string; label: string; icon: IconType }>;
 
 export function PageHeader({
     actions,
