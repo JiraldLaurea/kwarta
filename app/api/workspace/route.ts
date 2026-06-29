@@ -198,6 +198,9 @@ export async function PUT(request: Request) {
           color: account.color,
           icon: account.icon,
           openingBalance: account.openingBalance,
+          provider: account.provider ?? null,
+          externalId: account.externalId ?? null,
+          syncStatus: account.syncStatus,
           userId
         }))
       });
