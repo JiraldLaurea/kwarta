@@ -2110,7 +2110,7 @@ function AutomaticBackupSummary({
         : null;
 
     return (
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-neutral-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-neutral-50 p-3">
             <div className="min-w-0">
                 <p className="text-sm font-medium leading-5">
                     Latest automatic backup
@@ -2119,9 +2119,9 @@ function AutomaticBackupSummary({
                     {createdAt ? `Created ${createdAt}. ${details}.` : details}
                 </p>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+            <div className="grid w-full grid-cols-2 gap-2">
                 <Button
-                    className="w-full sm:w-auto"
+                    className="w-full justify-center"
                     disabled={!backup}
                     type="button"
                     variant="secondary"
@@ -2131,7 +2131,7 @@ function AutomaticBackupSummary({
                     Restore
                 </Button>
                 <Button
-                    className="w-full sm:w-auto"
+                    className="w-full justify-center"
                     disabled={!backup}
                     type="button"
                     variant="secondary"
@@ -2163,7 +2163,7 @@ function BackupActionRow({
     onImportFile: (file: File) => void;
 }) {
     return (
-        <div className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
             <div>
                 <p className="text-sm font-medium leading-5">{label}</p>
                 <p className="mt-1 text-sm leading-5 text-muted-foreground">

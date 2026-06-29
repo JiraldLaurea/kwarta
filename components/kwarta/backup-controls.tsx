@@ -18,9 +18,9 @@ export function BackupActions({
     onImportFile: (file: File) => void;
 }) {
     return (
-        <div className="relative grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+        <div className="relative grid w-full grid-cols-2 gap-2">
             <Button
-                className="w-full justify-center sm:w-auto"
+                className="w-full justify-center"
                 type="button"
                 variant="secondary"
                 onClick={onImportClick}
@@ -29,7 +29,7 @@ export function BackupActions({
                 Import
             </Button>
             <Button
-                className="w-full justify-center sm:w-auto"
+                className="w-full justify-center"
                 type="button"
                 variant="secondary"
                 onClick={onExport}
