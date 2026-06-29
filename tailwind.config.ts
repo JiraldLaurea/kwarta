@@ -32,7 +32,9 @@ const config: Config = {
         },
         accent: {
           DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))"
+          foreground: "hsl(var(--accent-foreground))",
+          muted: "hsl(var(--accent-muted))",
+          "muted-foreground": "hsl(var(--accent-muted-foreground))"
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",

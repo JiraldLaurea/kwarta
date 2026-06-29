@@ -902,7 +902,7 @@ function CategoryCardActionMenu({
         aria-haspopup="menu"
         className={cn(
           "h-8 w-8 rounded-lg border border-transparent md:hover:bg-neutral-100",
-          isOpen && "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
+          isOpen && "border-ring ring-2 ring-ring/20",
         )}
         type="button"
         variant="ghost"
@@ -1033,7 +1033,7 @@ export function QuickTransactionModal({
       ? {
           className:
             pageFocusTarget === target
-              ? "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]"
+              ? "border-ring ring-2 ring-ring/20"
               : undefined,
           onBlur: () => setPageFocusTarget(null),
           onFocus: () => {
@@ -1147,8 +1147,8 @@ export function QuickTransactionModal({
                 <button
                   aria-checked={reuseBudget}
                   className={cn(
-                    "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D99FF]/30",
-                    reuseBudget ? "bg-[#007AFF]" : "bg-neutral-300",
+                    "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                    reuseBudget ? "bg-accent" : "bg-neutral-300",
                   )}
                   id="quick-reuse-budget"
                   role="switch"

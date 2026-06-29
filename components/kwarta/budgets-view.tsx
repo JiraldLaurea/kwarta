@@ -423,9 +423,9 @@ function BudgetForm({
                             <button
                                 aria-checked={reuseBudget}
                                 className={cn(
-                                    "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D99FF]/30",
+                                    "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                     reuseBudget
-                                        ? "bg-[#007AFF]"
+                                        ? "bg-accent"
                                         : "bg-neutral-300",
                                 )}
                                 id="reuse-budget"

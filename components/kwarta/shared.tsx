@@ -207,8 +207,7 @@ export function DatePickerInput({
                 aria-label={ariaLabel}
                 className={cn(
                     "w-full justify-start px-3 text-left font-normal",
-                    isOpen &&
-                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
+                    isOpen && "border-ring ring-2 ring-ring/20",
                 )}
                 type="button"
                 variant="secondary"
@@ -277,7 +276,7 @@ export function DatePickerInput({
                                         !isCurrentMonth &&
                                             "text-muted-foreground/60",
                                         isSelected &&
-                                            "bg-[#2563EB] text-white md:hover:bg-[#2563EB]",
+                                            "bg-accent text-accent-foreground md:hover:bg-accent",
                                     )}
                                     key={dateValue}
                                     type="button"
@@ -377,9 +376,8 @@ export function MonthPickerInput({
                 className={cn(
                     "w-full justify-start px-3 text-left font-normal",
                     compact &&
-                        "rounded-full border-0 bg-[#E8F0FE] text-[#0B57D0] shadow-none md:hover:bg-[#DDEAFF]",
-                    isOpen &&
-                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
+                        "rounded-full border-0 bg-accent-muted text-accent-muted-foreground shadow-none md:hover:bg-accent-muted",
+                    isOpen && "border-ring ring-2 ring-ring/20",
                 )}
                 id={id}
                 type="button"
@@ -448,7 +446,7 @@ export function MonthPickerInput({
                                     className={cn(
                                         "h-10 rounded-md text-sm transition-colors md:hover:bg-[#F2F2F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                         isSelected &&
-                                            "bg-[#2563EB] text-white md:hover:bg-[#2563EB]",
+                                            "bg-accent text-accent-foreground md:hover:bg-accent",
                                     )}
                                     key={monthDate.toISOString()}
                                     type="button"
@@ -719,8 +717,7 @@ export function BudgetCyclePickerInput({
                 aria-label="Select budget cycle"
                 className={cn(
                     "w-full justify-start px-3 text-left font-normal",
-                    isOpen &&
-                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
+                    isOpen && "border-ring ring-2 ring-ring/20",
                 )}
                 type="button"
                 variant="secondary"
@@ -772,7 +769,7 @@ export function BudgetCyclePickerInput({
                                 <label className="grid gap-2 text-sm font-medium">
                                     1st cycle
                                     <input
-                                        className="h-11 rounded-md border border-border px-3 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20"
+                                        className="h-11 rounded-md border border-border px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
                                         inputMode="numeric"
                                         max={27}
                                         min={1}
@@ -788,7 +785,7 @@ export function BudgetCyclePickerInput({
                                 <label className="grid gap-2 text-sm font-medium">
                                     2nd cycle
                                     <input
-                                        className="h-11 rounded-md border border-border px-3 text-sm outline-none focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20"
+                                        className="h-11 rounded-md border border-border px-3 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
                                         inputMode="numeric"
                                         max={28}
                                         min={2}
@@ -843,7 +840,7 @@ export function BudgetCyclePickerInput({
                                         className={cn(
                                             "flex h-12 items-center justify-between rounded-md border border-border px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[#F2F2F2]",
                                             isSelected &&
-                                                "border-[#2563EB] bg-[#2563EB] text-white md:hover:bg-[#2563EB]",
+                                                "border-accent bg-accent text-accent-foreground md:hover:bg-accent",
                                         )}
                                         key={cycle.startDate}
                                         type="button"
@@ -966,8 +963,7 @@ export function WeekPickerInput({
                 aria-label="Select week"
                 className={cn(
                     "w-full justify-start px-3 text-left font-normal",
-                    isOpen &&
-                        "border-[#2563EB] shadow-[0_0_0_3px_rgba(37,99,235,0.18)]",
+                    isOpen && "border-ring ring-2 ring-ring/20",
                 )}
                 type="button"
                 variant="secondary"
@@ -1033,6 +1029,8 @@ export function WeekPickerInput({
                                 dateValue === selectedWeek.startDate;
                             const isWeekEnd =
                                 dateValue === selectedWeek.endDate;
+                            const isWeekMiddle =
+                                isInWeek && !isWeekStart && !isWeekEnd;
 
                             return (
                                 <button
@@ -1042,12 +1040,21 @@ export function WeekPickerInput({
                                             "text-muted-foreground/50",
                                         isCurrentMonth &&
                                             "md:hover:bg-[#F2F2F2]",
-                                        isInWeek &&
-                                            "bg-[#E8F0FE] text-[#1D4ED8] md:hover:bg-[#DDEAFF]",
+                                        isWeekMiddle &&
+                                            "md:hover:bg-accent-muted",
                                         (isWeekStart || isWeekEnd) &&
-                                            "bg-[#2563EB] font-medium text-white md:hover:bg-[#2563EB]",
+                                            "bg-accent font-medium text-accent-foreground md:hover:bg-accent",
                                     )}
                                     key={dateValue}
+                                    style={
+                                        isWeekMiddle
+                                            ? {
+                                                  backgroundColor:
+                                                      "hsl(var(--accent-muted))",
+                                                  color: "hsl(var(--accent-muted-foreground))",
+                                              }
+                                            : undefined
+                                    }
                                     type="button"
                                     onClick={() => {
                                         onChange(dateValue);

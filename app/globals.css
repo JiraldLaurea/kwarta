@@ -13,14 +13,40 @@
   --secondary-foreground: 0 0% 9%;
   --muted: 0 0% 96%;
   --muted-foreground: 0 0% 32%;
-  --accent: 221 83% 53%;
+  --accent: 0 0% 9%;
   --accent-foreground: 0 0% 100%;
+  --accent-muted: 0 0% 90%;
+  --accent-muted-foreground: 0 0% 15%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
   --border: 220 13% 91%;
   --input: 220 13% 91%;
   --ring: 221 83% 53%;
   --radius: 8px;
+}
+
+:root[data-accent="blue"] {
+  --primary: 221 83% 53%;
+  --accent: 221 83% 53%;
+  --accent-muted: 219 83% 92%;
+  --accent-muted-foreground: 224 76% 48%;
+  --ring: 221 83% 53%;
+}
+
+:root[data-accent="green"] {
+  --primary: 142 71% 35%;
+  --accent: 142 71% 35%;
+  --accent-muted: 138 66% 91%;
+  --accent-muted-foreground: 142 72% 29%;
+  --ring: 142 71% 35%;
+}
+
+:root[data-accent="purple"] {
+  --primary: 263 70% 50%;
+  --accent: 263 70% 50%;
+  --accent-muted: 270 88% 93%;
+  --accent-muted-foreground: 263 69% 42%;
+  --ring: 263 70% 50%;
 }
 
 * {

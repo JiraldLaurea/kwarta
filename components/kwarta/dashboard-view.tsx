@@ -144,7 +144,7 @@ function CashflowCard({
                                 />
                                 <Bar
                                     dataKey="expense"
-                                    fill="#2563EB"
+                                    fill="hsl(var(--accent))"
                                     radius={[4, 4, 0, 0]}
                                 />
                             </BarChart>
