@@ -57,7 +57,7 @@ import {
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { useForm } from "react-hook-form";
 import type { IconType } from "react-icons";
@@ -236,6 +236,18 @@ async function persistWorkspace(workspace: StoredWorkspace, userId: string) {
     }
 }
 
+async function persistAccount(account: Account, userId: string) {
+    const response = await fetch("/api/workspace", {
+        body: JSON.stringify({ ...account, userId }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
+    });
+
+    if (!response.ok) {
+        throw new Error("Unable to save account.");
+    }
+}
+
 function getCategorySubcategoriesStorageKey(userId: string) {
     return `kwarta:category-subcategories:${userId}`;
 }
@@ -397,6 +409,7 @@ export function KwartaApp() {
     const backupImportInputRef = useRef<HTMLInputElement>(null);
     const quickAddPageRef = useRef<HTMLElement>(null);
     const quickAddFocusBridgeRef = useRef<HTMLInputElement>(null);
+    const workspaceSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
     const [backupImportError, setBackupImportError] = useState<string | null>(
         null,
     );
@@ -408,6 +421,17 @@ export function KwartaApp() {
     const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
     const userId = user?.id ?? null;
+    const enqueueWorkspaceSave = useCallback(
+        (save: () => Promise<void>) => {
+            const queuedSave = workspaceSaveQueueRef.current
+                .catch(() => undefined)
+                .then(save);
+
+            workspaceSaveQueueRef.current = queuedSave;
+            return queuedSave;
+        },
+        [],
+    );
 
     useEffect(() => {
         const query = window.matchMedia("(min-width: 768px)");
@@ -635,7 +659,9 @@ export function KwartaApp() {
         });
 
         const timeout = window.setTimeout(() => {
-            persistWorkspace(workspace, userId).catch(() => {
+            enqueueWorkspaceSave(() =>
+                persistWorkspace(workspace, userId),
+            ).catch(() => {
                 // The UI remains usable; the next successful change will retry persistence.
             });
         }, 350);
@@ -651,6 +677,7 @@ export function KwartaApp() {
         transfers,
         userId,
         workspaceReady,
+        enqueueWorkspaceSave,
     ]);
 
     const selectedMonth = getPeriodMonth(selectedPeriod);
@@ -1293,16 +1320,37 @@ export function KwartaApp() {
                             onEditTransfer={(transfer) =>
                                 setEditingTransferId(transfer.id)
                             }
-                            onSubmit={(values) => {
-                                if (editingAccountId) {
+                            onSubmit={(values, accountId) => {
+                                if (accountId) {
+                                    const updatedAccount = {
+                                        ...accounts.find(
+                                            (account) =>
+                                                account.id === accountId,
+                                        ),
+                                        ...values,
+                                        id: accountId,
+                                    } as Account;
+
                                     setAccounts((current) =>
                                         current.map((account) =>
-                                            account.id === editingAccountId
-                                                ? { ...account, ...values }
+                                            account.id === accountId
+                                                ? updatedAccount
                                                 : account,
                                         ),
                                     );
                                     setEditingAccountId(null);
+
+                                    if (userId) {
+                                        enqueueWorkspaceSave(() =>
+                                            persistAccount(
+                                                updatedAccount,
+                                                userId,
+                                            ),
+                                        ).catch(() => {
+                                            // The regular workspace save will retry this update.
+                                        });
+                                    }
+
                                     return;
                                 }
 

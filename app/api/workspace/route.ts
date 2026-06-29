@@ -63,6 +63,11 @@ const workspaceSaveSchema = z.object({
   budgets: z.array(budgetSaveSchema)
 });
 
+const accountUpdateSchema = accountSchema.extend({
+  id: z.string().min(1),
+  userId: z.string().min(1)
+});
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const parsed = workspaceQuerySchema.safeParse({
@@ -271,6 +276,35 @@ export async function PUT(request: Request) {
       });
     }
   });
+
+  return NextResponse.json({ ok: true });
+}
+
+export async function PATCH(request: Request) {
+  const parsed = accountUpdateSchema.safeParse(await request.json());
+
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid account payload." }, { status: 400 });
+  }
+
+  const { id, userId, ...account } = parsed.data;
+  const result = await prisma.account.updateMany({
+    where: { id, userId },
+    data: {
+      name: account.name,
+      type: account.type,
+      color: account.color,
+      icon: account.icon,
+      openingBalance: account.openingBalance,
+      provider: account.provider ?? null,
+      externalId: account.externalId ?? null,
+      syncStatus: account.syncStatus
+    }
+  });
+
+  if (result.count === 0) {
+    return NextResponse.json({ error: "Account not found." }, { status: 404 });
+  }
 
   return NextResponse.json({ ok: true });
 }

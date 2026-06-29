@@ -128,7 +128,7 @@ export function AccountsView({
     onDeleteTransfer: (id: string) => void;
     onEdit: (account: Account) => void;
     onEditTransfer: (transfer: Transfer) => void;
-    onSubmit: (values: AccountFormValues) => void;
+    onSubmit: (values: AccountFormValues, accountId?: string) => void;
     onSubmitTransfer: (values: TransferFormValues) => void;
     transactions: Transaction[];
     transfers: Transfer[];
@@ -257,7 +257,7 @@ export function AccountsView({
                             onDelete(editing.id);
                             onCancelEdit();
                         }}
-                        onSubmit={onSubmit}
+                        onSubmit={(values) => onSubmit(values, editing.id)}
                     />
                 </EditModal>
             )}
