@@ -48,6 +48,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              '(function(){try{var theme=localStorage.getItem("kwarta:accent-theme");if(["black","blue","green","purple"].indexOf(theme)>-1){document.documentElement.dataset.accent=theme;}}catch(error){}})();'
+          }}
+        />
+        <link
+          as="image"
+          fetchPriority="high"
+          href="/icons/icon-192.png"
+          rel="preload"
+          type="image/png"
+        />
         {accountLogoPreloads.map((logo) => (
           <link
             as="image"
