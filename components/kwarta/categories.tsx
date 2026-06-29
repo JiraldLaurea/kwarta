@@ -470,9 +470,7 @@ export function SubcategoryForm({
     </DragOverlay>
   );
   const shouldPortalDragOverlay =
-    typeof document !== "undefined" &&
-    typeof window !== "undefined" &&
-    window.innerWidth >= 640;
+    typeof document !== "undefined";
 
   return (
     <Card
