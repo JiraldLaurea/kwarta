@@ -1824,7 +1824,7 @@ function SettingsView({
               <p className="mt-1 text-sm leading-5 text-muted-foreground">
                 Choose how category items appear on the Home page.
               </p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {options.map((option) => {
                   const Icon = option.icon;
                   const selected = homeItemStyle === option.value;
@@ -1834,7 +1834,7 @@ function SettingsView({
                       key={option.value}
                       className={cn(
                         "flex min-h-[70px] min-w-0 items-center gap-3 rounded-lg border border-border px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-neutral-50",
-                        selected && "bg-accent-muted",
+                        selected && "sm:bg-accent-muted",
                       )}
                       type="button"
                       aria-pressed={selected}
@@ -1882,7 +1882,7 @@ function SettingsView({
                       aria-pressed={selected}
                       className={cn(
                         "flex min-h-12 items-center gap-2 rounded-md border border-border px-3 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-neutral-50",
-                        selected && "bg-accent-muted",
+                        selected && "sm:bg-accent-muted",
                       )}
                       type="button"
                       onClick={() => onAccentThemeChange(option.value)}
