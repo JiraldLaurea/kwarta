@@ -1646,17 +1646,17 @@ function DesktopSidebar({
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-white md:flex">
       <button
         aria-label="Go to Home"
-        className="flex h-[73px] w-full cursor-pointer items-center gap-2 border-b border-border px-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+        className="flex w-full mb-2 pt-4 cursor-pointer items-center gap-2 border-border px-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
         type="button"
         onClick={() => onSelect("dashboard")}
       >
-        <LogoMark size={28} />
-        <span className="text-lg font-semibold leading-7">Kwarta</span>
+        <LogoMark size={30} />
+        <span className="text-xl font-semibold leading-7">Kwarta</span>
       </button>
       <nav aria-label="Primary navigation" className="flex-1 space-y-1 p-3">
         {navigationItems.map((item) => {
           const active = currentNavView === item.view;
-          const Icon = active ? item.activeIcon : item.icon;
+          const Icon = item.icon;
 
           return (
             <button
