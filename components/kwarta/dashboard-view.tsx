@@ -64,6 +64,17 @@ export function DashboardView({
                                             formatter={(value) =>
                                                 formatCurrency(Number(value))
                                             }
+                                            contentStyle={{
+                                                backgroundColor:
+                                                    "hsl(var(--card))",
+                                                borderColor:
+                                                    "hsl(var(--border))",
+                                                borderRadius: "6px",
+                                                color: "hsl(var(--foreground))",
+                                            }}
+                                            itemStyle={{
+                                                color: "hsl(var(--foreground))",
+                                            }}
                                         />
                                     </RePieChart>
                                 </ResponsiveContainer>
@@ -123,7 +134,7 @@ function CashflowCard({
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={cashflowData}>
                                 <CartesianGrid
-                                    stroke="#E5E7EB"
+                                    stroke="hsl(var(--border))"
                                     vertical={false}
                                 />
                                 <XAxis
@@ -134,12 +145,12 @@ function CashflowCard({
                                 <YAxis tickLine={false} axisLine={false} />
                                 <Tooltip
                                     content={<CashflowTooltip />}
-                                    cursor={{ fill: "#E5E5E5" }}
+                                    cursor={{ fill: "hsl(var(--muted))" }}
                                     wrapperStyle={{ outline: "none" }}
                                 />
                                 <Bar
                                     dataKey="income"
-                                    fill="#171717"
+                                    fill="hsl(var(--foreground))"
                                     radius={[4, 4, 0, 0]}
                                 />
                                 <Bar

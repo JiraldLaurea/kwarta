@@ -46,12 +46,12 @@ export default function RootLayout({
   ];
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html:
-              '(function(){try{var theme=localStorage.getItem("kwarta:accent-theme");if(["black","blue","green","purple"].indexOf(theme)>-1){document.documentElement.dataset.accent=theme;}}catch(error){}})();'
+              '(function(){try{var mode=localStorage.getItem("kwarta:color-mode");if(mode==="dark"){document.documentElement.classList.add("dark");}var theme=localStorage.getItem("kwarta:accent-theme");if(["black","blue","green","purple"].indexOf(theme)>-1){document.documentElement.dataset.accent=theme;}}catch(error){}})();'
           }}
         />
         <link
