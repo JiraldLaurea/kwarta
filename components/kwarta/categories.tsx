@@ -229,7 +229,7 @@ export function CategoryForm({
                     key={choice.value}
                     aria-label={`Use ${choice.label} icon`}
                     className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition-colors md:hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       isSelected &&
                         "border-ring text-foreground ring-2 ring-ring/20",
                     )}
@@ -250,7 +250,7 @@ export function CategoryForm({
             <div className="flex items-center gap-2 pt-2 sm:hidden">
               {editing && onDelete && (
                 <Button
-                  className="flex-1 border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                  className="flex-1 border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
                   type="button"
                   variant="secondary"
                   onClick={onDelete}
@@ -284,7 +284,7 @@ export function CategoryForm({
           <div className={cn("flex gap-2", isModal && "ml-auto")}>
             {editing && onDelete && (
               <Button
-                className="border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                className="border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
                 type="button"
                 variant="secondary"
                 onClick={onDelete}
@@ -722,7 +722,7 @@ function SubcategoryRowContent({
       <Button
         aria-label={`Reorder ${subcategory || "subcategory"}`}
         className={cn(
-          "h-10 w-10 shrink-0 border-dashed bg-white p-0 text-muted-foreground md:hover:bg-neutral-100",
+          "h-10 w-10 shrink-0 border-dashed bg-white p-0 text-muted-foreground md:hover:bg-[hsl(var(--hover-surface))]",
           !disabled && "cursor-grab active:cursor-grabbing",
           isDragging && "cursor-grabbing",
         )}
@@ -736,7 +736,7 @@ function SubcategoryRowContent({
       </Button>
       <Button
         aria-label={`Remove ${subcategory || "subcategory"}`}
-        className="h-10 w-10 shrink-0 border-red-200 bg-white p-0 text-destructive md:hover:bg-red-50"
+        className="h-10 w-10 shrink-0 border-destructive/70 bg-white p-0 text-destructive md:hover:bg-destructive/10"
         disabled={disabled}
         type="button"
         variant="secondary"

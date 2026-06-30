@@ -325,7 +325,7 @@ export function TransactionForm({
                                 <Button
                                     type="button"
                                     variant="secondary"
-                                    className="flex-1 border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                    className="flex-1 border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
                                     onClick={onDelete}
                                 >
                                     Delete
@@ -364,7 +364,7 @@ export function TransactionForm({
                             <Button
                                 type="button"
                                 variant="secondary"
-                                className="border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                className="border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
                                 onClick={onDelete}
                             >
                                 Delete
@@ -459,7 +459,7 @@ export function TransactionTable({
                                                 return (
                                                     <button
                                                         key={transaction.id}
-                                                        className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors md:hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                        className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                         type="button"
                                                         onClick={() =>
                                                             onEdit(transaction)
@@ -567,7 +567,7 @@ export function TransactionTable({
                                                                 key={
                                                                     transaction.id
                                                                 }
-                                                                className="cursor-pointer border-b transition-colors last:border-0 md:hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                                className="cursor-pointer border-b transition-colors last:border-0 md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                                 tabIndex={0}
                                                                 onClick={() =>
                                                                     onEdit(

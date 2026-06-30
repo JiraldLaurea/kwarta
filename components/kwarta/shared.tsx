@@ -210,7 +210,7 @@ export function DatePickerInput({
                 aria-haspopup="dialog"
                 aria-label={ariaLabel}
                 className={cn(
-                    "w-full justify-start px-3 text-left font-normal",
+                    "w-full justify-start px-3 text-left font-normal md:hover:bg-card",
                     isOpen && "border-ring ring-2 ring-ring/20",
                 )}
                 type="button"
@@ -276,7 +276,7 @@ export function DatePickerInput({
                             return (
                                 <button
                                     className={cn(
-                                        "h-9 rounded-md text-sm transition-colors md:hover:bg-[#F2F2F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                        "h-9 rounded-md text-sm transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                         !isCurrentMonth &&
                                             "text-muted-foreground/60",
                                         isSelected &&
@@ -378,7 +378,7 @@ export function MonthPickerInput({
                 aria-haspopup="dialog"
                 aria-label={ariaLabel}
                 className={cn(
-                    "w-full justify-start px-3 text-left font-normal",
+                    "w-full justify-start px-3 text-left font-normal md:hover:bg-card",
                     compact &&
                         "rounded-full border-0 bg-accent-muted text-accent-muted-foreground shadow-none md:hover:bg-accent-muted",
                     isOpen && "border-ring ring-2 ring-ring/20",
@@ -448,7 +448,7 @@ export function MonthPickerInput({
                             return (
                                 <button
                                     className={cn(
-                                        "h-10 rounded-md text-sm transition-colors md:hover:bg-[#F2F2F2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                        "h-10 rounded-md text-sm transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                         isSelected &&
                                             "bg-accent text-accent-foreground md:hover:bg-accent",
                                     )}
@@ -720,7 +720,7 @@ export function BudgetCyclePickerInput({
                 aria-haspopup="dialog"
                 aria-label="Select budget cycle"
                 className={cn(
-                    "w-full justify-start px-3 text-left font-normal",
+                    "w-full justify-start px-3 text-left font-normal md:hover:bg-card",
                     isOpen && "border-ring ring-2 ring-ring/20",
                 )}
                 type="button"
@@ -842,7 +842,7 @@ export function BudgetCyclePickerInput({
                                 return (
                                     <button
                                         className={cn(
-                                            "flex h-12 items-center justify-between rounded-md border border-border px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[#F2F2F2]",
+                                            "flex h-12 items-center justify-between rounded-md border border-border px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))]",
                                             isSelected &&
                                                 "border-accent bg-accent text-accent-foreground md:hover:bg-accent",
                                         )}
@@ -966,7 +966,7 @@ export function WeekPickerInput({
                 aria-haspopup="dialog"
                 aria-label="Select week"
                 className={cn(
-                    "w-full justify-start px-3 text-left font-normal",
+                    "w-full justify-start px-3 text-left font-normal md:hover:bg-card",
                     isOpen && "border-ring ring-2 ring-ring/20",
                 )}
                 type="button"
@@ -1043,7 +1043,7 @@ export function WeekPickerInput({
                                         !isCurrentMonth &&
                                             "text-muted-foreground/50",
                                         isCurrentMonth &&
-                                            "md:hover:bg-[#F2F2F2]",
+                                            "md:hover:bg-[hsl(var(--hover-surface))]",
                                         isWeekMiddle &&
                                             "md:hover:bg-accent-muted",
                                         (isWeekStart || isWeekEnd) &&

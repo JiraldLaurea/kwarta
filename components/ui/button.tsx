@@ -10,8 +10,8 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground md:hover:bg-primary/85",
         secondary:
-          "border border-border bg-white text-foreground shadow-[0_1px_0_rgba(0,0,0,0.04)] md:hover:bg-[#F2F2F2]",
-        ghost: "bg-transparent text-foreground md:hover:bg-neutral-100",
+          "border border-border bg-white text-foreground shadow-[0_1px_0_rgba(0,0,0,0.04)] md:hover:bg-[hsl(var(--hover-surface))]",
+        ghost: "bg-transparent text-foreground md:hover:bg-[hsl(var(--hover-surface))]",
         destructive:
           "bg-destructive text-destructive-foreground md:hover:bg-red-700"
       },

@@ -369,7 +369,7 @@ function SortableCategoryCard({
       className={cn(
         "relative bg-white text-left transition-[border-color,background-color,box-shadow,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         usesIosStyle
-          ? "flex min-h-[78px] items-center gap-3 border-0 px-4 py-3 md:hover:bg-neutral-50"
+          ? "flex min-h-[78px] items-center gap-3 border-0 px-4 py-3 md:hover:bg-[hsl(var(--hover-surface))]"
           : "rounded-2xl border border-border p-4 sm:flex sm:min-h-[154px] sm:flex-col sm:items-center sm:justify-center sm:text-center md:p-5 md:hover:border-[var(--category-color)]",
         editMode &&
           "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
@@ -779,7 +779,9 @@ const ManageCategoryRowView = forwardRef<
       tabIndex={!isOverlay && onEditCategory ? 0 : undefined}
       className={cn(
         "flex min-h-[64px] items-center gap-3 border-b border-border bg-white px-3 py-2 transition-[background-color,box-shadow,opacity,transform] first:rounded-t-lg last:rounded-b-lg last:border-b-0",
-        !isOverlay && onEditCategory && "cursor-pointer md:hover:bg-neutral-50",
+        !isOverlay &&
+          onEditCategory &&
+          "cursor-pointer md:hover:bg-[hsl(var(--hover-surface))]",
         isDragging && "",
         isOverlay && "rounded-lg border border-border shadow-2xl",
       )}
@@ -901,7 +903,7 @@ function CategoryCardActionMenu({
         aria-expanded={isOpen}
         aria-haspopup="menu"
         className={cn(
-          "h-8 w-8 rounded-lg border border-transparent md:hover:bg-neutral-100",
+          "h-8 w-8 rounded-lg border border-transparent md:hover:bg-[hsl(var(--hover-surface))]",
           isOpen && "border-ring ring-2 ring-ring/20",
         )}
         type="button"
@@ -936,7 +938,7 @@ function CategoryCardActionMenu({
             onPointerDown={(event) => event.stopPropagation()}
           >
             <button
-              className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 md:hover:bg-neutral-100"
+              className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 md:hover:bg-[hsl(var(--hover-surface))]"
               role="menuitem"
               type="button"
               onClick={(event) => {
@@ -949,7 +951,7 @@ function CategoryCardActionMenu({
               Edit
             </button>
             <button
-              className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 text-destructive md:hover:bg-neutral-100"
+              className="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 text-left text-sm leading-5 text-destructive md:hover:bg-destructive/10"
               role="menuitem"
               type="button"
               onClick={(event) => {

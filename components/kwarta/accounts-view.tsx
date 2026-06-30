@@ -381,7 +381,7 @@ function AccountCard({
         <button
             type="button"
             onClick={onSelect}
-            className="flex w-full items-center justify-between gap-3 rounded-lg border bg-white p-4 text-left transition-colors md:hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex w-full items-center justify-between gap-3 rounded-lg border bg-white p-4 text-left transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
             <div className="flex min-w-0 items-center gap-3">
                 <AccountLogo
@@ -451,7 +451,7 @@ function TransferHistory({
                             key={transfer.id}
                             type="button"
                             onClick={() => onSelect(transfer)}
-                            className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors md:hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                             <div className="flex min-w-0 items-center gap-3">
                                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-foreground">
@@ -676,7 +676,7 @@ function TransferForm({
                         <div className="flex items-center gap-2 pt-2 sm:hidden">
                             {editing && onDelete && (
                                 <Button
-                                    className="flex-1 border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                    className="flex-1 border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
                                     type="button"
                                     variant="secondary"
                                     onClick={onDelete}
@@ -710,7 +710,7 @@ function TransferForm({
                     <div className={cn("flex gap-2", isModal && "ml-auto")}>
                         {editing && onDelete && (
                             <Button
-                                className="border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                className="border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
                                 type="button"
                                 variant="secondary"
                                 onClick={onDelete}
@@ -1059,7 +1059,7 @@ function AccountForm({
                         <div className="flex items-center gap-2 pt-2 sm:hidden">
                             {editing && onDelete && (
                                 <Button
-                                    className="flex-1 border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                    className="flex-1 border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
                                     type="button"
                                     variant="secondary"
                                     onClick={onDelete}
@@ -1093,7 +1093,7 @@ function AccountForm({
                     <div className={cn("flex gap-2", isModal && "ml-auto")}>
                         {editing && onDelete && (
                             <Button
-                                className="border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                className="border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
                                 type="button"
                                 variant="secondary"
                                 onClick={onDelete}

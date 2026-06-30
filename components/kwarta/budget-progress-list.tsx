@@ -143,7 +143,7 @@ function BudgetListRow({
 
     return (
         <button
-            className="block min-h-[78px] w-full px-4 py-3 text-left transition-colors md:hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            className="block min-h-[78px] w-full px-4 py-3 text-left transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             type="button"
             onClick={() => onSelect(item.category, item.budget)}
         >

@@ -454,7 +454,7 @@ function BudgetForm({
                         <div className="flex items-center gap-2 pt-2 sm:hidden">
                             {editing && onDelete && (
                                 <Button
-                                    className="flex-1 border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                    className="flex-1 border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
                                     type="button"
                                     variant="secondary"
                                     onClick={onDelete}
@@ -488,7 +488,7 @@ function BudgetForm({
                     <div className={cn("flex gap-2", isModal && "ml-auto")}>
                         {editing && onDelete && (
                             <Button
-                                className="border-red-300 bg-white text-destructive md:hover:bg-red-50"
+                                className="border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
                                 type="button"
                                 variant="secondary"
                                 onClick={onDelete}

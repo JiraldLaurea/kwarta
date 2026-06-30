@@ -11,6 +11,7 @@ export type SelectOption = {
 
 export type SelectProps = {
   "aria-label"?: string;
+  compactOptions?: boolean;
   disabled?: boolean;
   id?: string;
   onValueChange: (value: string) => void;
@@ -21,6 +22,7 @@ export type SelectProps = {
 
 export function Select({
   "aria-label": ariaLabel,
+  compactOptions = false,
   disabled,
   id,
   onValueChange,
@@ -89,7 +91,11 @@ export function Select({
   }
 
   function handleTriggerKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
-    if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+    if (
+      event.key === "ArrowDown" ||
+      event.key === "Enter" ||
+      event.key === " "
+    ) {
       event.preventDefault();
       setIsOpen(true);
     }
@@ -104,8 +110,7 @@ export function Select({
         aria-label={ariaLabel}
         className={cn(
           "flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-white px-3 py-2 text-left text-base text-foreground transition-[border-color,box-shadow] duration-150 ease-out focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
-          isOpen &&
-            "border-ring ring-2 ring-ring/20",
+          isOpen && "border-ring ring-2 ring-ring/20",
         )}
         disabled={disabled}
         id={id ?? buttonId}
@@ -145,7 +150,8 @@ export function Select({
                   aria-disabled={option.disabled}
                   aria-selected={isSelected}
                   className={cn(
-                    "relative flex h-10 w-full cursor-pointer select-none items-center gap-2 rounded-md px-3 pr-8 text-left text-sm leading-5 text-foreground outline-none focus:bg-neutral-100 md:hover:bg-neutral-100",
+                    "relative flex h-10 w-full cursor-pointer select-none items-center gap-2 rounded-md px-3 pr-8 text-left text-sm leading-5 text-foreground outline-none focus:bg-[hsl(var(--hover-surface))] md:hover:bg-[hsl(var(--hover-surface))]",
+                    compactOptions && "px-3",
                     option.disabled &&
                       "pointer-events-none cursor-not-allowed opacity-50",
                   )}
@@ -156,7 +162,12 @@ export function Select({
                   onClick={() => selectOption(option)}
                 >
                   {hasIcons ? (
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center">
+                    <span
+                      className={cn(
+                        "flex h-6 w-6 shrink-0 items-center justify-center",
+                        compactOptions && "w-2 justify-start",
+                      )}
+                    >
                       {option.icon}
                     </span>
                   ) : null}

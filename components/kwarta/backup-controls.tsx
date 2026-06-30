@@ -107,7 +107,7 @@ export function ImportLoadingModal() {
                 aria-live="polite"
             >
                 <span
-                    className="mx-auto flex h-10 w-10 animate-spin rounded-full border-2 border-neutral-200 border-t-foreground"
+                    className="mx-auto flex h-10 w-10 animate-spin rounded-full border-2 border-border border-t-foreground"
                     aria-hidden
                 />
                 <CardTitle className="mt-4 text-xl font-medium leading-7">
