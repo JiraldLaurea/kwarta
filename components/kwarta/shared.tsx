@@ -17,27 +17,25 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { IconType } from "react-icons";
+import { FaCar } from "react-icons/fa";
 import {
     FaBagShopping,
     FaBolt,
     FaBriefcase,
-    FaCarSide,
+    FaBuilding,
     FaClapperboard,
     FaGraduationCap,
     FaHeartPulse,
     FaHouse,
     FaLaptop,
     FaMobileScreenButton,
-    FaMoneyBillWave,
+    FaMoneyBill,
     FaPiggyBank,
     FaReceipt,
     FaWallet,
 } from "react-icons/fa6";
-import {
-    IoBusinessOutline,
-    IoRestaurantOutline,
-    IoRepeatOutline,
-} from "react-icons/io5";
+import { FiRepeat } from "react-icons/fi";
+import { IoFastFood } from "react-icons/io5";
 import { RemoveScroll } from "react-remove-scroll";
 import type { Category, TransactionType } from "@/lib/types";
 import {
@@ -82,22 +80,21 @@ export const colorChoices = [
 
 export const categoryIconChoices = [
     { value: "home", label: "Home", icon: FaHouse },
-    { value: "utensils", label: "Food", icon: IoRestaurantOutline },
-    { value: "car", label: "Transport", icon: FaCarSide },
+    { value: "utensils", label: "Food", icon: IoFastFood },
+    { value: "car", label: "Transport", icon: FaCar },
     { value: "zap", label: "Utilities", icon: FaBolt },
     { value: "heart-pulse", label: "Health", icon: FaHeartPulse },
     { value: "shopping-bag", label: "Shopping", icon: FaBagShopping },
-    { value: "repeat", label: "Subscriptions", icon: IoRepeatOutline },
+    { value: "repeat", label: "Subscriptions", icon: FiRepeat },
     { value: "briefcase", label: "Work", icon: FaBriefcase },
     { value: "laptop", label: "Freelance", icon: FaLaptop },
-    { value: "banknote", label: "Cash", icon: FaMoneyBillWave },
-    { value: "landmark", label: "Bank", icon: IoBusinessOutline },
+    { value: "banknote", label: "Cash", icon: FaMoneyBill },
+    { value: "landmark", label: "Bank", icon: FaBuilding },
     { value: "piggy-bank", label: "Savings", icon: FaPiggyBank },
     { value: "receipt", label: "Bills", icon: FaReceipt },
     { value: "smartphone", label: "Phone", icon: FaMobileScreenButton },
     { value: "graduation-cap", label: "Education", icon: FaGraduationCap },
     { value: "clapperboard", label: "Entertainment", icon: FaClapperboard },
-    { value: "badge-dollar-sign", label: "Income", icon: FaMoneyBillWave },
     { value: "wallet", label: "Wallet", icon: FaWallet },
 ] satisfies Array<{ value: string; label: string; icon: IconType }>;
 
@@ -121,9 +118,10 @@ export function PageHeader({
     );
 }
 
-const categoryIconMap = new Map(
+const categoryIconMap = new Map<string, IconType>(
     categoryIconChoices.map((choice) => [choice.value, choice.icon]),
 );
+categoryIconMap.set("badge-dollar-sign", FaMoneyBill);
 
 export function DatePickerInput({
     ariaLabel,

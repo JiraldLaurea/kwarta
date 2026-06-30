@@ -208,7 +208,8 @@ export function CategoryForm({
                   aria-label={`Use ${color}`}
                   className={cn(
                     "h-8 w-8 rounded-full border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    selectedColor === color && "ring-2 ring-ring ring-offset-2",
+                    selectedColor === color &&
+                      "ring-2 ring-ring ring-offset-2 ring-offset-card",
                   )}
                   style={{ backgroundColor: color }}
                   type="button"
@@ -219,7 +220,7 @@ export function CategoryForm({
           </div>
           <FieldError message={form.formState.errors.icon?.message}>
             <Label>Icon</Label>
-            <div className="mt-2 flex max-w-[560px] flex-wrap gap-2">
+            <div className="mt-2 grid w-full grid-cols-9 sm:grid-cols-10 gap-2">
               {categoryIconChoices.map((choice) => {
                 const Icon = choice.icon;
                 const isSelected = selectedIcon === choice.value;
@@ -229,7 +230,7 @@ export function CategoryForm({
                     key={choice.value}
                     aria-label={`Use ${choice.label} icon`}
                     className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "flex aspect-square w-full items-center justify-center rounded-md border border-border bg-white text-muted-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       isSelected &&
                         "border-ring text-foreground ring-2 ring-ring/20",
                     )}
@@ -469,8 +470,7 @@ export function SubcategoryForm({
       ) : null}
     </DragOverlay>
   );
-  const shouldPortalDragOverlay =
-    typeof document !== "undefined";
+  const shouldPortalDragOverlay = typeof document !== "undefined";
 
   return (
     <Card
