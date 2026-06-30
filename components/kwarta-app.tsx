@@ -2135,12 +2135,12 @@ function SettingsSwitch({
     }, [isInfoOpen]);
 
     return (
-        <div className="flex items-center justify-between w-full">
+        <div className="relative flex w-full items-center justify-between">
             <div className="min-w-0">
                 <div className="flex items-center gap-2">
                     <Label htmlFor={id}>{label}</Label>
                     {descriptionDisplay === "menu" && (
-                        <div className="relative" ref={infoRef}>
+                        <div className="sm:relative" ref={infoRef}>
                             <button
                                 aria-expanded={isInfoOpen}
                                 aria-haspopup="dialog"
@@ -2153,7 +2153,7 @@ function SettingsSwitch({
                             </button>
                             {isInfoOpen && (
                                 <div
-                                    className="absolute left-0 bottom-full z-20 w-64 rounded-lg border border-border bg-white p-3 shadow-sm"
+                                    className="absolute bottom-full left-1/2 z-20 mb-2 w-[min(16rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-border bg-white p-3 shadow-sm sm:left-0 sm:w-64 sm:translate-x-0"
                                     role="dialog"
                                 >
                                     <p className="text-sm leading-5 text-muted-foreground">
