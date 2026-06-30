@@ -238,7 +238,7 @@ function MonthlyBudgetSummary({
                             {segments.map((segment) => (
                                 <span
                                     aria-hidden
-                                    className="h-full shrink-0 border-r border-white transition-all last:border-r-0"
+                                    className="h-full shrink-0 transition-all"
                                     key={segment.category.id}
                                     style={{
                                         backgroundColor: segment.category.color,
