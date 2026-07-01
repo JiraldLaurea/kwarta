@@ -1,295 +1,290 @@
----
-version: alpha
-name: Vercel Minimal AI Cloud
-description: A clean, high-contrast developer platform system with spacious white surfaces, tight typography, and restrained monochrome UI accented by subtle blue UI states.
-colors:
-  primary: "#171717"
-  primary-contrast: "#FFFFFF"
-  secondary: "#6B7280"
-  tertiary: "#2563EB"
-  neutral: "#FAFAFA"
-  neutral-100: "#FFFFFF"
-  neutral-200: "#E5E7EB"
-  surface: "#FFFFFF"
-  on-surface: "#171717"
-  muted: "#525252"
-  accent: "#000000"
-  error: "#DC2626"
-typography:
-  headline-display:
-    fontFamily: Geist
-    fontSize: 35px
-    fontWeight: 600
-    lineHeight: 46px
-    letterSpacing: -1.95px
-  headline-lg:
-    fontFamily: Geist
-    fontSize: 29px
-    fontWeight: 500
-    lineHeight: 35px
-    letterSpacing: -0.28px
-  headline-md:
-    fontFamily: Geist
-    fontSize: 24px
-    fontWeight: 500
-    lineHeight: 32px
-    letterSpacing: -0.96px
-  headline-sm:
-    fontFamily: Geist
-    fontSize: 20px
-    fontWeight: 500
-    lineHeight: 24px
-    letterSpacing: 0px
-  body-lg:
-    fontFamily: Geist
-    fontSize: 18px
-    fontWeight: 400
-    lineHeight: 28px
-    letterSpacing: 0px
-  body-md:
-    fontFamily: Geist
-    fontSize: 16px
-    fontWeight: 400
-    lineHeight: 24px
-    letterSpacing: 0px
-  body-sm:
-    fontFamily: Geist
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 20px
-    letterSpacing: 0px
-  label-lg:
-    fontFamily: Geist
-    fontSize: 16px
-    fontWeight: 500
-    lineHeight: 24px
-    letterSpacing: 0px
-  label-md:
-    fontFamily: Geist
-    fontSize: 14px
-    fontWeight: 500
-    lineHeight: 20px
-    letterSpacing: 0px
-  label-sm:
-    fontFamily: Geist
-    fontSize: 12px
-    fontWeight: 500
-    lineHeight: 16px
-    letterSpacing: 0px
-  nav-md:
-    fontFamily: Geist
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 20px
-    letterSpacing: 0px
-  nav-sm:
-    fontFamily: Geist
-    fontSize: 14px
-    fontWeight: 500
-    lineHeight: 20px
-    letterSpacing: 0px
-rounded:
-  none: 0px
-  sm: 4px
-  md: 8px
-  lg: 16px
-  xl: 24px
-  full: 9999px
-spacing:
-  xs: 2px
-  sm: 10px
-  md: 24px
-  lg: 40px
-  xl: 198px
-components:
-  button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary-contrast}"
-    typography: "{typography.label-md}"
-    rounded: "{rounded.md}"
-    padding: "13px 14px"
-    height: "40px"
-    width: "181px"
-  button-primary-hover:
-    backgroundColor: "#383838"
-    textColor: "{colors.primary-contrast}"
-    rounded: "{rounded.md}"
-  button-secondary:
-    backgroundColor: "{colors.neutral-100}"
-    textColor: "{colors.on-surface}"
-    typography: "{typography.label-md}"
-    rounded: "{rounded.md}"
-    padding: "13px 14px"
-    height: "40px"
-    width: "181px"
-  button-secondary-hover:
-    backgroundColor: "#F2F2F2"
-    textColor: "{colors.on-surface}"
-    rounded: "{rounded.md}"
-  button-link:
-    backgroundColor: "transparent"
-    textColor: "{colors.on-surface}"
-    typography: "{typography.body-sm}"
-    rounded: "{rounded.none}"
-    padding: "0px"
-  card:
-    backgroundColor: "{colors.neutral}"
-    textColor: "{colors.on-surface}"
-    rounded: "{rounded.sm}"
-    padding: "16px"
-    height: "auto"
-  input:
-    backgroundColor: "{colors.neutral-100}"
-    textColor: "{colors.on-surface}"
-    typography: "{typography.body-md}"
-    mobileFontSize: "16px"
-    desktopFontSize: "14px"
-    rounded: "{rounded.md}"
-    padding: "12px 14px"
-  input-focus:
-    borderColor: "#2563EB"
-    outline: "none"
-    boxShadow: "0 0 0 3px rgba(37, 99, 235, 0.18)"
-    transition: "border-color 150ms ease-out, box-shadow 150ms ease-out"
-  chip:
-    backgroundColor: "#E8F0FE"
-    textColor: "#0B57D0"
-    typography: "{typography.label-sm}"
-    rounded: "{rounded.full}"
-    padding: "4px 10px"
-  modal:
-    backgroundColor: "{colors.neutral-100}"
-    textColor: "{colors.on-surface}"
-    rounded: "{rounded.lg}"
-    maxWidth: "540px"
-    bodyPadding: "20px 24px 24px"
-    footerBackgroundColor: "{colors.neutral}"
-    footerBorderColor: "{colors.neutral-200}"
-    footerPadding: "16px 20px"
-    titleTypography:
-      fontFamily: Geist
-      fontSize: 24px
-      fontWeight: 500
-      lineHeight: 32px
-      letterSpacing: 0px
-    subheaderTypography:
-      fontFamily: Geist
-      fontSize: 16px
-      fontWeight: 400
-      lineHeight: 24px
-      letterSpacing: 0px
-  date-picker:
-    triggerBackgroundColor: "{colors.neutral-100}"
-    triggerTextColor: "{colors.on-surface}"
-    triggerRounded: "{rounded.md}"
-    triggerHeight: "40px"
-    triggerPadding: "8px 12px"
-    popoverBackgroundColor: "{colors.neutral-100}"
-    popoverRounded: "{rounded.lg}"
-    popoverPadding: "16px"
-    popoverShadow: "0 18px 60px rgba(0, 0, 0, 0.12)"
-    selectedDayBackgroundColor: "{colors.tertiary}"
-    selectedDayTextColor: "{colors.primary-contrast}"
-  loading-spinner:
-    color: "{colors.on-surface}"
-    size: "16px"
-    animation: "spin"
----
+# Kwarta Design System
 
-# Vercel Minimal AI Cloud
+This document describes the current visual language and interaction behavior of
+Kwarta. The implementation in `app/globals.css`, `components/kwarta-app.tsx`,
+`components/kwarta/`, and `components/ui/` is the source of truth.
 
-## Overview
-This system feels crisp, product-led, and highly engineered, with a strong preference for whitespace and sharp contrast over ornament. It is tailored to technical audiences who want clarity, speed, and trust: developers, platform teams, and founders evaluating infrastructure. The tone is professional and modern, with a subtle editorial polish and a light, spacious density.
+## Product Character
 
-## Colors
-- **Primary (#171717):** The main ink color for headlines, primary buttons, and high-emphasis text. It gives the interface its confident, near-black backbone.
-- **Primary contrast (#FFFFFF):** Used for text and iconography on dark controls, especially filled buttons, to preserve legibility and crisp contrast.
-- **Secondary (#6B7280):** A restrained gray for supporting copy, navigation, and secondary metadata. It softens the hierarchy without feeling disabled.
-- **Tertiary (#2563EB):** A subtle blue used for interactive emphasis such as badges, links, and attention states. It should stay sparing so the UI remains mostly monochrome.
-- **Neutral (#FAFAFA):** The main page and surface wash. This almost-white tone keeps the UI airy and makes content blocks feel softly separated.
-- **Neutral 100 (#FFFFFF):** Pure white for elevated controls and panels, especially secondary buttons and cards that need a clear surface distinction.
-- **Neutral 200 (#E5E7EB):** The light border and divider tone. It defines structure without introducing visible heaviness.
-- **Surface (#FFFFFF):** Default component surface color, especially for cards, inputs, and button backgrounds on light pages.
-- **On-surface (#171717):** The default readable text color on light backgrounds.
-- **Muted (#525252):** Used for longer supporting paragraphs and subtle explanatory copy where a slightly softer tone is appropriate.
-- **Accent (#000000):** The deepest black reserved for maximum contrast moments, including the strongest UI emphasis and dark icon treatment.
-- **Error (#DC2626):** Reserved for validation and destructive states; it should remain rare so it does not compete with the otherwise restrained palette.
+Kwarta is a personal finance workspace. It should feel calm, direct, and
+trustworthy. The interface favors scanability, predictable placement, and fast
+repeated actions over decorative presentation.
+
+Core principles:
+
+- Keep financial values and status changes easy to compare.
+- Use restrained surfaces, thin borders, and small radii.
+- Let category colors identify data, not decorate entire screens.
+- Keep desktop workflows dense and mobile workflows touch-friendly.
+- Preserve layout stability when content, hover, focus, or loading states change.
+
+## Responsive App Shell
+
+### Desktop
+
+- Use a fixed left sidebar for Home, Transactions, Budgets, Accounts, and
+  Settings.
+- The Kwarta mark and name navigate to Home.
+- Use outline navigation icons for both inactive and active items. The active
+  row uses a quiet neutral background rather than a filled icon.
+- Main content fills the remaining viewport width and uses responsive internal
+  padding. Do not impose an unnecessary narrow page maximum.
+- Settings panels form two columns when enough width is available.
+
+### Mobile
+
+- Use a fixed five-item bottom tab bar with the same destinations and icon
+  family as desktop.
+- Reserve bottom content padding so the tab bar never covers actions or fields.
+- Hide the desktop sidebar and nonessential shell controls.
+- Quick-add transaction and required-budget forms are separate full-screen
+  views. They are not modals or overlays and must not expose the app header or
+  mobile tabs.
+- Other modal workflows may use a bottom sheet. Sheets start slightly above the
+  viewport midpoint, have rounded top corners and a drag handle, and respond
+  directly to downward dragging.
+
+## Color System
+
+Colors are semantic CSS variables defined in `app/globals.css`.
+
+### Light mode
+
+- Page background: near white.
+- Cards and controls: white.
+- Primary text and actions: near black.
+- Borders: light neutral gray.
+- Muted text: medium neutral gray.
+
+### Dark mode
+
+- Page background: black.
+- Cards and elevated controls: near black with visible neutral borders.
+- Primary text: near white.
+- Muted text: medium gray with sufficient contrast.
+- Hovered interactive rows use a dedicated brighter dark surface so hover is
+  distinct from static muted panels.
+- The loading mark uses a white tile with a dark glyph, and loading rings remain
+  visible against black.
+
+Theme color changes are instant. Only the dark-mode switch thumb animates during
+the change, preventing a page-wide color transition.
+
+### Accent themes
+
+Supported accents are black/white, blue, green, and purple.
+
+- Black is the default accent in light mode and becomes white in dark mode.
+- Input focus remains blue when the black/white accent is selected.
+- Selected option checkmarks remain black regardless of accent.
+- Accent colors mark selection, progress, and high-emphasis controls. They must
+  not tint entire page backgrounds.
+
+### Semantic colors
+
+- Green communicates income and positive values.
+- Red communicates expenses, errors, over-budget values, and destructive
+  actions.
+- Destructive outline controls use the semantic destructive border and a subtle
+  destructive hover fill in both modes.
+- Category colors belong to category badges, charts, and progress segments.
 
 ## Typography
-Geist is the defining voice of the system: geometric, modern, and highly legible. Headlines use medium to semi-bold weights with negative letter-spacing to keep large text compact and authoritative. Body copy stays regular weight with generous line-height for readability, while labels and buttons use medium weight to create clear action hierarchy without looking heavy.
 
-Headlines should follow the tight Vercel rhythm: large, confident, and minimally decorative. H1-style display text is compact and prominent; H2 and H3 levels retain the same family and weight discipline with subtle size reductions. Navigation and button text are small but strong, relying on weight rather than uppercase treatment.
+Kwarta uses Geist with system sans-serif fallbacks.
 
-There is no strong uppercase system in the screenshot; instead, emphasis comes from weight, spacing, and contrast. Keep letter-spacing near zero for most text, and use slight negative tracking only for major headings.
+- Page title: 20px, medium weight, 28px line height.
+- Modal or full-screen form title: 24px, medium weight, 32px line height.
+- Panel title: 16px, semibold, 24px line height.
+- Body: 16px on mobile where needed for iOS input behavior, otherwise 14px.
+- Labels and navigation: 14px, medium weight, 20px line height.
+- Supporting text: 14px with muted color and 20px line height.
+- Compact metadata: 12px with 16px line height.
 
-## Layout
-The page uses a wide, centered desktop container with a very large visual canvas and generous outer margins. Content is organized in stacked bands: navigation, promotional strip, hero, then supporting proof points and text blocks. The rhythm is spacious and deliberate, with large vertical separations that allow the hero illustration to dominate.
+Use zero letter spacing. Reserve large type for page-level titles and keep panel
+headings compact.
 
-Spacing follows a clean scale anchored by small increments and a few larger jumps. Use 2px for micro adjustments, 10px for compact gaps, 24px for standard section spacing, and 40px for major separations. The 198px value functions as a large hero-scale offset or breathing room for expansive compositions rather than routine spacing.
+## Spacing, Shape, and Surfaces
 
-Cards and panels should use modest internal padding, typically 16px, with thin borders instead of heavy shadows. Layout should remain fluid on the inside but preserve a stable, centered composition overall.
+- Base control height: 40px.
+- Compact icon buttons: 32px to 36px where the surrounding layout permits.
+- Standard panel gap: 16px on small screens and 20px on larger screens.
+- Standard card radius: 8px or less.
+- Desktop modal radius: 16px.
+- Use 1px semantic borders for structure.
+- Keep shadows subtle and limited to popovers, menus, and modals.
+- Do not nest decorative cards inside cards. Framed rows are acceptable when
+  they are independent editable or repeated items.
 
-Dashboard summary panels use a consistent 16px gap (`gap-4`) between cards and between the summary group and the following dashboard panels. The overview chip above dashboard summaries uses a 16px bottom margin (`mb-4`) to keep the rhythm equal.
+## Navigation and Page Headers
 
-Dashboard panel order prioritizes budget awareness: Budget progress appears before Cashflow in the main dashboard grid, with Spending beside it on wider screens and Cashflow continuing below.
+- Page headers contain a title, one short description, and right-aligned actions
+  when needed.
+- Settings exposes Reports and Manage categories as actions, not primary tabs.
+- Buttons use an icon when a familiar command icon exists.
+- Tooltips and info popovers must fit within the mobile viewport and center when
+  anchored near an edge.
 
-Dashboard empty states use the full available panel body. When a chart or progress panel has no data, the dashed empty-state box should match the chart/progress content height rather than collapsing to a short message block.
+## Forms and Controls
 
-List panels such as Dashboard Recent activity and the Transactions page should use the same full-body empty-state treatment. The dashed empty-state box should stretch across the available card content width and height so the panel still feels intentionally occupied before data exists.
+### Inputs and selects
 
-Form action rows place the primary add/save action on the right side of the form. In modal footers, the secondary cancel action remains on the left while the primary action remains on the right. Inline add forms should also right-align their primary submit button for consistency with the modal action model.
+- Inputs and select triggers use white/card surfaces, semantic borders, and an
+  8px radius.
+- Focus uses a blue border and soft blue ring.
+- Mobile text inputs use at least 16px text to avoid iOS zoom.
+- Numeric money inputs accept decimal digits without signs or currency symbols.
+- Select menus stay near their trigger, remain above sheets and dialogs, and use
+  compact option padding where the Settings accent selector requires it.
+- Hover fills apply to menu options and interactive rows, not to the date-picker
+  trigger itself.
 
-Transaction forms keep Type and Amount in one two-column row even on small screens. Amount and budget Limit fields should use decimal numeric input behavior on mobile and accept only digits plus one decimal point; do not allow signs, currency symbols, commas, or other special characters in the field.
+### Switches
 
-Transactions and Budgets cards expose backup actions from a compact three-dot overflow button in the upper-right of the relevant card header. The menu opens as a small white rounded panel aligned to the trigger, with Export and Import rows using leading icons, 14px text, and a subtle neutral hover background. Import errors appear as compact destructive text near the overflow trigger. Import progress uses a centered modal with the standard blurred backdrop, a compact spinner, a short title, and muted helper text. When importing over existing rows, use the standard confirmation modal pattern with a clear title, concise body copy, cancel on the left, and the primary replace action on the right.
+- Switches appear beside their label and align with the first line of text.
+- The switch track is 40px by 24px with a 20px thumb.
+- Use switches only for binary settings such as dark mode, budget tracking, and
+  reusable budgets.
 
-Authentication screens show only the product mark and form on small screens. Hide the larger intro headline and supporting copy until larger viewports so mobile login stays focused and avoids pushing the form too far down the page. On small screens, group the product mark and form in one centered vertical stack so viewport height does not stretch the gap; keep that gap tight, around 12px, then restore the split layout and more generous spacing on larger screens. Sign-in form headers use direct action copy such as "Sign in" with a friendly subheader, social auth appears first, and a thin horizontal divider with centered "or" separates social auth from email/password fields. Primary auth submit buttons use text only.
+### Date and period pickers
 
-## Elevation & Depth
-The system is intentionally flat. Depth is created mostly through contrast, hairline borders, and occasional soft shadow rather than layered elevation stacks. The secondary button uses a subtle 1px shadow or border-like inset effect to distinguish itself from the page without appearing raised.
+- Use custom month, week, date, and cycle popovers instead of native browser
+  controls.
+- Picker inputs do not darken on hover.
+- Interactive calendar cells retain a visible hover state.
+- Selected week endpoints use the accent color. Days between endpoints use the
+  accent-muted surface with no gaps between adjacent cells.
+- Popovers flip or reposition when there is insufficient space below.
 
-Use tonal separation sparingly: white controls on off-white surfaces, pale borders, and soft divisions. The hero illustration adds visual energy, but the UI itself should remain calm and disciplined.
+## Buttons and Action Rows
 
-## Shapes
-The shape language is rounded but restrained. Buttons use soft rectangular corners, typically 8px, giving actions a modern product feel without becoming pill-like. Cards and inputs use matching small radii, typically 8px, to keep surfaces softly contained without looking playful. Modals use a larger but still disciplined radius, typically 16px, so the dialog feels elevated and intentional.
+- Primary actions use the active accent with readable foreground color.
+- Secondary actions use a card surface and semantic border.
+- Destructive actions use red text and border rather than borrowing a light-mode
+  pink border.
+- Modal footers place Cancel on the left and the primary action on the right.
+- Mobile forms may use a full-width primary action.
+- Backup action pairs fill their row equally on small screens.
 
-Avoid overly sharp geometry on interactive elements, but also avoid decorative rounding beyond the modal container. The overall impression should be clean, minimal, and slightly soft around the edges.
+## Categories and Home Layout
 
-## Components
-Buttons are the most visually expressive component. Primary buttons use a dark fill, white text, 8px rounding, and compact padding for a strong call to action. Primary button hover uses #383838. Secondary buttons invert the surface treatment: white fill, dark text, very subtle border/shadow, and the same 8px rounding. Secondary button hover uses #F2F2F2. Button sizing should remain consistent at about 40px tall with compact horizontal padding; this keeps navigation and actions aligned.
+- Categories use a stable color and icon everywhere they appear.
+- The category editor provides color swatches and a full-width grid of equal,
+  square icon containers. The icon glyph stays fixed in size as its container
+  grows.
+- A selected color uses a blue ring separated from the swatch by a card-colored
+  gap, so the gap adapts to light and dark mode.
+- A selected icon keeps its blue focus/selection treatment without a white inner
+  border.
+- Subcategories can be reordered by drag and drop. The mobile drag overlay must
+  begin at the touched row position without an initial vertical jump.
+- Home supports List and Cards layouts. Layout controls show only a black check
+  for selection, without a dark selected background or heavy border.
+- Category cards use a compact width, taller proportion, centered icon, centered
+  labels, and visible budget progress. The responsive grid fills the available
+  width with three, five, or seven columns as the viewport grows.
 
-Use `button-primary` for the dominant action and `button-secondary` for adjacent or exploratory actions. Hover states should deepen or slightly darken the background rather than introducing new colors. Link-style buttons should stay minimal, with no container fill and underlined text only when they need to read as inline navigation.
+## Transactions and Quick Add
 
-Cards are quiet containers with white or near-white backgrounds, 1px neutral borders, small radii, and modest padding. They should feel like organized content surfaces rather than raised modules. Inputs should follow the same surface logic as cards: white background, subtle border, rounded corners, and body-sized text. Form controls use 16px text on mobile to prevent iOS Safari focus zoom, then reduce to 14px on larger screens where compact density is appropriate. Focused inputs and select triggers use the system blue border (#2563EB) and a soft outer ring (`0 0 0 3px rgba(37, 99, 235, 0.18)`) with a 150ms ease-out transition for both border color and shadow.
+- Desktop create/edit flows use centered dialogs with a stable border and no
+  vertical entrance movement.
+- Dialog appearance is a quick center fade. Closing through Cancel uses the same
+  exit animation.
+- Mobile category quick add opens as a full-screen page so keyboard resizing does
+  not expose or shift the underlying app shell.
+- Amount and Subcategory share one row in the mobile quick-add form. Account and
+  date remain clearly reachable.
+- Quick add focuses the relevant Amount or Limit field only when focus can be
+  transferred without scrolling the page unexpectedly.
+- When an input is focused in the mobile quick-add view, the document must not
+  gain stray scroll space or nudge vertically.
 
-Modals use a centered white dialog with a 16px radius, 540px max width, thin neutral border, and subtle shadow over a separate lightly washed backdrop. Use a dedicated full-screen backdrop layer with `bg-white/45` and `backdrop-blur-sm` so content behind the modal softens while the dialog itself stays crisp and unaffected by blur. Modal backdrops can close the dialog when clicked, but hovering the backdrop should keep the default cursor rather than a pointer cursor. Modal content padding is 20px top, 24px sides, and 24px bottom. Modal titles use 24px type with 32px line-height, while subheaders use 16px type with 24px line-height. Modal action rows are separated from the body by a 1px neutral divider, use a #FAFAFA-style footer background, and place the secondary cancel action on the left with the primary action on the right.
+## Budgets and Data Visualization
 
-Category list panels include a muted subheader below the panel title to clarify the group purpose. Category row labels use 14px type with 20px line-height and medium weight, paired with compact action icons aligned to the right.
+- Period selection supports monthly, weekly, and custom twice-monthly cycles.
+- Budget rows show spent amount, limit, remaining or excess value, and category
+  progress.
+- Over-budget values and progress use the destructive color.
+- Aggregate budget bars place colored segments directly beside one another with
+  no white separator lines.
+- Charts use semantic border, foreground, muted, and card variables so tooltips,
+  grid lines, cursors, and bars remain legible in both themes.
+- Empty chart and list panels retain enough height to look intentional.
 
-Transaction type indicators use semantic tints: income uses green (`#15803D` on `#DCFCE7`) and expense uses red (`#DC2626` on `#FEE2E2`). Use these colors for compact transaction icons and transaction amount emphasis where the sign needs to scan quickly. Transaction amounts should be vertically centered against the merchant/source and category text block, with income amounts green and expense amounts red.
+## Accounts and Transfers
 
-Budget progress rows show the category name, posted spend against the monthly limit, and a compact remaining or excess value on the same metadata line. Remaining values use muted text; excess values use the error color so over-budget states are easy to scan without adding extra decoration. Progress bars use the primary fill while within budget, then switch to the error color when spend exceeds the limit.
+- Accounts are grouped as Bank, E-Wallet, and Cash.
+- Account cards show provider branding when available and a calculated balance.
+- Forms support manual accounts while preserving provider and sync fields for a
+  future aggregation service.
+- Transfers move value between accounts without counting as income or expense.
+  Optional fees reduce the source account only.
+- Transfer history is editable and uses the same responsive form patterns as
+  other finance records.
 
-Chart panels do not use decorative header icons; let the title, subheader, and chart shape carry the section. Chart hover states use a pale vertical cursor band and a compact white date tooltip. The tooltip should be a small rounded label with subtle border/shadow, body-sm text, and a centered pointer notch so it reads as anchored to the active bar without covering the chart.
+## Settings and Backup
 
-Date and month inputs use custom popovers rather than browser-native controls. The trigger is a 40px white input-like button with a calendar icon on the left, 8px radius, and the same neutral focus ring as text inputs. The date picker popover uses a white 16px-radius panel, 16px padding, subtle shadow, month navigation icons, seven-column day grid, muted adjacent-month days, and a blue selected-day state. Month pickers use the same trigger and popover shell, with year navigation and a compact three-column month grid. Date and month popovers should position dynamically: open below the input when space allows, and flip above the input when there is insufficient room below.
+- General contains Home layout, Dark mode, Accent color, and Disable Budget
+  Tracking in that order.
+- Settings controls use compact 72px rows with labels on the left and controls on
+  the right.
+- Backup contains a full-workspace import/export row and a latest automatic
+  backup row. Each row places its two actions below the description and lets the
+  actions fill the available width.
+- JSON backups include accounts, categories, subcategories, transactions,
+  transfers, and budgets.
+- Restoring or importing over current data requires confirmation.
+- Account contains the Kwarta workspace identity, signed-in profile, and Log Out.
 
-Loading states use a compact 16px monochrome CSS ring spinner placed inline with the loading message. Use an even circular border with one darker segment so the spinner rotates around its own center without visually orbiting. Keep the spinner close to the text with a small gap so the state reads as one unit rather than a separate decorative element.
+## Loading, Motion, and Feedback
 
-Chips and badges are small, lightweight status markers. They should use compact padding, full rounding, and a gentle accent tint rather than a saturated fill. Keep iconography simple and monochrome, with blue reserved for small informational highlights or active states.
+- The initial loading screen shows the Kwarta mark immediately with a visible
+  semantic spinner.
+- Desktop dialogs fade in at the center without translating upward.
+- Mobile bottom sheets animate from the bottom and track the pointer while being
+  dragged down.
+- Respect reduced-motion preferences.
+- Avoid transitions during light/dark color replacement except for the theme
+  switch itself.
+- Disabled actions retain their dimensions and use opacity rather than layout
+  changes.
 
-The favicon/app icon mirrors the Kwarta product mark: a primary black field with the white Peso-style Kwarta glyph. Keep it high-contrast and legible at 16px; avoid text, gradients, or detailed decorative marks in the favicon.
+## Accessibility
 
-The installed PWA experience should feel like the mobile web app, not a separate brand surface. Use the same Kwarta app icon family for navbar mark, favicon, Apple touch icon, and manifest icons. Installed app icons use a full-bleed primary black field with a centered white Peso-style glyph so platform masks can apply rounded corners cleanly without exposing baked-in white corners. Keep the iOS status bar default and the app theme/background aligned to the neutral page wash (`#FAFAFA`) so the standalone app opens cleanly from the home screen.
+- Every icon-only button has an accessible label and a tooltip when its meaning
+  is not obvious.
+- Use native buttons for actions and preserve keyboard focus rings.
+- Dialogs and popovers expose the appropriate expanded, selected, checked, and
+  modal states.
+- Color is not the only indicator of selection, transaction type, or budget
+  status.
+- Maintain readable contrast in both themes and every accent.
+- Touch targets remain comfortably usable on mobile.
 
-Account menus use the person's display name in the navigation trigger instead of a generic "Account" label. The dropdown opens as a compact white rounded panel with a left-aligned account summary: display name on the first line and email beneath it in muted text. Keep irrelevant menu items out of the Kwarta account menu; it should include the account summary, one divider, and a single log-out row. On small screens, use fixed bottom tabbed browsing instead of a hamburger menu. The five mobile tabs are Dashboard, Transactions, Budgets, Categories, and More, each with a 20px icon above a short label. Mobile tabs should not change color on hover. Inactive tabs use a lighter gray for both label and icon. Active tabs should not use a filled background container; instead, use black text/icon color and switch the icon to a proper filled variant without changing label size, label weight, icon box size, or visual outer bounds. More opens an account sheet above the tab bar with account name, email, and log out. Use a separate fixed backdrop with a light wash and `backdrop-blur-sm` so content outside the More sheet softens while the sheet itself stays crisp; hovering that backdrop should keep the default cursor rather than a pointer cursor. The log-out action is inset inside the menu with 8px horizontal padding, a 44px row height, 14px text, and a compact 16px icon aligned to the right so the hover background reads as a contained menu item rather than an edge-to-edge footer. On small screens, reduce account menu typography one step: 14px for the account name, 12px for email, and 12px for the log-out row to keep the compact menu balanced. Main content needs enough bottom padding on mobile so the fixed tab bar never covers forms or action buttons.
+## PWA and Brand
 
-## Do's and Don'ts
-- Do keep the interface spacious and centered, with large breathing room around hero content.
-- Do use dark text on light surfaces and reserve black for the highest-emphasis actions.
-- Do rely on typography weight and scale for hierarchy instead of adding heavy decoration.
-- Do keep shadows minimal; prefer borders and tonal contrast for separation.
-- Don't introduce loud accent colors beyond the restrained blue interaction tone.
-- Don't make buttons square or overly rounded beyond the pill style used for primary actions.
-- Don't stack too many competing visual effects in the hero; let the illustration be the focal point.
-- Don't use dense card grids or cramped spacing that would undermine the editorial, open feel.
+- The Kwarta mark is a high-contrast Peso-style glyph.
+- Light surfaces use the black mark tile. Dark surfaces may invert it to a white
+  tile with a dark glyph for visibility.
+- Favicon, Apple touch icon, manifest icons, and in-app branding use the same
+  mark family.
+- The installed app uses standalone display, portrait orientation, finance and
+  productivity categories, and maskable artwork.
+
+## Do and Do Not
+
+Do:
+
+- Keep operational screens compact, consistent, and easy to scan.
+- Use semantic tokens instead of hardcoded light-only colors.
+- Verify fixed navigation, popovers, forms, and text at mobile and desktop sizes.
+- Keep hover, focus, selected, loading, empty, and destructive states complete.
+
+Do not:
+
+- Add marketing-style hero sections to the application shell.
+- Use oversized headings inside cards or settings panels.
+- Add decorative gradients, floating color blobs, or one-note theme washes.
+- Animate the whole page during theme changes.
+- Allow fixed navigation, keyboards, or dropdowns to cover required actions.
+- Change icon dimensions when only the surrounding option container should grow.
