@@ -632,10 +632,7 @@ export function KwartaApp() {
         document.documentElement.classList.toggle("dark", initialIsDark);
         document
             .querySelector('meta[name="theme-color"]')
-            ?.setAttribute(
-                "content",
-                initialIsDark ? "#141414" : "#FAFAFA",
-            );
+            ?.setAttribute("content", initialIsDark ? "#141414" : "#FAFAFA");
 
         const storedAccentTheme = window.localStorage.getItem(
             "kwarta:accent-theme",
@@ -2137,8 +2134,9 @@ function SettingsView({
     onViewReports: () => void;
     onSignOut: () => void;
 }) {
-    const currentAccentColor =
-        accentThemeOptions.find((o) => o.value === accentTheme)?.color;
+    const currentAccentColor = accentThemeOptions.find(
+        (o) => o.value === accentTheme,
+    )?.color;
     const isDarkEffective =
         colorMode === "dark" ||
         (colorMode === "system" &&
@@ -2318,9 +2316,7 @@ function SettingsView({
                                         key={value}
                                         type="button"
                                         aria-label={label}
-                                        onClick={() =>
-                                            onColorModeChange(value)
-                                        }
+                                        onClick={() => onColorModeChange(value)}
                                         className={cn(
                                             "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
                                             colorMode === value
