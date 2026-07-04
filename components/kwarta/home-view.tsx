@@ -1139,9 +1139,10 @@ export function QuickTransactionModal({
                 >
                   <span
                     className={cn(
-                      "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
+                      "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
                       reuseBudget && "left-[18px]",
                     )}
+                    style={{ backgroundColor: "#fff" }}
                   />
                 </button>
                 <p className="text-sm leading-5 text-muted-foreground">
