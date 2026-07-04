@@ -27,6 +27,7 @@ import {
     CategoryIconBadge,
     BudgetCyclePickerInput,
     EditModal,
+    EmptyState,
     FieldError,
     ModalBackButton,
     MonthPickerInput,
@@ -78,15 +79,11 @@ export function BudgetsView({
                     title="Budgets"
                     description={`Set ${getPeriodNoun(period)} limits and track category spending.`}
                 />
-                <Card className="bg-white">
-                    <CardHeader>
-                        <CardTitle>Budgets are disabled</CardTitle>
-                        <p className="text-sm leading-5 text-muted-foreground">
-                            Turn budgets back on in Settings to set limits,
-                            reuse budgets, and track remaining or excess spending.
-                        </p>
-                    </CardHeader>
-                </Card>
+                <EmptyState
+                    className="flex min-h-[calc(100svh-13rem)] flex-col items-center justify-center rounded-md border border-dashed bg-white"
+                    title="Budgets are disabled"
+                    description="Turn budgets back on in Settings to set limits, reuse budgets, and track remaining or excess spending."
+                />
             </div>
         );
     }
@@ -453,9 +450,10 @@ function BudgetForm({
                             >
                                 <span
                                     className={cn(
-                                        "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
+                                        "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
                                         reuseBudget && "left-[18px]",
                                     )}
+                                    style={{ backgroundColor: "#fff" }}
                                 />
                             </button>
                             <p className="text-sm leading-5 text-muted-foreground">
