@@ -103,7 +103,7 @@ export const defaultSubcategories: Record<string, string[]> = {
     subscriptions: ["Streaming", "Software", "Membership", "Cloud"],
 };
 
-const REUSED_BUDGET_MONTH_COUNT = 13;
+const REUSED_BUDGET_PERIOD_COUNT = 2;
 
 export function normalizeTransactionType(value: string) {
     return value.trim().toLowerCase() as TransactionType;
@@ -582,7 +582,7 @@ export function getAverageExpenseDayCount(monthValue: string) {
 export function getReuseBudgetMonths(monthValue: string) {
     const start = parseMonthValue(monthValue);
 
-    return Array.from({ length: REUSED_BUDGET_MONTH_COUNT }, (_, index) =>
+    return Array.from({ length: REUSED_BUDGET_PERIOD_COUNT }, (_, index) =>
         toMonthInputValue(
             new Date(start.getFullYear(), start.getMonth() + index, 1),
         ),
@@ -593,7 +593,7 @@ function getReuseBudgetPeriods(values: BudgetFormValues) {
     if (values.frequency === "weekly") {
         const start = parseDateValue(values.periodStart);
 
-        return Array.from({ length: REUSED_BUDGET_MONTH_COUNT }, (_, index) => {
+        return Array.from({ length: REUSED_BUDGET_PERIOD_COUNT }, (_, index) => {
             const weekStart = new Date(start);
             weekStart.setDate(start.getDate() + index * 7);
             const weekEnd = new Date(weekStart);
@@ -615,7 +615,7 @@ function getReuseBudgetPeriods(values: BudgetFormValues) {
         });
         const start = parseDateValue(values.periodStart);
 
-        return Array.from({ length: REUSED_BUDGET_MONTH_COUNT }, (_, index) => {
+        return Array.from({ length: REUSED_BUDGET_PERIOD_COUNT }, (_, index) => {
             const nextStart = new Date(start);
 
             if (start.getDate() === cycleSettings.firstStartDay) {
@@ -702,43 +702,26 @@ export function upsertReusableBudgets(
     }
 
     const periods = getReuseBudgetPeriods(values);
-    const remainingBudgets = editingId
-        ? budgets.filter((budget) => budget.id !== editingId)
-        : budgets.slice();
-    const nextBudgets = remainingBudgets.slice();
 
-    periods.forEach((period) => {
-        const existingIndex = nextBudgets.findIndex(
-            (budget) =>
-                budget.categoryId === values.categoryId &&
-                getBudgetFrequency(budget) === period.frequency &&
-                getBudgetPeriodStart(budget) === period.periodStart &&
-                getBudgetPeriodEnd(budget) === period.periodEnd,
-        );
-        const nextBudget = {
-            categoryId: values.categoryId,
-            frequency: period.frequency,
-            limit: values.limit,
-            month: period.month,
-            periodEnd: period.periodEnd,
-            periodStart: period.periodStart,
-        };
+    // Remove all existing budgets for this category+frequency so old
+    // extra periods from a previous 13-period save don't accumulate.
+    const remainingBudgets = budgets.filter(
+        (budget) =>
+            budget.categoryId !== values.categoryId ||
+            getBudgetFrequency(budget) !== values.frequency,
+    );
 
-        if (existingIndex >= 0) {
-            nextBudgets[existingIndex] = {
-                ...nextBudgets[existingIndex],
-                ...nextBudget,
-            };
-            return;
-        }
+    const newBudgets = periods.map((period) => ({
+        id: crypto.randomUUID(),
+        categoryId: values.categoryId,
+        frequency: period.frequency,
+        limit: values.limit,
+        month: period.month,
+        periodEnd: period.periodEnd,
+        periodStart: period.periodStart,
+    }));
 
-        nextBudgets.unshift({
-            id: crypto.randomUUID(),
-            ...nextBudget,
-        });
-    });
-
-    return nextBudgets;
+    return [...newBudgets, ...remainingBudgets];
 }
 
 export function parseDateValue(value: string) {
