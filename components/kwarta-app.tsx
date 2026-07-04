@@ -128,6 +128,12 @@ import {
     type WorkspaceBackup,
     type WorkspaceBackupPayload,
 } from "@/lib/kwarta/backup";
+import {
+    hasPendingWorkspaceSync,
+    markWorkspacePendingSync,
+    readCachedWorkspace,
+    writeCachedWorkspace,
+} from "@/lib/kwarta/offline-cache";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type {
     Account,
@@ -764,9 +770,24 @@ export function KwartaApp() {
         const activeUserId = userId;
         setAutomaticBackup(readAutomaticBackup(activeUserId));
 
+        function applyWorkspace(workspace: StoredWorkspace) {
+            setCategories(
+                mergeStoredCategorySubcategories(
+                    withCategoryIcons(workspace.categories),
+                    activeUserId,
+                ),
+            );
+            setAccounts(workspace.accounts);
+            setTransactions(workspace.transactions);
+            setTransfers(workspace.transfers ?? []);
+            setBudgets(workspace.budgets);
+        }
+
         async function loadWorkspace() {
+            setWorkspaceReady(false);
+            const cachedWorkspace = readCachedWorkspace(activeUserId);
+
             try {
-                setWorkspaceReady(false);
                 const response = await fetch(
                     `/api/workspace?userId=${encodeURIComponent(activeUserId)}`,
                 );
@@ -781,26 +802,24 @@ export function KwartaApp() {
                     return;
                 }
 
-                setCategories(
-                    mergeStoredCategorySubcategories(
-                        withCategoryIcons(workspace.categories),
-                        activeUserId,
-                    ),
-                );
-                setAccounts(workspace.accounts);
-                setTransactions(workspace.transactions);
-                setTransfers(workspace.transfers ?? []);
-                setBudgets(workspace.budgets);
+                applyWorkspace(workspace);
+                writeCachedWorkspace(activeUserId, workspace);
             } catch {
                 if (cancelled) {
                     return;
                 }
 
-                setCategories(seedCategories);
-                setAccounts(seedAccounts);
-                setTransactions([]);
-                setTransfers([]);
-                setBudgets([]);
+                if (cachedWorkspace) {
+                    // Offline (or the server is unreachable): fall back to the
+                    // last workspace saved locally instead of wiping to seed.
+                    applyWorkspace(cachedWorkspace);
+                } else {
+                    setCategories(seedCategories);
+                    setAccounts(seedAccounts);
+                    setTransactions([]);
+                    setTransfers([]);
+                    setBudgets([]);
+                }
             } finally {
                 if (!cancelled) {
                     setWorkspaceReady(true);
@@ -829,6 +848,11 @@ export function KwartaApp() {
             transactions,
             transfers,
         };
+
+        // Mirror the live workspace locally on every change so it survives a
+        // reload while offline and can be re-synced once back online.
+        writeCachedWorkspace(userId, workspace);
+
         const today = toDateInputValue(new Date());
         const storedToday = readAutomaticBackup(userId);
 
@@ -852,9 +876,13 @@ export function KwartaApp() {
 
         const timeout = window.setTimeout(() => {
             enqueueWorkspaceSave(() =>
-                persistWorkspace(workspace, userId),
+                persistWorkspace(workspace, userId).then(() => {
+                    markWorkspacePendingSync(userId, false);
+                }),
             ).catch(() => {
-                // The UI remains usable; the next successful change will retry persistence.
+                // Offline or the server rejected the save. Keep the local cache
+                // and flag it so it is flushed when connectivity returns.
+                markWorkspacePendingSync(userId, true);
             });
         }, 350);
 
@@ -871,6 +899,45 @@ export function KwartaApp() {
         workspaceReady,
         enqueueWorkspaceSave,
     ]);
+
+    useEffect(() => {
+        if (!userId) {
+            return;
+        }
+
+        const activeUserId = userId;
+
+        function flushPendingSync() {
+            if (!hasPendingWorkspaceSync(activeUserId)) {
+                return;
+            }
+
+            const cachedWorkspace = readCachedWorkspace(activeUserId);
+
+            if (!cachedWorkspace) {
+                markWorkspacePendingSync(activeUserId, false);
+                return;
+            }
+
+            enqueueWorkspaceSave(() =>
+                persistWorkspace(cachedWorkspace, activeUserId).then(() => {
+                    markWorkspacePendingSync(activeUserId, false);
+                }),
+            ).catch(() => {
+                // Still unreachable; keep the flag and retry on the next
+                // reconnect.
+            });
+        }
+
+        // Retry immediately in case the app was reloaded while offline with
+        // unsynced changes, then again whenever connectivity is restored.
+        flushPendingSync();
+        window.addEventListener("online", flushPendingSync);
+
+        return () => {
+            window.removeEventListener("online", flushPendingSync);
+        };
+    }, [userId, enqueueWorkspaceSave]);
 
     const selectedMonth = getPeriodMonth(selectedPeriod);
     const periodTransactions = useMemo(

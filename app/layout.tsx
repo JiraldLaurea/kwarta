@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { PwaRegistration } from "@/components/pwa-registration";
+import { OfflineIndicator } from "@/components/offline-indicator";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -73,6 +74,7 @@ export default function RootLayout({
       </head>
       <body className={GeistSans.variable}>
         <PwaRegistration />
+        <OfflineIndicator />
         {children}
       </body>
     </html>
