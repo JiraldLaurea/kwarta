@@ -1115,36 +1115,218 @@ export function KwartaApp() {
         setSubcategoryFormOpen(false);
     }
 
-    const spendingByCategory = useMemo(() => {
-        return expenseCategories
-            .map((category) => ({
-                name: category.name,
-                value: periodTransactions
+    const expenseCategoryLookup = useMemo(
+        () =>
+            new Map(
+                expenseCategories.map((category) => [category.id, category]),
+            ),
+        [expenseCategories],
+    );
+
+    // Last 6 calendar months ending at the selected period's month. Uses all
+    // transactions (not just the current period) to reveal the trend.
+    const trendData = useMemo(() => {
+        const anchor = parseMonthValue(selectedMonth);
+        const months = Array.from({ length: 6 }, (_, index) => {
+            const date = new Date(
+                anchor.getFullYear(),
+                anchor.getMonth() - (5 - index),
+                1,
+            );
+            return {
+                key: toMonthInputValue(date),
+                label: date.toLocaleDateString("en-US", { month: "short" }),
+            };
+        });
+        const byMonth = new Map(
+            months.map((month) => [month.key, { income: 0, expense: 0 }]),
+        );
+
+        transactions.forEach((transaction) => {
+            const bucket = byMonth.get(transaction.date.slice(0, 7));
+
+            if (!bucket) {
+                return;
+            }
+
+            if (transaction.type === "income") {
+                bucket.income += transaction.amount;
+            } else {
+                bucket.expense += transaction.amount;
+            }
+        });
+
+        return months.map((month) => {
+            const bucket = byMonth.get(month.key) ?? { income: 0, expense: 0 };
+
+            return {
+                month: month.label,
+                income: bucket.income,
+                expense: bucket.expense,
+                net: bucket.income - bucket.expense,
+            };
+        });
+    }, [selectedMonth, transactions]);
+
+    // Spent vs limit per budgeted category, most-consumed first so anything
+    // over budget floats to the top.
+    const budgetVsActual = useMemo(() => {
+        const budgetByCategory = new Map<string, Budget>();
+        periodBudgets.forEach((budget) => {
+            if (!budgetByCategory.has(budget.categoryId)) {
+                budgetByCategory.set(budget.categoryId, budget);
+            }
+        });
+
+        return Array.from(budgetByCategory.values())
+            .map((budget) => {
+                const category = expenseCategoryLookup.get(budget.categoryId);
+
+                if (!category) {
+                    return null;
+                }
+
+                const spent = periodTransactions
                     .filter(
                         (transaction) =>
                             transaction.type === "expense" &&
-                            transaction.categoryId === category.id,
+                            transaction.categoryId === budget.categoryId,
                     )
-                    .reduce((sum, transaction) => sum + transaction.amount, 0),
-                color: category.color,
-            }))
-            .filter((item) => item.value > 0);
-    }, [expenseCategories, periodTransactions]);
+                    .reduce((sum, transaction) => sum + transaction.amount, 0);
 
-    const cashflowData = useMemo(() => {
-        return periodTransactions
-            .slice()
-            .sort((a, b) => a.date.localeCompare(b.date))
-            .map((transaction) => ({
-                date: new Date(transaction.date).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                }),
-                income: transaction.type === "income" ? transaction.amount : 0,
-                expense:
-                    transaction.type === "expense" ? transaction.amount : 0,
-            }));
-    }, [periodTransactions]);
+                return {
+                    name: category.name,
+                    color: category.color,
+                    spent,
+                    limit: budget.limit,
+                };
+            })
+            .filter(
+                (item): item is NonNullable<typeof item> => item !== null,
+            )
+            .sort(
+                (a, b) =>
+                    b.spent / Math.max(b.limit, 1) -
+                    a.spent / Math.max(a.limit, 1),
+            );
+    }, [periodBudgets, periodTransactions, expenseCategoryLookup]);
+
+    // Top expense categories this period with the equivalent preceding window
+    // (same number of days immediately before) for a like-for-like comparison.
+    const categoryComparison = useMemo(() => {
+        const start = parseDateValue(selectedPeriod.startDate);
+        const end = parseDateValue(selectedPeriod.endDate);
+        const msPerDay = 86_400_000;
+        const durationDays =
+            Math.round((end.getTime() - start.getTime()) / msPerDay) + 1;
+        const previousEnd = new Date(start.getTime() - msPerDay);
+        const previousStart = new Date(
+            previousEnd.getTime() - (durationDays - 1) * msPerDay,
+        );
+        const previousStartValue = toDateInputValue(previousStart);
+        const previousEndValue = toDateInputValue(previousEnd);
+
+        const currentByCategory = new Map<string, number>();
+        periodTransactions.forEach((transaction) => {
+            if (transaction.type !== "expense") {
+                return;
+            }
+
+            currentByCategory.set(
+                transaction.categoryId,
+                (currentByCategory.get(transaction.categoryId) ?? 0) +
+                    transaction.amount,
+            );
+        });
+
+        const previousByCategory = new Map<string, number>();
+        transactions.forEach((transaction) => {
+            if (
+                transaction.type !== "expense" ||
+                !isInDateRange(
+                    transaction.date,
+                    previousStartValue,
+                    previousEndValue,
+                )
+            ) {
+                return;
+            }
+
+            previousByCategory.set(
+                transaction.categoryId,
+                (previousByCategory.get(transaction.categoryId) ?? 0) +
+                    transaction.amount,
+            );
+        });
+
+        return Array.from(currentByCategory.entries())
+            .map(([categoryId, current]) => {
+                const category = expenseCategoryLookup.get(categoryId);
+
+                return {
+                    name: category?.name ?? "Uncategorized",
+                    color: category?.color ?? "#9CA3AF",
+                    current,
+                    previous: previousByCategory.get(categoryId) ?? 0,
+                };
+            })
+            .sort((a, b) => b.current - a.current)
+            .slice(0, 6);
+    }, [
+        selectedPeriod.startDate,
+        selectedPeriod.endDate,
+        periodTransactions,
+        transactions,
+        expenseCategoryLookup,
+    ]);
+
+    const financialHealth = useMemo(() => {
+        const { income, expenses } = totals;
+        const savingsRate = income > 0 ? (income - expenses) / income : null;
+
+        const start = parseDateValue(selectedPeriod.startDate);
+        const end = parseDateValue(selectedPeriod.endDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const msPerDay = 86_400_000;
+        const totalDays =
+            Math.round((end.getTime() - start.getTime()) / msPerDay) + 1;
+        const clampedNow =
+            today < start ? start : today > end ? end : today;
+        const daysElapsed =
+            Math.round((clampedNow.getTime() - start.getTime()) / msPerDay) + 1;
+        const avgPerDay = daysElapsed > 0 ? expenses / daysElapsed : 0;
+        const projected =
+            today < start
+                ? null
+                : today > end
+                  ? expenses
+                  : avgPerDay * totalDays;
+
+        const biggestTransaction = periodTransactions
+            .filter((transaction) => transaction.type === "expense")
+            .reduce<Transaction | null>(
+                (max, transaction) =>
+                    !max || transaction.amount > max.amount ? transaction : max,
+                null,
+            );
+        const biggest = biggestTransaction
+            ? {
+                  amount: biggestTransaction.amount,
+                  category:
+                      expenseCategoryLookup.get(biggestTransaction.categoryId)
+                          ?.name ?? "Uncategorized",
+              }
+            : null;
+
+        return { savingsRate, avgPerDay, projected, biggest };
+    }, [
+        totals,
+        selectedPeriod.startDate,
+        selectedPeriod.endDate,
+        periodTransactions,
+        expenseCategoryLookup,
+    ]);
 
     function getCurrentWorkspace(): StoredWorkspace {
         return {
@@ -1702,12 +1884,11 @@ export function KwartaApp() {
                             </section>
 
                             <DashboardView
-                                budgets={periodBudgets}
+                                budgetVsActual={budgetVsActual}
                                 budgetsEnabled={budgetsEnabled}
-                                categories={expenseCategories}
-                                cashflowData={cashflowData}
-                                spendingByCategory={spendingByCategory}
-                                transactions={periodTransactions}
+                                categoryComparison={categoryComparison}
+                                financialHealth={financialHealth}
+                                trendData={trendData}
                             />
                         </div>
                     )}
@@ -2321,7 +2502,7 @@ function SettingsView({
                                             "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
                                             colorMode === value
                                                 ? "ring-1 ring-border text-foreground"
-                                                : "text-muted-foreground hover:text-foreground",
+                                                : "text-muted-foreground hover:bg-neutral-200 hover:text-foreground dark:hover:bg-neutral-700",
                                         )}
                                     >
                                         <Icon className="h-3.5 w-3.5" />
@@ -2634,7 +2815,7 @@ function AutomaticBackupSummary({
             </div>
             {previousBackup && (
                 <>
-                    <div className="min-w-0 border-t border-border pt-3">
+                    <div className="min-w-0 pt-2">
                         <p className="text-sm font-medium leading-5">
                             Previous backup
                         </p>
