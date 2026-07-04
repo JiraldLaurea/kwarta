@@ -412,6 +412,8 @@ function AccountCard({
     );
 }
 
+const TRANSFER_PAGE_SIZE = 5;
+
 function TransferHistory({
     accounts,
     transfers,
@@ -421,6 +423,7 @@ function TransferHistory({
     transfers: Transfer[];
     onSelect: (transfer: Transfer) => void;
 }) {
+    const [visibleCount, setVisibleCount] = useState(TRANSFER_PAGE_SIZE);
     const accountsById = new Map(
         accounts.map((account) => [account.id, account]),
     );
@@ -433,6 +436,8 @@ function TransferHistory({
 
         return right.time.localeCompare(left.time);
     });
+    const visibleTransfers = sortedTransfers.slice(0, visibleCount);
+    const remaining = sortedTransfers.length - visibleCount;
 
     return (
         <section className="space-y-2">
@@ -440,7 +445,7 @@ function TransferHistory({
                 Transfers
             </h2>
             <div className="overflow-hidden rounded-md border bg-white divide-y">
-                {sortedTransfers.map((transfer) => {
+                {visibleTransfers.map((transfer) => {
                     const fromAccount = accountsById.get(
                         transfer.fromAccountId,
                     );
@@ -480,6 +485,17 @@ function TransferHistory({
                         </button>
                     );
                 })}
+                {remaining > 0 && (
+                    <button
+                        type="button"
+                        className="w-full p-3 text-sm font-medium text-accent transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() =>
+                            setVisibleCount((c) => c + TRANSFER_PAGE_SIZE)
+                        }
+                    >
+                        Show {Math.min(remaining, TRANSFER_PAGE_SIZE)} more
+                    </button>
+                )}
             </div>
         </section>
     );
