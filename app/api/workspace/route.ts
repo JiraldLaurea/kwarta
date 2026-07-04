@@ -271,6 +271,9 @@ export async function PUT(request: Request) {
           categoryId: budget.categoryId,
           limit: budget.limit,
           month: budget.month,
+          frequency: budget.frequency,
+          periodStart: budget.periodStart,
+          periodEnd: budget.periodEnd,
           userId
         }))
       });

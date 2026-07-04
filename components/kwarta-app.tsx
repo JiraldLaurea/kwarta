@@ -170,6 +170,7 @@ import {
   upsertReusableBudgets,
   withCategoryIcons,
   type BudgetCycleSettings,
+  type SelectedPeriod,
 } from "@/lib/kwarta/helpers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -445,9 +446,29 @@ export function KwartaApp() {
     useState<BudgetCycleSettings>(defaultBudgetCycleSettings);
   const [budgetCycleSettingsReady, setBudgetCycleSettingsReady] =
     useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState(() =>
-    createMonthlyPeriod(toMonthInputValue(new Date())),
-  );
+  const [selectedPeriod, setSelectedPeriod] = useState<SelectedPeriod>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("kwarta:selectedPeriod");
+        if (stored) {
+          const parsed = JSON.parse(stored) as SelectedPeriod;
+          if (
+            parsed &&
+            (parsed.frequency === "monthly" ||
+              parsed.frequency === "weekly" ||
+              parsed.frequency === "cycle") &&
+            typeof parsed.startDate === "string" &&
+            typeof parsed.endDate === "string"
+          ) {
+            return parsed;
+          }
+        }
+      } catch {
+        // ignore corrupt storage
+      }
+    }
+    return createMonthlyPeriod(toMonthInputValue(new Date()));
+  });
   const [categories, setCategories] = useState<Category[]>(seedCategories);
   const [accounts, setAccounts] = useState<Account[]>(seedAccounts);
   const [transactions, setTransactions] =
@@ -510,6 +531,17 @@ export function KwartaApp() {
       query.removeEventListener("change", syncLayout);
     };
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "kwarta:selectedPeriod",
+        JSON.stringify(selectedPeriod),
+      );
+    } catch {
+      // ignore
+    }
+  }, [selectedPeriod]);
 
   useEffect(() => {
     if (!quickAddCategory || isDesktopLayout || !quickAddPageRef.current) {

@@ -173,7 +173,20 @@ function MonthlyBudgetSummary({
     periodLabel: string;
     transactions: Transaction[];
 }) {
-    const totalBudget = budgets.reduce((sum, budget) => sum + budget.limit, 0);
+    // Collapse to a single budget per category. Reused budgets can leave more
+    // than one row matching the same period, which would otherwise double-count
+    // the total and repeat categories in the legend.
+    const budgetByCategoryId = new Map<string, Budget>();
+    budgets.forEach((budget) => {
+        if (!budgetByCategoryId.has(budget.categoryId)) {
+            budgetByCategoryId.set(budget.categoryId, budget);
+        }
+    });
+    const uniqueBudgets = Array.from(budgetByCategoryId.values());
+    const totalBudget = uniqueBudgets.reduce(
+        (sum, budget) => sum + budget.limit,
+        0,
+    );
     const totalSpent = transactions.reduce(
         (sum, transaction) => sum + transaction.amount,
         0,
@@ -181,7 +194,7 @@ function MonthlyBudgetSummary({
     const remaining = totalBudget - totalSpent;
     const isOverBudget = remaining < 0;
     const usage = percent(totalSpent, totalBudget);
-    const segments = budgets
+    const segments = uniqueBudgets
         .map((budget) => {
             const category = categories.find(
                 (item) => item.id === budget.categoryId,
