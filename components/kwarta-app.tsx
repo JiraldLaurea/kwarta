@@ -2323,10 +2323,13 @@ function SettingsSwitch({
     const [isInfoOpen, setIsInfoOpen] = useState(false);
     const infoRef = useRef<HTMLDivElement>(null);
     const normalizedAccent = accentColor?.replace(/\s/g, "").toLowerCase();
-    const knobColor =
-        normalizedAccent === "#fff" || normalizedAccent === "#ffffff" || normalizedAccent === "white"
-            ? "#000"
-            : "#fff";
+    const isWhiteAccent =
+        normalizedAccent === "#fff" ||
+        normalizedAccent === "#ffffff" ||
+        normalizedAccent === "white";
+    // Only use a black knob when checked — the track is white (accent) and
+    // needs contrast. When unchecked the track is neutral-300, so white is fine.
+    const knobColor = isWhiteAccent && checked ? "#000" : "#fff";
 
     useEffect(() => {
         if (!isInfoOpen) {
