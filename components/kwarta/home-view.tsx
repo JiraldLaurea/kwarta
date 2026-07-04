@@ -342,7 +342,9 @@ function SortableCategoryCard({
   });
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    ...(transition && {
+      transition: `${transition}, background-color 150ms ease`,
+    }),
     ["--category-color" as any]: category.color,
     // backgroundColor: `color-mix(in srgb, ${category.color} 7%, white)`,
     // borderColor: `color-mix(in srgb, ${category.color} 40%, white)`
@@ -1139,8 +1141,8 @@ export function QuickTransactionModal({
                 >
                   <span
                     className={cn(
-                      "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
-                      reuseBudget && "left-[18px]",
+                      "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-transform duration-150 ease-[cubic-bezier(0,0,0.2,1)] [will-change:transform]",
+                      reuseBudget && "translate-x-4",
                     )}
                     style={{ backgroundColor: "#fff" }}
                   />

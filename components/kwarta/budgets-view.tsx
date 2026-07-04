@@ -444,14 +444,13 @@ function BudgetForm({
                                 onClick={() =>
                                     form.setValue("reuseBudget", !reuseBudget, {
                                         shouldDirty: true,
-                                        shouldValidate: true,
                                     })
                                 }
                             >
                                 <span
                                     className={cn(
-                                        "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
-                                        reuseBudget && "left-[18px]",
+                                        "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-transform duration-150 ease-[cubic-bezier(0,0,0.2,1)] [will-change:transform]",
+                                        reuseBudget && "translate-x-4",
                                     )}
                                     style={{ backgroundColor: "#fff" }}
                                 />

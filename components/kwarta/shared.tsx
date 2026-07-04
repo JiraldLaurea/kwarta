@@ -2,7 +2,6 @@
 
 import { type User } from "@supabase/supabase-js";
 import { disableBodyScroll, enableBodyScroll } from "body-scroll-lock";
-import { motion, useReducedMotion } from "framer-motion";
 import {
     Calendar,
     ChevronLeft,
@@ -110,7 +109,7 @@ export function PageHeader({
     return (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-                <h1 className="text-xl font-medium leading-7">{title}</h1>
+                <h1 className="text-xl font-semibold leading-7">{title}</h1>
                 <p className="text-sm text-muted-foreground">{description}</p>
             </div>
             {actions}
@@ -1233,6 +1232,24 @@ export function useSwipeToClose(
     };
 }
 
+// Tracks the user's reduced-motion preference. SSR-safe: starts false on the
+// server and first client render, then syncs to the media query.
+function usePrefersReducedMotion() {
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+    useEffect(() => {
+        const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const update = () => setPrefersReducedMotion(query.matches);
+
+        update();
+        query.addEventListener("change", update);
+
+        return () => query.removeEventListener("change", update);
+    }, []);
+
+    return prefersReducedMotion;
+}
+
 // Reactive viewport check matching the `sm` Tailwind breakpoint (640px).
 // SSR-safe: starts false on the server and first client render.
 export function useIsMobileViewport() {
@@ -1531,7 +1548,7 @@ function DesktopEditModal({
 }) {
     const [isVisible, setIsVisible] = useState(false);
     const [isMobileInputFocused, setIsMobileInputFocused] = useState(false);
-    const prefersReducedMotion = useReducedMotion();
+    const prefersReducedMotion = usePrefersReducedMotion();
     const closingRef = useRef(false);
     const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -1556,24 +1573,24 @@ function DesktopEditModal({
         onTouchStart,
         isSwipeDismissing,
     } = useSwipeToClose(requestClose, mobileMotion);
-    const modalOffset =
-        isDragging || isSwipeDismissing
-            ? dragOffset
-            : isVisible || (!animateMobileEnter && !closingRef.current)
-              ? 0
-              : "100%";
-    const modalAnimation =
+    const dragging = isDragging || isSwipeDismissing;
+    const isOpenPosition =
+        isVisible || (!animateMobileEnter && !closingRef.current);
+    // Off-screen when closed, in place when open, following the finger while
+    // dragging. Force-disabled on desktop via `sm:!transform-none`.
+    const modalOffset = dragging
+        ? `${dragOffset}px`
+        : isOpenPosition
+          ? "0px"
+          : "100%";
+    const modalTransform =
         mobileMotion === "right"
-            ? { x: modalOffset, y: 0 }
-            : { x: 0, y: modalOffset };
-    const modalTransition = prefersReducedMotion
-        ? { duration: 0 }
-        : isDragging && !isSwipeDismissing
-          ? { duration: 0 }
-          : {
-                duration: isSwipeDismissing ? 0.15 : 0.16,
-                ease: [0.22, 1, 0.36, 1] as const,
-            };
+            ? `translateX(${modalOffset})`
+            : `translateY(${modalOffset})`;
+    // Skip the transition while the finger is actively dragging (so it tracks
+    // 1:1) or when the user prefers reduced motion.
+    const disableTransform =
+        prefersReducedMotion || (isDragging && !isSwipeDismissing);
 
     useEffect(() => {
         const frame = window.requestAnimationFrame(() => {
@@ -1722,18 +1739,17 @@ function DesktopEditModal({
                 type="button"
                 onClick={requestClose}
             />
-            <motion.div
+            <div
                 ref={dialogRef}
                 className={cn(
-                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 will-change-transform sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:overflow-visible sm:rounded-2xl sm:border sm:border-border sm:transition-opacity sm:duration-100 sm:will-change-auto",
+                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 will-change-transform transition-transform ease-[cubic-bezier(0.22,1,0.36,1)] sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:overflow-visible sm:rounded-2xl sm:border sm:border-border sm:transition-opacity sm:duration-100 sm:will-change-auto",
+                    disableTransform ? "duration-0" : "duration-[160ms]",
                     allowContentScroll && "sm:overflow-hidden",
                     mobileMotion === "bottom" && "rounded-t-2xl",
                     !isVisible && "sm:opacity-0",
                     className,
                 )}
-                initial={false}
-                animate={modalAnimation}
-                transition={modalTransition}
+                style={{ transform: modalTransform }}
                 role="dialog"
                 aria-modal="true"
                 onClickCapture={(event) => {
@@ -1775,7 +1791,7 @@ function DesktopEditModal({
                 >
                     {children}
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 }

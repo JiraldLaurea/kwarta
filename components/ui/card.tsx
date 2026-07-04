@@ -2,45 +2,45 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export function Card({
-  className,
-  ...props
+    className,
+    ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      className={cn(
-        "rounded-lg border border-border bg-card text-card-foreground",
-        className,
-      )}
-      {...props}
-    />
-  );
+    return (
+        <div
+            className={cn(
+                "rounded-lg border border-border bg-card text-card-foreground",
+                className,
+            )}
+            {...props}
+        />
+    );
 }
 
 export function CardHeader({
-  className,
-  ...props
+    className,
+    ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("space-y-1 p-4 pb-3", className)} {...props} />;
+    return <div className={cn("space-y-1 p-4 pb-3", className)} {...props} />;
 }
 
 export function CardTitle({
-  className,
-  ...props
+    className,
+    ...props
 }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return (
-    <h3
-      className={cn(
-        "text-base font-semibold leading-6 tracking-normal",
-        className,
-      )}
-      {...props}
-    />
-  );
+    return (
+        <h3
+            className={cn(
+                "text-base font-medium leading-6 tracking-normal",
+                className,
+            )}
+            {...props}
+        />
+    );
 }
 
 export function CardContent({
-  className,
-  ...props
+    className,
+    ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-4 pt-0", className)} {...props} />;
+    return <div className={cn("p-4 pt-0", className)} {...props} />;
 }
