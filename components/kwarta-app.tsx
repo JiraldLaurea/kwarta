@@ -2407,7 +2407,7 @@ function SettingsSwitch({
                 type="button"
                 style={
                     isWhiteAccent && !checked
-                        ? { backgroundColor: "#737373" }
+                        ? { backgroundColor: "#525252" }
                         : undefined
                 }
                 onClick={() => onChange(!checked)}
