@@ -260,7 +260,7 @@ function CategoryQuickAddSection({
               className={cn(
                 usesIosStyle
                   ? "overflow-hidden rounded-lg border border-border bg-white divide-y divide-border"
-                  : "grid grid-cols-3 gap-2 sm:grid-cols-3 md:grid-cols-5 md:gap-3 lg:grid-cols-7",
+                  : "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4",
               )}
             >
               {categories.map((category) => (
@@ -367,10 +367,10 @@ function SortableCategoryCard({
       {...attributes}
       {...listeners}
       className={cn(
-        "relative bg-white text-left transition-[border-color,background-color,box-shadow,opacity] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "relative bg-white text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         usesIosStyle
           ? "flex min-h-[78px] items-center gap-3 border-0 px-4 py-3 md:hover:bg-[hsl(var(--hover-surface))]"
-          : "rounded-2xl border border-border p-4 sm:flex sm:min-h-[154px] sm:flex-col sm:items-center sm:justify-center sm:text-center md:p-5 md:hover:border-[var(--category-color)]",
+          : "rounded-2xl border border-border p-4 md:hover:bg-[hsl(var(--hover-surface))]",
         editMode &&
           "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
         isDragging && "opacity-20",
@@ -391,126 +391,106 @@ function SortableCategoryCard({
         }
       }}
     >
-      <div
-        className={cn(
-          "flex items-start gap-3",
-          usesIosStyle ? "shrink-0" : "mb-3 justify-center sm:mb-4",
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <CategoryIconBadge
-            category={category}
-            className={cn(usesIosStyle ? "h-11 w-11" : "h-10 w-10")}
-            iconClassName={cn(usesIosStyle ? "h-5 w-5" : "h-4 w-4")}
-          />
-        </div>
-      </div>
-      <div
-        className={cn(
-          usesIosStyle
-            ? "min-w-0 flex-1"
-            : "sm:flex sm:w-full sm:flex-1 sm:flex-col sm:items-center sm:justify-center",
-        )}
-      >
-        <div
-          className={cn(
-            usesIosStyle
-              ? "flex min-w-0 items-center justify-between gap-3"
-              : "block",
-          )}
-        >
-          <p
-            className={cn(
-              "truncate font-medium",
-              usesIosStyle
-                ? "text-sm leading-5"
-                : "text-center text-sm leading-5 md:text-base",
+      {usesIosStyle ? (
+        <>
+          <div className="shrink-0">
+            <CategoryIconBadge
+              category={category}
+              className="h-11 w-11"
+              iconClassName="h-5 w-5"
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <p className="truncate text-sm font-medium leading-5">
+                {category.name}
+              </p>
+              <span className="shrink-0 text-sm font-medium leading-5">
+                {formatCurrency(total)}
+              </span>
+            </div>
+            {hasBudgetTracking && (
+              <div className="mt-2">
+                <div
+                  aria-label={`${category.name} budget progress`}
+                  className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
+                >
+                  {budget && (
+                    <div
+                      className={cn("h-full rounded-full transition-all")}
+                      style={{
+                        backgroundColor:
+                          total > budget.limit ? "#DC2626" : category.color,
+                        width: budgetProgressWidth,
+                      }}
+                    />
+                  )}
+                </div>
+                <p
+                  className={cn(
+                    "mt-1 text-xs leading-4 text-muted-foreground",
+                    budget && total > budget.limit && "text-destructive",
+                  )}
+                >
+                  {budgetStatus}
+                </p>
+              </div>
             )}
-          >
-            {category.name}
-          </p>
-          {usesIosStyle && (
-            <span className="shrink-0 text-sm font-medium leading-5">
+          </div>
+          {!editMode && (
+            <ChevronRight
+              className="h-5 w-5 shrink-0 text-muted-foreground/60"
+              aria-hidden
+            />
+          )}
+        </>
+      ) : (
+        <>
+          <div className="mb-3 flex items-start justify-between">
+            <CategoryIconBadge
+              category={category}
+              className="h-10 w-10"
+              iconClassName="h-5 w-5"
+            />
+            <span className="text-sm font-semibold leading-5">
               {formatCurrency(total)}
             </span>
-          )}
-        </div>
-        {usesIosStyle && hasBudgetTracking && (
-          <div className="mt-2">
-            <div
-              aria-label={`${category.name} budget progress`}
-              className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
-            >
-              {budget && (
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all",
-                    total > budget.limit && "bg-destructive",
-                  )}
-                  style={{
-                    backgroundColor:
-                      total > budget.limit ? "#DC2626" : category.color,
-                    width: budgetProgressWidth,
-                  }}
-                />
-              )}
+          </div>
+          <p className="truncate text-sm font-medium leading-5">
+            {category.name}
+          </p>
+          {hasBudgetTracking ? (
+            <div className="mt-2">
+              <div
+                aria-label={`${category.name} budget progress`}
+                className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
+              >
+                {budget && (
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      backgroundColor:
+                        total > budget.limit ? "#DC2626" : category.color,
+                      width: budgetProgressWidth,
+                    }}
+                  />
+                )}
+              </div>
+              <p
+                className={cn(
+                  "mt-1 text-xs leading-4 text-muted-foreground",
+                  budget && total > budget.limit && "text-destructive",
+                )}
+              >
+                {budgetStatus}
+              </p>
             </div>
-            <p
-              className={cn(
-                "mt-1 text-xs leading-4 text-muted-foreground",
-                budget && total > budget.limit && "text-destructive",
-              )}
-            >
-              {budgetStatus}
+          ) : (
+            <p className="mt-1 text-xs leading-4 text-muted-foreground">
+              No budget set
             </p>
-          </div>
-        )}
-        {hasBudgetTracking && !usesIosStyle && (
-          <div className="mt-3 w-full">
-            <div
-              aria-label={`${category.name} budget progress`}
-              className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
-            >
-              {budget && (
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all",
-                    total > budget.limit && "bg-destructive",
-                  )}
-                  style={{
-                    backgroundColor:
-                      total > budget.limit ? "#DC2626" : category.color,
-                    width: budgetProgressWidth,
-                  }}
-                />
-              )}
-            </div>
-          </div>
-        )}
-        <div
-          className={cn(
-            "mt-3 flex-col items-center gap-1 text-center",
-            usesIosStyle ? "hidden" : "flex",
           )}
-        >
-          <span className="text-sm font-medium">{formatCurrency(total)}</span>
-          {hasBudgetTracking && (
-            <span
-              className={cn(
-                "text-center text-xs leading-4 text-muted-foreground ",
-                budget && total > budget.limit && "text-destructive",
-              )}
-            >
-              {budgetStatus}
-            </span>
-          )}
-        </div>
-      </div>
-      {usesIosStyle && !editMode && (
-        <ChevronRight
-          className="h-5 w-5 shrink-0 text-muted-foreground/60"
-          aria-hidden
-        />
+        </>
       )}
     </div>
   );

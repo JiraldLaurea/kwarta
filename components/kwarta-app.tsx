@@ -1960,7 +1960,7 @@ function MobileTabBar({
                         <button
                             className={cn(
                                 "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-[#9CA3AF] transition-colors",
-                                active && "text-primary",
+                                active && "text-primary dark:text-white",
                             )}
                             key={item.view}
                             type="button"

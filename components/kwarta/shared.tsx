@@ -292,7 +292,7 @@ export function DatePickerInput({
                             );
                         })}
                     </div>
-                    <div className="mt-4 border-t border-border pt-3">
+                    <div className="mt-3">
                         <Button
                             className="w-full justify-center"
                             type="button"
@@ -464,7 +464,7 @@ export function MonthPickerInput({
                             );
                         })}
                     </div>
-                    <div className="mt-4 border-t border-border pt-3">
+                    <div className="mt-3">
                         <Button
                             className="w-full justify-center"
                             type="button"
@@ -863,7 +863,7 @@ export function BudgetCyclePickerInput({
                         </div>
                     )}
                     {!isEditingCycle && (
-                        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-3">
+                        <div className="mt-3 grid grid-cols-2 gap-2">
                             <Button
                                 className="w-full justify-center"
                                 type="button"
@@ -1068,7 +1068,7 @@ export function WeekPickerInput({
                             );
                         })}
                     </div>
-                    <div className="mt-4 border-t border-border pt-3">
+                    <div className="mt-3">
                         <Button
                             className="w-full justify-center"
                             type="button"
@@ -1571,7 +1571,7 @@ function DesktopEditModal({
         : isDragging && !isSwipeDismissing
           ? { duration: 0 }
           : {
-                duration: isSwipeDismissing ? 0.18 : 0.24,
+                duration: isSwipeDismissing ? 0.15 : 0.16,
                 ease: [0.22, 1, 0.36, 1] as const,
             };
 
@@ -1725,7 +1725,7 @@ function DesktopEditModal({
             <motion.div
                 ref={dialogRef}
                 className={cn(
-                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 shadow-[0_-12px_40px_rgba(0,0,0,0.12)] will-change-transform sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:overflow-visible sm:rounded-2xl sm:border sm:border-border sm:transition-opacity sm:duration-100 sm:will-change-auto sm:shadow-[0_24px_80px_rgba(0,0,0,0.12)]",
+                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 will-change-transform sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:overflow-visible sm:rounded-2xl sm:border sm:border-border sm:transition-opacity sm:duration-100 sm:will-change-auto",
                     allowContentScroll && "sm:overflow-hidden",
                     mobileMotion === "bottom" && "rounded-t-2xl",
                     !isVisible && "sm:opacity-0",

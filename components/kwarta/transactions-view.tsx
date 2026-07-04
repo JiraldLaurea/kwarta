@@ -3,7 +3,10 @@
 import type { TransactionFormValues } from "@/lib/schema";
 import type { Account, Category, Transaction } from "@/lib/types";
 import { EditModal, PageHeader } from "@/components/kwarta/shared";
-import { TransactionForm, TransactionTable } from "@/components/kwarta/transactions";
+import {
+    TransactionForm,
+    TransactionTable,
+} from "@/components/kwarta/transactions";
 export function TransactionsView({
     accounts,
     categories,
@@ -31,7 +34,7 @@ export function TransactionsView({
 
     return (
         <>
-            <div className="space-y-4">
+            <div className="space-y-4 md:space-y-5">
                 <PageHeader
                     title="Transactions"
                     description="Edit or remove posted money movement."
@@ -61,4 +64,3 @@ export function TransactionsView({
         </>
     );
 }
-

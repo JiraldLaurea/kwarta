@@ -13,7 +13,7 @@
   --secondary-foreground: 0 0% 9%;
   --muted: 0 0% 96%;
   --muted-foreground: 0 0% 32%;
-  --hover-surface: 0 0% 94%;
+  --hover-surface: 0 0% 90%;
   --accent: 0 0% 9%;
   --accent-foreground: 0 0% 100%;
   --accent-muted: 0 0% 90%;
@@ -52,19 +52,19 @@
 
 :root.dark {
   color-scheme: dark;
-  --background: 0 0% 0%;
+  --background: 0 0% 8%;
   --foreground: 0 0% 96%;
-  --card: 0 0% 4%;
+  --card: 0 0% 13%;
   --card-foreground: 0 0% 96%;
   --secondary: 0 0% 64%;
   --secondary-foreground: 0 0% 96%;
-  --muted: 0 0% 9%;
+  --muted: 0 0% 18%;
   --muted-foreground: 0 0% 64%;
-  --hover-surface: 0 0% 14%;
+  --hover-surface: 0 0% 22%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --border: 0 0% 17%;
-  --input: 0 0% 19%;
+  --border: 0 0% 22%;
+  --input: 0 0% 24%;
 }
 
 :root.dark[data-accent="black"] {
@@ -142,7 +142,7 @@ body {
 
 .dark .bg-neutral-50,
 .dark .bg-neutral-100 {
-  background-color: hsl(var(--muted));
+  background-color: hsl(0 0% 9%);
 }
 
 .dark .bg-neutral-300 {

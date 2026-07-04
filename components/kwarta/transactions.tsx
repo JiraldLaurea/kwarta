@@ -425,7 +425,7 @@ export function TransactionTable({
         <div>
             {transactions.length === 0 ? (
                 <EmptyState
-                    className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed bg-white md:min-h-80"
+                    className="flex min-h-[calc(100svh-13rem)] flex-col items-center justify-center rounded-md border border-dashed bg-white"
                     title="No transactions yet"
                     description="Use a category card on Home to add income or expenses."
                 />

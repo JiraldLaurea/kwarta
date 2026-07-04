@@ -249,6 +249,7 @@ export function AccountsView({
             {editing && (
                 <EditModal onClose={onCancelEdit}>
                     <AccountForm
+                        canDelete={normalizedAccounts.length > 1}
                         editing={editing}
                         key={editing.id}
                         modal
@@ -751,12 +752,14 @@ function TransferForm({
 }
 
 function AccountForm({
+    canDelete = true,
     editing,
     modal = false,
     onCancel,
     onDelete,
     onSubmit,
 }: {
+    canDelete?: boolean;
     editing?: Account;
     modal?: boolean;
     onCancel: () => void;
@@ -1076,6 +1079,7 @@ function AccountForm({
                             {editing && onDelete && (
                                 <Button
                                     className="flex-1 border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
+                                    disabled={!canDelete}
                                     type="button"
                                     variant="secondary"
                                     onClick={onDelete}
@@ -1110,6 +1114,7 @@ function AccountForm({
                         {editing && onDelete && (
                             <Button
                                 className="border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
+                                disabled={!canDelete}
                                 type="button"
                                 variant="secondary"
                                 onClick={onDelete}
