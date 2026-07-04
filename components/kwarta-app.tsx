@@ -2405,6 +2405,11 @@ function SettingsSwitch({
                 id={id}
                 role="switch"
                 type="button"
+                style={
+                    isWhiteAccent && !checked
+                        ? { backgroundColor: "#737373" }
+                        : undefined
+                }
                 onClick={() => onChange(!checked)}
             >
                 <span
