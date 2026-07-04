@@ -2127,23 +2127,6 @@ function SettingsView({
                                 />
                             </div>
                         </div>
-                        <div className="h-[72px] flex items-center">
-                            <SettingsSwitch
-                                checked={colorMode === "dark"}
-                                description="Use a dark interface across Kwarta."
-                                descriptionDisplay="menu"
-                                icon={FaMoon}
-                                iconColor="#6366F1"
-                                id="dark-mode"
-                                label="Dark mode"
-                                accentColor={currentAccentColor}
-                                onChange={(checked) =>
-                                    onColorModeChange(
-                                        checked ? "dark" : "light",
-                                    )
-                                }
-                            />
-                        </div>
                         <div className="h-[72px] gap-3 flex items-center justify-between">
                             <div className="flex items-center gap-2.5 min-w-0">
                                 <SettingIconBadge
@@ -2190,6 +2173,23 @@ function SettingsView({
                                     }
                                 />
                             </div>
+                        </div>
+                        <div className="h-[72px] flex items-center">
+                            <SettingsSwitch
+                                checked={colorMode === "dark"}
+                                description="Use a dark interface across Kwarta."
+                                descriptionDisplay="menu"
+                                icon={FaMoon}
+                                iconColor="#6366F1"
+                                id="dark-mode"
+                                label="Dark mode"
+                                accentColor={currentAccentColor}
+                                onChange={(checked) =>
+                                    onColorModeChange(
+                                        checked ? "dark" : "light",
+                                    )
+                                }
+                            />
                         </div>
                         <div className="h-[72px] flex items-center">
                             <SettingsSwitch
