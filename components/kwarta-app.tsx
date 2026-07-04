@@ -78,7 +78,15 @@ import {
     IoWallet,
     IoWalletOutline,
 } from "react-icons/io5";
-import { FaThLarge, FaMoon, FaPalette, FaChartBar } from "react-icons/fa";
+import {
+    FaThLarge,
+    FaMoon,
+    FaPalette,
+    FaChartBar,
+    FaDesktop,
+    FaSun,
+    FaAdjust,
+} from "react-icons/fa";
 import { DashboardView } from "@/components/kwarta/dashboard-view";
 import {
     type HomeItemStyle,
@@ -254,7 +262,7 @@ const navigationItems: Array<{
 ];
 
 type AccentTheme = "black" | "blue" | "green" | "purple";
-type ColorMode = "light" | "dark";
+type ColorMode = "light" | "dark" | "system";
 
 const accentThemeOptions: Array<{
     color: string;
@@ -601,18 +609,26 @@ export function KwartaApp() {
         const storedColorMode =
             window.localStorage.getItem("kwarta:color-mode");
         const initialColorMode: ColorMode =
-            storedColorMode === "dark" ? "dark" : "light";
+            storedColorMode === "dark"
+                ? "dark"
+                : storedColorMode === "system"
+                  ? "system"
+                  : "light";
+
+        const systemPrefersDark = window.matchMedia(
+            "(prefers-color-scheme: dark)",
+        ).matches;
+        const initialIsDark =
+            initialColorMode === "dark" ||
+            (initialColorMode === "system" && systemPrefersDark);
 
         setColorMode(initialColorMode);
-        document.documentElement.classList.toggle(
-            "dark",
-            initialColorMode === "dark",
-        );
+        document.documentElement.classList.toggle("dark", initialIsDark);
         document
             .querySelector('meta[name="theme-color"]')
             ?.setAttribute(
                 "content",
-                initialColorMode === "dark" ? "#141414" : "#FAFAFA",
+                initialIsDark ? "#141414" : "#FAFAFA",
             );
 
         const storedAccentTheme = window.localStorage.getItem(
@@ -695,6 +711,25 @@ export function KwartaApp() {
             subscription.unsubscribe();
         };
     }, [supabase]);
+
+    useEffect(() => {
+        if (colorMode !== "system") return;
+
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        const handler = (e: MediaQueryListEvent) => {
+            applyAppearanceWithoutTransition(() => {
+                document.documentElement.classList.toggle("dark", e.matches);
+                document
+                    .querySelector('meta[name="theme-color"]')
+                    ?.setAttribute(
+                        "content",
+                        e.matches ? "#141414" : "#FAFAFA",
+                    );
+            });
+        };
+        mq.addEventListener("change", handler);
+        return () => mq.removeEventListener("change", handler);
+    }, [colorMode]);
 
     useEffect(() => {
         window.localStorage.setItem("kwarta:home-item-style", homeItemStyle);
@@ -1655,9 +1690,15 @@ export function KwartaApp() {
                             onColorModeChange={(mode) => {
                                 applyAppearanceWithoutTransition(() => {
                                     setColorMode(mode);
+                                    const sysDark = window.matchMedia(
+                                        "(prefers-color-scheme: dark)",
+                                    ).matches;
+                                    const isDark =
+                                        mode === "dark" ||
+                                        (mode === "system" && sysDark);
                                     document.documentElement.classList.toggle(
                                         "dark",
-                                        mode === "dark",
+                                        isDark,
                                     );
                                     document
                                         .querySelector(
@@ -1665,9 +1706,7 @@ export function KwartaApp() {
                                         )
                                         ?.setAttribute(
                                             "content",
-                                            mode === "dark"
-                                                ? "#141414"
-                                                : "#FAFAFA",
+                                            isDark ? "#141414" : "#FAFAFA",
                                         );
                                     window.localStorage.setItem(
                                         "kwarta:color-mode",
@@ -2033,6 +2072,11 @@ function SettingsView({
 }) {
     const currentAccentColor =
         accentThemeOptions.find((o) => o.value === accentTheme)?.color;
+    const isDarkEffective =
+        colorMode === "dark" ||
+        (colorMode === "system" &&
+            typeof window !== "undefined" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
 
     const options: Array<{
         icon: LucideIcon;
@@ -2148,8 +2192,7 @@ function SettingsView({
                                                     className="h-2 w-2 rounded-full bg-current"
                                                     style={{
                                                         color:
-                                                            colorMode ===
-                                                                "dark" &&
+                                                            isDarkEffective &&
                                                             option.value ===
                                                                 "black"
                                                                 ? "#F5F5F5"
@@ -2158,7 +2201,7 @@ function SettingsView({
                                                 />
                                             ),
                                             label:
-                                                colorMode === "dark" &&
+                                                isDarkEffective &&
                                                 option.value === "black"
                                                     ? "White"
                                                     : option.label,
@@ -2174,22 +2217,54 @@ function SettingsView({
                                 />
                             </div>
                         </div>
-                        <div className="h-[72px] flex items-center">
-                            <SettingsSwitch
-                                checked={colorMode === "dark"}
-                                description="Use a dark interface across Kwarta."
-                                descriptionDisplay="menu"
-                                icon={FaMoon}
-                                iconColor="#6366F1"
-                                id="dark-mode"
-                                label="Dark mode"
-                                accentColor={currentAccentColor}
-                                onChange={(checked) =>
-                                    onColorModeChange(
-                                        checked ? "dark" : "light",
-                                    )
-                                }
-                            />
+                        <div className="h-[72px] gap-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <SettingIconBadge
+                                    icon={FaAdjust}
+                                    color="#6366F1"
+                                />
+                                <p className="text-sm font-medium leading-5">
+                                    Theme
+                                </p>
+                            </div>
+                            <div className="flex items-center rounded-full border border-border p-1 gap-0.5">
+                                {(
+                                    [
+                                        {
+                                            value: "system" as ColorMode,
+                                            icon: FaDesktop,
+                                            label: "System",
+                                        },
+                                        {
+                                            value: "light" as ColorMode,
+                                            icon: FaSun,
+                                            label: "Light",
+                                        },
+                                        {
+                                            value: "dark" as ColorMode,
+                                            icon: FaMoon,
+                                            label: "Dark",
+                                        },
+                                    ] as const
+                                ).map(({ value, icon: Icon, label }) => (
+                                    <button
+                                        key={value}
+                                        type="button"
+                                        aria-label={label}
+                                        onClick={() =>
+                                            onColorModeChange(value)
+                                        }
+                                        className={cn(
+                                            "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                                            colorMode === value
+                                                ? "ring-1 ring-border text-foreground"
+                                                : "text-muted-foreground hover:text-foreground",
+                                        )}
+                                    >
+                                        <Icon className="h-3.5 w-3.5" />
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                         <div className="h-[72px] flex items-center">
                             <SettingsSwitch
