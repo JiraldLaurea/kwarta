@@ -78,8 +78,8 @@ import {
     IoWallet,
     IoWalletOutline,
 } from "react-icons/io5";
+import { RiLayoutFill } from "react-icons/ri";
 import {
-    FaThLarge,
     FaMoon,
     FaPalette,
     FaChartBar,
@@ -1201,9 +1201,7 @@ export function KwartaApp() {
                     limit: budget.limit,
                 };
             })
-            .filter(
-                (item): item is NonNullable<typeof item> => item !== null,
-            )
+            .filter((item): item is NonNullable<typeof item> => item !== null)
             .sort(
                 (a, b) =>
                     b.spent / Math.max(b.limit, 1) -
@@ -1291,8 +1289,7 @@ export function KwartaApp() {
         const msPerDay = 86_400_000;
         const totalDays =
             Math.round((end.getTime() - start.getTime()) / msPerDay) + 1;
-        const clampedNow =
-            today < start ? start : today > end ? end : today;
+        const clampedNow = today < start ? start : today > end ? end : today;
         const daysElapsed =
             Math.round((clampedNow.getTime() - start.getTime()) / msPerDay) + 1;
         const avgPerDay = daysElapsed > 0 ? expenses / daysElapsed : 0;
@@ -2384,7 +2381,7 @@ function SettingsView({
                         <div className="h-[72px] flex items-center justify-between">
                             <div className="flex items-center gap-2.5 min-w-0">
                                 <SettingIconBadge
-                                    icon={FaThLarge}
+                                    icon={RiLayoutFill}
                                     color="#3B82F6"
                                 />
                                 <p className="text-sm font-medium leading-5">
