@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Kwarta",
     short_name: "Kwarta",
     description: "Personal budget tracking dashboard",
-    start_url: "/",
+    start_url: "/app",
     scope: "/",
     display: "standalone",
     background_color: "#FAFAFA",

@@ -2589,6 +2589,16 @@ function SettingsView({
                             </div>
                         </div>
                         <Button
+                            asChild
+                            className="w-full justify-between"
+                            variant="secondary"
+                        >
+                            <a href="/" target="_blank" rel="noopener noreferrer">
+                                <span>About Kwarta</span>
+                                <ChevronRight className="h-4 w-4" aria-hidden />
+                            </a>
+                        </Button>
+                        <Button
                             className="w-full justify-between"
                             type="button"
                             variant="secondary"

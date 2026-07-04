@@ -1,5 +1,5 @@
-const CACHE_NAME = "kwarta-v3";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/icon-192.png"];
+const CACHE_NAME = "kwarta-v4";
+const APP_SHELL = ["/app", "/manifest.webmanifest", "/icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -47,10 +47,15 @@ self.addEventListener("fetch", (event) => {
       fetch(request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/", copy));
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match("/") || Response.error()),
+        .catch(() =>
+          caches
+            .match(request)
+            .then((cached) => cached || caches.match("/app"))
+            .then((cached) => cached || Response.error()),
+        ),
     );
     return;
   }
