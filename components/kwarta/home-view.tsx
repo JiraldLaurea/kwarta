@@ -778,7 +778,7 @@ const ManageCategoryRowView = forwardRef<
       }}
     >
       <span
-        className="flex h-9 w-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg border border-dashed border-border text-muted-foreground active:cursor-grabbing"
+        className="flex h-9 w-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg border border-dashed border-border bg-card text-muted-foreground active:cursor-grabbing"
         {...dragAttributes}
         {...dragListeners}
         onClick={(event) => event.stopPropagation()}

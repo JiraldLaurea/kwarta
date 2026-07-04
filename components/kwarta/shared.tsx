@@ -66,7 +66,6 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 
 export const colorChoices = [
-    "#171717",
     "#2563EB",
     "#7C3AED",
     "#16A34A",

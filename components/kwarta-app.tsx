@@ -768,9 +768,16 @@ export function KwartaApp() {
         setAutomaticBackup(readAutomaticBackup(activeUserId));
 
         function applyWorkspace(workspace: StoredWorkspace) {
+            // #171717 (black) has been removed from the color picker. Any
+            // existing category using it migrates to blue on next save.
+            const migratedCategories = workspace.categories.map((category) =>
+                category.color === "#171717"
+                    ? { ...category, color: "#2563EB" }
+                    : category,
+            );
             setCategories(
                 mergeStoredCategorySubcategories(
-                    withCategoryIcons(workspace.categories),
+                    withCategoryIcons(migratedCategories),
                     activeUserId,
                 ),
             );
