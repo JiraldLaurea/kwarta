@@ -327,11 +327,13 @@ function getAutomaticBackupStorageKey(userId: string) {
   return `kwarta:auto-backup:${userId}`;
 }
 
-function readAutomaticBackup(userId: string): AutomaticBackupRecord | null {
+function getPreviousBackupStorageKey(userId: string) {
+  return `kwarta:auto-backup:${userId}:prev`;
+}
+
+function readBackupRecord(key: string): AutomaticBackupRecord | null {
   try {
-    const stored = window.localStorage.getItem(
-      getAutomaticBackupStorageKey(userId),
-    );
+    const stored = window.localStorage.getItem(key);
 
     if (!stored) {
       return null;
@@ -351,6 +353,14 @@ function readAutomaticBackup(userId: string): AutomaticBackupRecord | null {
   } catch {
     return null;
   }
+}
+
+function readAutomaticBackup(userId: string): AutomaticBackupRecord | null {
+  return readBackupRecord(getAutomaticBackupStorageKey(userId));
+}
+
+function readPreviousBackup(userId: string): AutomaticBackupRecord | null {
+  return readBackupRecord(getPreviousBackupStorageKey(userId));
 }
 
 function persistAutomaticBackupLocally(
@@ -505,6 +515,8 @@ export function KwartaApp() {
     useState<PendingBackupImport | null>(null);
   const [automaticBackup, setAutomaticBackup] =
     useState<AutomaticBackupRecord | null>(null);
+  const [previousBackup, setPreviousBackup] =
+    useState<AutomaticBackupRecord | null>(null);
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const userId = user?.id ?? null;
@@ -531,6 +543,12 @@ export function KwartaApp() {
       query.removeEventListener("change", syncLayout);
     };
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    setAutomaticBackup(readAutomaticBackup(userId));
+    setPreviousBackup(readPreviousBackup(userId));
+  }, [userId]);
 
   useEffect(() => {
     try {
@@ -587,7 +605,7 @@ export function KwartaApp() {
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute(
         "content",
-        initialColorMode === "dark" ? "#000000" : "#FAFAFA",
+        initialColorMode === "dark" ? "#141414" : "#FAFAFA",
       );
 
     const storedAccentTheme = window.localStorage.getItem(
@@ -764,15 +782,24 @@ export function KwartaApp() {
       transactions,
       transfers,
     };
-    setAutomaticBackup((current) => {
-      const today = toDateInputValue(new Date());
+    const today = toDateInputValue(new Date());
+    const storedToday = readAutomaticBackup(userId);
 
-      if (current?.createdAt.slice(0, 10) === today) {
-        return current;
+    if (storedToday?.createdAt.slice(0, 10) === today) {
+      // Today's backup already exists — sync state without overwriting.
+      setAutomaticBackup(storedToday);
+    } else {
+      // New day: rotate the old today backup into the prev slot, then
+      // create a fresh today snapshot from the current workspace.
+      if (storedToday) {
+        window.localStorage.setItem(
+          getPreviousBackupStorageKey(userId),
+          JSON.stringify(storedToday),
+        );
+        setPreviousBackup(storedToday);
       }
-
-      return persistAutomaticBackupLocally(userId, workspace);
-    });
+      setAutomaticBackup(persistAutomaticBackupLocally(userId, workspace));
+    }
 
     const timeout = window.setTimeout(() => {
       enqueueWorkspaceSave(() => persistWorkspace(workspace, userId)).catch(
@@ -1091,26 +1118,11 @@ export function KwartaApp() {
     setIsImportingBackup(false);
   }
 
-  function handleAutomaticBackupDownload() {
-    if (!automaticBackup) {
-      return;
-    }
-
-    downloadWorkspaceBackupPayload(
-      automaticBackup.backup,
-      automaticBackup.createdAt.slice(0, 10),
-    );
-  }
-
-  function handleAutomaticBackupRestore() {
-    if (!automaticBackup) {
-      return;
-    }
-
+  function restoreFromBackupRecord(record: AutomaticBackupRecord) {
     try {
       setPendingBackupImport({
         workspace: parseWorkspaceBackupPayload(
-          automaticBackup.backup,
+          record.backup,
           getCurrentWorkspace(),
         ),
       });
@@ -1120,6 +1132,32 @@ export function KwartaApp() {
         "Automatic backup could not be restored. Please download it and import the file manually.",
       );
     }
+  }
+
+  function handleAutomaticBackupDownload() {
+    if (!automaticBackup) return;
+    downloadWorkspaceBackupPayload(
+      automaticBackup.backup,
+      automaticBackup.createdAt.slice(0, 10),
+    );
+  }
+
+  function handleAutomaticBackupRestore() {
+    if (!automaticBackup) return;
+    restoreFromBackupRecord(automaticBackup);
+  }
+
+  function handlePreviousBackupDownload() {
+    if (!previousBackup) return;
+    downloadWorkspaceBackupPayload(
+      previousBackup.backup,
+      previousBackup.createdAt.slice(0, 10),
+    );
+  }
+
+  function handlePreviousBackupRestore() {
+    if (!previousBackup) return;
+    restoreFromBackupRecord(previousBackup);
   }
 
   if (!authReady || (isAuthed && !workspaceReady)) {
@@ -1508,6 +1546,7 @@ export function KwartaApp() {
               backupImportError={backupImportError}
               backupImportInputRef={backupImportInputRef}
               automaticBackup={automaticBackup}
+              previousBackup={previousBackup}
               budgetsEnabled={budgetsEnabled}
               colorMode={colorMode}
               homeItemStyle={homeItemStyle}
@@ -1522,6 +1561,8 @@ export function KwartaApp() {
               onBackupImportFile={handleBackupImportFile}
               onAutomaticBackupDownload={handleAutomaticBackupDownload}
               onAutomaticBackupRestore={handleAutomaticBackupRestore}
+              onPreviousBackupDownload={handlePreviousBackupDownload}
+              onPreviousBackupRestore={handlePreviousBackupRestore}
               onColorModeChange={(mode) => {
                 applyAppearanceWithoutTransition(() => {
                   setColorMode(mode);
@@ -1533,7 +1574,7 @@ export function KwartaApp() {
                     .querySelector('meta[name="theme-color"]')
                     ?.setAttribute(
                       "content",
-                      mode === "dark" ? "#000000" : "#FAFAFA",
+                      mode === "dark" ? "#141414" : "#FAFAFA",
                     );
                   window.localStorage.setItem("kwarta:color-mode", mode);
                 });
@@ -1747,7 +1788,7 @@ function DesktopSidebar({
             <button
               className={cn(
                 "flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground",
-                active && "bg-neutral-100 text-foreground",
+                active && "bg-[hsl(var(--hover-surface))] text-foreground",
               )}
               key={item.view}
               type="button"
@@ -1805,6 +1846,7 @@ function SettingsView({
   accentTheme,
   accountName,
   automaticBackup,
+  previousBackup,
   backupImportError,
   backupImportInputRef,
   budgetsEnabled,
@@ -1817,6 +1859,8 @@ function SettingsView({
   onBackupImportFile,
   onAutomaticBackupDownload,
   onAutomaticBackupRestore,
+  onPreviousBackupDownload,
+  onPreviousBackupRestore,
   onColorModeChange,
   onAccentThemeChange,
   onBudgetsEnabledChange,
@@ -1828,6 +1872,7 @@ function SettingsView({
   accentTheme: AccentTheme;
   accountName: string;
   automaticBackup: AutomaticBackupRecord | null;
+  previousBackup: AutomaticBackupRecord | null;
   backupImportError: string | null;
   backupImportInputRef: RefObject<HTMLInputElement>;
   budgetsEnabled: boolean;
@@ -1840,6 +1885,8 @@ function SettingsView({
   onBackupImportFile: (file: File) => void;
   onAutomaticBackupDownload: () => void;
   onAutomaticBackupRestore: () => void;
+  onPreviousBackupDownload: () => void;
+  onPreviousBackupRestore: () => void;
   onColorModeChange: (mode: ColorMode) => void;
   onAccentThemeChange: (theme: AccentTheme) => void;
   onBudgetsEnabledChange: (enabled: boolean) => void;
@@ -2009,8 +2056,11 @@ function SettingsView({
             />
             <AutomaticBackupSummary
               backup={automaticBackup}
+              previousBackup={previousBackup}
               onDownload={onAutomaticBackupDownload}
               onRestore={onAutomaticBackupRestore}
+              onPreviousDownload={onPreviousBackupDownload}
+              onPreviousRestore={onPreviousBackupRestore}
             />
           </CardContent>
         </Card>
@@ -2154,37 +2204,47 @@ function SettingsSwitch({
 
 function AutomaticBackupSummary({
   backup,
+  previousBackup,
   onDownload,
   onRestore,
+  onPreviousDownload,
+  onPreviousRestore,
 }: {
   backup: AutomaticBackupRecord | null;
+  previousBackup: AutomaticBackupRecord | null;
   onDownload: () => void;
   onRestore: () => void;
+  onPreviousDownload: () => void;
+  onPreviousRestore: () => void;
 }) {
-  const details = backup
-    ? [
-        `${backup.backup.transactions.length} transactions`,
-        `${backup.backup.budgets.length} budgets`,
-        `${backup.backup.accounts.length} accounts`,
-        `${backup.backup.categories.length} categories`,
-      ].join(", ")
-    : "A latest daily snapshot will appear here after the workspace loads.";
-  const createdAt = backup
-    ? new Date(backup.createdAt).toLocaleString("en-US", {
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
-    : null;
+  function formatRecord(record: AutomaticBackupRecord) {
+    const createdAt = new Date(record.createdAt).toLocaleString("en-US", {
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+    const details = [
+      `${record.backup.transactions.length} transactions`,
+      `${record.backup.budgets.length} budgets`,
+      `${record.backup.accounts.length} accounts`,
+      `${record.backup.categories.length} categories`,
+    ].join(", ");
+    return { createdAt, details };
+  }
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
       <div className="min-w-0">
         <p className="text-sm font-medium leading-5">Latest automatic backup</p>
         <p className="mt-1 text-sm leading-5 text-muted-foreground">
-          {createdAt ? `Created ${createdAt}. ${details}.` : details}
+          {backup
+            ? (() => {
+                const { createdAt, details } = formatRecord(backup);
+                return `Created ${createdAt}. ${details}.`;
+              })()
+            : "A daily snapshot will appear here after the workspace loads."}
         </p>
       </div>
       <div className="grid w-full grid-cols-2 gap-2">
@@ -2209,6 +2269,39 @@ function AutomaticBackupSummary({
           Download
         </Button>
       </div>
+      {previousBackup && (
+        <>
+          <div className="min-w-0 border-t border-border pt-3">
+            <p className="text-sm font-medium leading-5">Previous backup</p>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              {(() => {
+                const { createdAt, details } = formatRecord(previousBackup);
+                return `Created ${createdAt}. ${details}.`;
+              })()}
+            </p>
+          </div>
+          <div className="grid w-full grid-cols-2 gap-2">
+            <Button
+              className="w-full justify-center"
+              type="button"
+              variant="secondary"
+              onClick={onPreviousRestore}
+            >
+              <Upload className="h-4 w-4" aria-hidden />
+              Restore
+            </Button>
+            <Button
+              className="w-full justify-center"
+              type="button"
+              variant="secondary"
+              onClick={onPreviousDownload}
+            >
+              <Download className="h-4 w-4" aria-hidden />
+              Download
+            </Button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
