@@ -1008,7 +1008,7 @@ export function WeekPickerInput({
                         </Button>
                     </div>
                     <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
+                        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
                             (weekday) => (
                                 <span
                                     key={weekday}
@@ -1084,9 +1084,8 @@ export function WeekPickerInput({
 
 function getWeekPickerDays(month: Date) {
     const firstOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
-    const mondayOffset = (firstOfMonth.getDay() + 6) % 7;
     const start = new Date(firstOfMonth);
-    start.setDate(firstOfMonth.getDate() - mondayOffset);
+    start.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
 
     return Array.from({ length: 42 }, (_, index) => {
         const date = new Date(start);

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
+import { ThemeToggle } from "@/components/landing/theme-toggle";
 
 const ACCOUNT_LOGOS = [
   "bdo",
@@ -114,7 +115,7 @@ export function LandingPage() {
     <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b border-border/70 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto grid h-16 w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-5">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 md:grid md:grid-cols-[1fr_auto_1fr]">
           <Logo className="justify-self-start" />
           <nav className="hidden items-center gap-8 justify-self-center text-sm font-medium text-muted-foreground md:flex">
             <a className="transition-colors hover:text-foreground" href="#features">
@@ -127,7 +128,8 @@ export function LandingPage() {
               FAQ
             </a>
           </nav>
-          <div className="justify-self-end">
+          <div className="flex items-center gap-2 justify-self-end">
+            <ThemeToggle />
             <Button asChild size="sm" className="group">
               <Link href="/app">
                 Get started

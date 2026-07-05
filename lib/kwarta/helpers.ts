@@ -367,8 +367,7 @@ export function getMonthRange(monthValue: string) {
 export function getWeekRange(dateValue: string) {
     const date = parseDateValue(dateValue);
     const start = new Date(date);
-    const mondayOffset = (date.getDay() + 6) % 7;
-    start.setDate(date.getDate() - mondayOffset);
+    start.setDate(date.getDate() - date.getDay());
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
 
