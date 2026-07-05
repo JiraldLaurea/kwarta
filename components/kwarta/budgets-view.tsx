@@ -80,7 +80,7 @@ export function BudgetsView({
                     description={`Set ${getPeriodNoun(period)} limits and track category spending.`}
                 />
                 <EmptyState
-                    className="flex min-h-[calc(100svh-13rem)] flex-col items-center justify-center rounded-md border border-dashed bg-white"
+                    className="flex min-h-[calc(100svh-13rem)] flex-col items-center justify-center rounded-xl border border-dashed bg-card"
                     title="Budgets are disabled"
                     description="Turn budgets back on in Settings to set limits, reuse budgets, and track remaining or excess spending."
                 />
@@ -243,7 +243,7 @@ function MonthlyBudgetSummary({
                             {isOverBudget ? "excess" : "left"}
                         </span>
                     </div>
-                    <div className="h-4 overflow-hidden rounded-sm bg-neutral-100">
+                    <div className="h-4 overflow-hidden rounded-md bg-muted">
                         <div className="flex h-full">
                             {segments.map((segment) => (
                                 <span

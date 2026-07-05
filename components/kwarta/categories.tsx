@@ -777,7 +777,7 @@ export function CategoryList({
         {categories.map((category) => (
           <div
             key={category.id}
-            className="flex items-center justify-between gap-3 rounded-md border bg-white p-3"
+            className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background p-3"
           >
             <div className="flex min-w-0 items-center gap-3">
               <CategoryIconBadge category={category} />

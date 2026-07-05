@@ -425,7 +425,7 @@ export function TransactionTable({
         <div>
             {transactions.length === 0 ? (
                 <EmptyState
-                    className="flex min-h-[calc(100svh-13rem)] flex-col items-center justify-center rounded-md border border-dashed bg-white"
+                    className="flex min-h-[calc(100svh-13rem)] flex-col items-center justify-center rounded-xl border border-dashed bg-card"
                     title="No transactions yet"
                     description="Use a category card on Home to add income or expenses."
                 />
@@ -440,7 +440,7 @@ export function TransactionTable({
                             return (
                                 <section
                                     key={group.date}
-                                    className="overflow-hidden rounded-lg border bg-white"
+                                    className="overflow-hidden rounded-xl border border-border bg-card"
                                 >
                                     <TransactionGroupHeader
                                         date={group.date}
@@ -528,7 +528,7 @@ export function TransactionTable({
                             return (
                                 <section
                                     key={group.date}
-                                    className="overflow-hidden rounded-lg border bg-white"
+                                    className="overflow-hidden rounded-xl border border-border bg-card"
                                 >
                                     <TransactionGroupHeader
                                         date={group.date}

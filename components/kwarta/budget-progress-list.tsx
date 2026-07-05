@@ -63,12 +63,12 @@ export function BudgetProgressList({
 
                 {items.length === 0 ? (
                     <EmptyState
-                        className="mt-5 flex min-h-56 flex-col items-center justify-center rounded-md border border-dashed border-border"
+                        className="mt-5 flex min-h-56 flex-col items-center justify-center rounded-xl border border-dashed border-border"
                         title="No budgets yet"
                         description={`Create a ${periodNoun} budget after adding expense categories.`}
                     />
                 ) : (
-                    <div className="mt-5 overflow-hidden rounded-lg border border-border bg-white divide-y divide-border">
+                    <div className="mt-5 overflow-hidden rounded-xl border border-border bg-card divide-y divide-border">
                         {items.map((item) => (
                             <BudgetListRow
                                 key={item.category.id}
@@ -154,7 +154,7 @@ function BudgetListRow({
 
 function BudgetCardRow({ item }: { item: BudgetProgressItem }) {
     return (
-        <div className="rounded-md border border-border bg-white p-3 md:p-4">
+        <div className="rounded-xl border border-border bg-card p-3 md:p-4">
             <BudgetRowContent item={item} />
         </div>
     );

@@ -196,7 +196,7 @@ export function AccountsView({
 
                 {normalizedAccounts.length === 0 ? (
                     <EmptyState
-                        className="flex min-h-64 flex-col items-center justify-center rounded-md border border-dashed bg-white"
+                        className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-dashed bg-card"
                         title="No accounts yet"
                         description="Add a bank, e-wallet, or cash account to start tracking balances."
                     />
@@ -333,7 +333,7 @@ function NetWorthSummary({
 
 function ConnectAccountCard() {
     return (
-        <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border bg-neutral-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-xl border border-dashed border-border bg-background p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#0B57D0] text-white">
                     <Link2 className="h-5 w-5" aria-hidden />
@@ -382,7 +382,7 @@ function AccountCard({
         <button
             type="button"
             onClick={onSelect}
-            className="flex w-full items-center justify-between gap-3 rounded-lg border bg-white p-4 text-left transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
             <div className="flex min-w-0 items-center gap-3">
                 <AccountLogo
@@ -445,7 +445,7 @@ function TransferHistory({
             <h2 className="px-1 text-sm font-medium leading-5 text-muted-foreground">
                 Transfers
             </h2>
-            <div className="overflow-hidden rounded-md border bg-white divide-y">
+            <div className="overflow-hidden rounded-xl border border-border bg-card divide-y">
                 {visibleTransfers.map((transfer) => {
                     const fromAccount = accountsById.get(
                         transfer.fromAccountId,
@@ -460,7 +460,7 @@ function TransferHistory({
                             className="flex w-full items-center justify-between gap-3 p-3 text-left transition-colors md:hover:bg-[hsl(var(--hover-surface))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                             <div className="flex min-w-0 items-center gap-3">
-                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-foreground">
+                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
                                     <ArrowLeftRight
                                         className="h-4 w-4"
                                         aria-hidden

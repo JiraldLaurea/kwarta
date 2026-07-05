@@ -394,8 +394,8 @@ export function MonthPickerInput({
                 <div
                     className={cn(
                         mobileFullWidth
-                            ? "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-full sm:min-w-[312px]"
-                            : "absolute left-0 z-[70] w-full min-w-[312px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
+                            ? "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-auto sm:min-w-[210px]"
+                            : "absolute left-0 z-[70] w-auto min-w-[210px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
                         popoverSide === "above"
                             ? "bottom-full mb-2"
                             : "top-full mt-2",
@@ -838,7 +838,7 @@ export function BudgetCyclePickerInput({
                                 return (
                                     <button
                                         className={cn(
-                                            "flex h-12 items-center justify-between rounded-md border border-border px-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))]",
+                                            "flex h-12 items-center justify-center rounded-md border border-border px-3 text-center text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))]",
                                             isSelected &&
                                                 "border-accent bg-accent text-accent-foreground md:hover:bg-accent",
                                         )}
@@ -1821,8 +1821,8 @@ export function MetricCard({
     value: string;
 }) {
     return (
-        <Card className={cn("bg-white p-3 md:p-4", className)}>
-            <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100">
+        <Card className={cn("p-3 md:p-4", className)}>
+            <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                 {icon === "plus" && <Plus className="h-4 w-4" aria-hidden />}
                 {icon === "minus" && <Minus className="h-4 w-4" aria-hidden />}
                 {icon === "wallet" && (

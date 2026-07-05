@@ -259,7 +259,7 @@ function CategoryQuickAddSection({
             <div
               className={cn(
                 usesIosStyle
-                  ? "overflow-hidden rounded-lg border border-border bg-white divide-y divide-border"
+                  ? "overflow-hidden rounded-xl border border-border bg-card divide-y divide-border"
                   : "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4",
               )}
             >
@@ -369,10 +369,10 @@ function SortableCategoryCard({
       {...attributes}
       {...listeners}
       className={cn(
-        "relative bg-white text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "relative bg-card text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         usesIosStyle
           ? "flex min-h-[78px] items-center gap-3 border-0 px-4 py-3 md:hover:bg-[hsl(var(--hover-surface))]"
-          : "rounded-2xl border border-border p-4 md:hover:bg-[hsl(var(--hover-surface))]",
+          : "rounded-xl border border-border p-4 md:hover:bg-[hsl(var(--hover-surface))]",
         editMode &&
           "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
         isDragging && "opacity-20",
@@ -415,7 +415,7 @@ function SortableCategoryCard({
               <div className="mt-2">
                 <div
                   aria-label={`${category.name} budget progress`}
-                  className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
+                  className="h-1.5 overflow-hidden rounded-full bg-muted"
                 >
                   {budget && (
                     <div

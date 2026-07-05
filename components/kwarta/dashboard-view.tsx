@@ -305,7 +305,7 @@ function TrendTooltip({
     );
 
     return (
-        <div className="rounded-md border border-border bg-white px-3 py-2 text-sm leading-5 text-foreground shadow-[0_14px_34px_rgba(0,0,0,0.12)]">
+        <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm leading-5 text-foreground shadow-[0_14px_34px_rgba(0,0,0,0.12)]">
             <p className="mb-1 font-medium">{label}</p>
             <TooltipRow
                 color={INCOME_COLOR}
