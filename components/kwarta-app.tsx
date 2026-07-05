@@ -1576,9 +1576,9 @@ export function KwartaApp() {
         <>
             {quickAddFocusBridge}
             <DesktopSidebar activeView={view} onSelect={setView} />
-            <main className="min-h-screen bg-background md:pl-64">
+            <main className="min-h-screen bg-background md:pl-60">
                 <header className="sticky top-0 z-30 border-b bg-white [backface-visibility:hidden] [transform:translateZ(0)]">
-                    <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 md:px-5 md:py-4">
+                    <div className="flex w-full items-center gap-3 px-4 py-3 md:px-5 md:py-4">
                         <div className="w-full max-w-[36rem] md:w-auto md:max-w-none">
                             <PeriodSelector
                                 budgetCycleSettings={budgetCycleSettings}
@@ -1592,7 +1592,7 @@ export function KwartaApp() {
                     </div>
                 </header>
 
-                <div className="mx-auto w-full max-w-7xl px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 md:px-5 md:py-7">
+                <div className="w-full px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 md:px-5 md:py-7">
                     {view === "dashboard" && (
                         <HomeView
                             budgets={periodBudgets}
@@ -2183,7 +2183,7 @@ function DesktopSidebar({
             : activeView;
 
     return (
-        <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-border bg-white md:flex">
+        <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border bg-white md:flex">
             <div className="w-full mb-2 pt-4 border-border px-4 text-left">
                 <button
                     aria-label="Go to Home"
@@ -2377,25 +2377,30 @@ function SettingsView({
             />
 
             <div className="grid gap-4 md:gap-5 lg:grid-cols-2">
-                <Card className="overflow-visible bg-white">
-                    <CardHeader>
-                        <CardTitle>General</CardTitle>
-                        {/* <p className="text-sm leading-5 text-muted-foreground">
-              Control core app behavior and visibility.
-            </p> */}
+                <Card className="overflow-visible rounded-xl">
+                    <CardHeader className="p-5 pb-2">
+                        <CardTitle className="text-base font-semibold">
+                            General
+                        </CardTitle>
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            How Kwarta looks and behaves.
+                        </p>
                     </CardHeader>
-                    <CardContent className="">
-                        <div className="h-[72px] flex items-center justify-between">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                                <SettingIconBadge
-                                    icon={RiLayoutFill}
-                                    color="#3B82F6"
-                                />
-                                <p className="text-sm font-medium leading-5">
-                                    Home layout
-                                </p>
+                    <CardContent className="flex flex-col gap-1 px-5 pb-4 pt-1">
+                        <div className="flex items-center justify-between gap-3 py-3 first:pt-0">
+                            <div className="flex min-w-0 items-center gap-3">
+                                <SettingIconBadge icon={RiLayoutFill} />
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium leading-5">
+                                        Home layout
+                                    </p>
+                                    <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                                        How categories appear on the home
+                                        screen.
+                                    </p>
+                                </div>
                             </div>
-                            <div className="w-40 sm:w-[200px]">
+                            <div className="w-40 shrink-0 sm:w-[200px]">
                                 <Select
                                     aria-label="Home layout"
                                     options={options.map((option) => {
@@ -2421,17 +2426,19 @@ function SettingsView({
                                 />
                             </div>
                         </div>
-                        <div className="h-[72px] gap-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                                <SettingIconBadge
-                                    icon={FaPalette}
-                                    color="#EC4899"
-                                />
-                                <p className="text-sm font-medium leading-5">
-                                    Accent color
-                                </p>
+                        <div className="flex items-center justify-between gap-3 py-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                                <SettingIconBadge icon={FaPalette} />
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium leading-5">
+                                        Accent color
+                                    </p>
+                                    <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                                        The highlight color across the app.
+                                    </p>
+                                </div>
                             </div>
-                            <div className="w-40 sm:w-[200px]">
+                            <div className="w-40 shrink-0 sm:w-[200px]">
                                 <Select
                                     aria-label="Accent color"
                                     compactOptions
@@ -2467,17 +2474,20 @@ function SettingsView({
                                 />
                             </div>
                         </div>
-                        <div className="h-[72px] gap-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                                <SettingIconBadge
-                                    icon={FaAdjust}
-                                    color="#6366F1"
-                                />
-                                <p className="text-sm font-medium leading-5">
-                                    Theme
-                                </p>
+                        <div className="flex items-center justify-between gap-3 py-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                                <SettingIconBadge icon={FaAdjust} />
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium leading-5">
+                                        Theme
+                                    </p>
+                                    <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                                        Follow your system, or pick light or
+                                        dark.
+                                    </p>
+                                </div>
                             </div>
-                            <div className="flex items-center rounded-full border border-border p-1 gap-0.5">
+                            <div className="flex shrink-0 items-center gap-0.5 rounded-full border border-border p-1">
                                 {(
                                     [
                                         {
@@ -2506,7 +2516,7 @@ function SettingsView({
                                             "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
                                             colorMode === value
                                                 ? "ring-1 ring-border text-foreground"
-                                                : "text-muted-foreground hover:bg-neutral-200 hover:text-foreground dark:hover:bg-neutral-700",
+                                                : "text-muted-foreground hover:bg-[hsl(var(--hover-surface))] hover:text-foreground",
                                         )}
                                     >
                                         <Icon className="h-3.5 w-3.5" />
@@ -2514,13 +2524,12 @@ function SettingsView({
                                 ))}
                             </div>
                         </div>
-                        <div className="h-[72px] flex items-center">
+                        <div className="py-3 last:pb-0">
                             <SettingsSwitch
                                 checked={!budgetsEnabled}
                                 description="Add expenses without setting category budgets."
-                                descriptionDisplay="menu"
+                                descriptionDisplay="inline"
                                 icon={FaChartBar}
-                                iconColor="#F59E0B"
                                 id="disable-budget-tracking"
                                 label="Disable Budget Tracking"
                                 accentColor={currentAccentColor}
@@ -2532,14 +2541,16 @@ function SettingsView({
                     </CardContent>
                 </Card>
 
-                <Card className="overflow-hidden bg-white">
-                    <CardHeader>
-                        <CardTitle>Backup</CardTitle>
-                        {/* <p className="text-sm leading-5 text-muted-foreground">
-              Import or export your full Kwarta workspace as a JSON backup.
-            </p> */}
+                <Card className="overflow-hidden rounded-xl">
+                    <CardHeader className="p-5 pb-3">
+                        <CardTitle className="text-base font-semibold">
+                            Backup
+                        </CardTitle>
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            Import or export your full workspace.
+                        </p>
                     </CardHeader>
-                    <CardContent className="space-y-3">
+                    <CardContent className="space-y-3 px-5 pb-5">
                         <BackupActionRow
                             description="Transactions, budgets, accounts, categories, and subcategories."
                             error={backupImportError}
@@ -2560,15 +2571,17 @@ function SettingsView({
                     </CardContent>
                 </Card>
 
-                <Card className="overflow-hidden bg-white">
-                    <CardHeader>
-                        <CardTitle>Account</CardTitle>
-                        {/* <p className="text-sm leading-5 text-muted-foreground">
-              Review your signed-in profile and session access.
-            </p> */}
+                <Card className="overflow-hidden rounded-xl">
+                    <CardHeader className="p-5 pb-3">
+                        <CardTitle className="text-base font-semibold">
+                            Account
+                        </CardTitle>
+                        <p className="text-sm leading-5 text-muted-foreground">
+                            Your profile and session.
+                        </p>
                     </CardHeader>
-                    <CardContent className="space-y-5">
-                        <div className="flex items-center gap-3 rounded-lg border border-border bg-neutral-50 p-3">
+                    <CardContent className="space-y-4 px-5 pb-5">
+                        <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:bg-[hsl(var(--hover-surface))]">
                             <LogoMark size={40} />
                             <div>
                                 <p className="font-medium leading-5">Kwarta</p>
@@ -2577,7 +2590,7 @@ function SettingsView({
                                 </p>
                             </div>
                         </div>
-                        <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:bg-[hsl(var(--hover-surface))]">
                             <ProfileImage user={user} size="md" />
                             <div className="min-w-0">
                                 <p className="truncate font-medium leading-5">
@@ -2593,7 +2606,11 @@ function SettingsView({
                             className="w-full justify-between"
                             variant="secondary"
                         >
-                            <a href="/" target="_blank" rel="noopener noreferrer">
+                            <a
+                                href="/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
                                 <span>About Kwarta</span>
                                 <ChevronRight className="h-4 w-4" aria-hidden />
                             </a>
@@ -2614,20 +2631,13 @@ function SettingsView({
     );
 }
 
-function SettingIconBadge({
-    icon: Icon,
-    color,
-}: {
-    icon: IconType;
-    color: string;
-}) {
+function SettingIconBadge({ icon: Icon }: { icon: IconType }) {
     return (
         <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white"
-            style={{ backgroundColor: color }}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-muted text-accent-muted-foreground"
             aria-hidden
         >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-[18px] w-[18px]" />
         </span>
     );
 }
@@ -2637,7 +2647,6 @@ function SettingsSwitch({
     description,
     descriptionDisplay = "inline",
     icon,
-    iconColor,
     id,
     label,
     accentColor,
@@ -2647,7 +2656,6 @@ function SettingsSwitch({
     description: string;
     descriptionDisplay?: "inline" | "menu";
     icon?: IconType;
-    iconColor?: string;
     id: string;
     label: string;
     accentColor?: string;
@@ -2686,11 +2694,9 @@ function SettingsSwitch({
     }, [isInfoOpen]);
 
     return (
-        <div className="relative flex w-full items-center justify-between">
-            <div className="flex min-w-0 items-center gap-2.5">
-                {icon && iconColor && (
-                    <SettingIconBadge icon={icon} color={iconColor} />
-                )}
+        <div className="relative flex w-full items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+                {icon && <SettingIconBadge icon={icon} />}
                 <div className="min-w-0">
                     <div className="flex items-center gap-2">
                         <Label htmlFor={id}>{label}</Label>
@@ -2722,7 +2728,7 @@ function SettingsSwitch({
                         )}
                     </div>
                     {descriptionDisplay === "inline" && (
-                        <p className="mt-1 text-sm leading-5 text-muted-foreground">
+                        <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
                             {description}
                         </p>
                     )}
@@ -2790,7 +2796,7 @@ function AutomaticBackupSummary({
     }
 
     return (
-        <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
             <div className="min-w-0">
                 <p className="text-sm font-medium leading-5">
                     Latest automatic backup
@@ -2885,7 +2891,7 @@ function BackupActionRow({
     onImportFile: (file: File) => void;
 }) {
     return (
-        <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
             <div>
                 <p className="text-sm font-medium leading-5">{label}</p>
                 <p className="mt-1 text-sm leading-5 text-muted-foreground">
