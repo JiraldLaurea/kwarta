@@ -422,7 +422,7 @@ function InfoPopover({ text, label }: { text: string; label: string }) {
       </button>
       {open && (
         <div
-          className="absolute left-0 top-full z-20 mt-2 w-[min(16rem,calc(100vw-2rem))] rounded-lg border border-border bg-card p-3 shadow-[0_10px_30px_rgba(0,0,0,0.12)]"
+          className="absolute left-1/2 top-full z-20 mt-2 w-[min(16rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-border bg-card p-3 shadow-[0_10px_30px_rgba(0,0,0,0.12)]"
           role="dialog"
         >
           <p className="text-sm leading-5 text-muted-foreground">{text}</p>
