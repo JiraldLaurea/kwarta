@@ -12,6 +12,7 @@ import {
     HomeView,
     ManageCategoriesView,
     QuickTransactionModal,
+    isHomeItemStyle,
 } from "@/components/kwarta/home-view";
 import { TransactionsView } from "@/components/kwarta/transactions-view";
 import {
@@ -470,7 +471,7 @@ export function KwartaApp() {
             "kwarta:home-item-style",
         );
 
-        if (storedHomeItemStyle === "ios" || storedHomeItemStyle === "cards") {
+        if (isHomeItemStyle(storedHomeItemStyle)) {
             setHomeItemStyle(storedHomeItemStyle);
         }
 

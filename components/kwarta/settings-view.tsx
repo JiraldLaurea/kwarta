@@ -3,10 +3,14 @@ import type { IconType } from "react-icons";
 import {
   ChevronRight,
   Download,
+  Gauge,
+  Grid3x3,
   Info,
   LayoutGrid,
   List,
   LogOut,
+  Rows3,
+  Target,
   Upload,
   type LucideIcon,
 } from "lucide-react";
@@ -45,7 +49,11 @@ const homeLayoutOptions: Array<{
   value: HomeItemStyle;
 }> = [
   { icon: List, label: "List", value: "ios" },
+  { icon: Rows3, label: "Compact", value: "compact" },
+  { icon: Gauge, label: "Meter", value: "meter" },
   { icon: LayoutGrid, label: "Cards", value: "cards" },
+  { icon: Grid3x3, label: "Tiles", value: "tiles" },
+  { icon: Target, label: "Rings", value: "rings" },
 ];
 
 const colorModeOptions = [

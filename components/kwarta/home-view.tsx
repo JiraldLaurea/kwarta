@@ -39,6 +39,7 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
@@ -74,6 +75,84 @@ import {
   ModalBackButton,
 } from "@/components/kwarta/shared";
 
+// Layouts that stack full-width rows inside a single divided card; the rest are
+// grids. Kept as a list so new list-style layouts only need adding here.
+const LIST_LAYOUTS: readonly HomeItemStyle[] = ["ios", "compact", "meter"];
+
+function isListLayout(style: HomeItemStyle) {
+  return LIST_LAYOUTS.includes(style);
+}
+
+function gridLayoutClass(style: HomeItemStyle) {
+  return style === "cards"
+    ? "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+    : "grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6";
+}
+
+// Per-layout classes for the tappable category wrapper (drag target).
+const CATEGORY_CARD_WRAPPER: Record<HomeItemStyle, string> = {
+  ios: "flex min-h-[78px] items-center gap-3 border-0 px-4 py-3 md:hover:bg-[hsl(var(--hover-surface))]",
+  compact:
+    "flex min-h-[52px] items-center gap-3 border-0 px-4 py-2.5 md:hover:bg-[hsl(var(--hover-surface))]",
+  meter: "block border-0 px-4 py-3 md:hover:bg-[hsl(var(--hover-surface))]",
+  cards:
+    "rounded-xl border border-border p-4 md:hover:bg-[hsl(var(--hover-surface))]",
+  rings:
+    "flex flex-col items-center gap-2 rounded-xl border border-border p-3 text-center md:hover:bg-[hsl(var(--hover-surface))]",
+  tiles:
+    "flex flex-col items-center gap-1.5 rounded-xl border border-border p-3 text-center md:hover:bg-[hsl(var(--hover-surface))]",
+};
+
+function BudgetRing({
+  active,
+  color,
+  over,
+  pct,
+  children,
+}: {
+  active: boolean;
+  color: string;
+  over: boolean;
+  pct: number;
+  children: ReactNode;
+}) {
+  const size = 60;
+  const stroke = 4;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dash = (circumference * Math.min(100, pct)) / 100;
+
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90" aria-hidden>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="hsl(var(--muted))"
+          strokeWidth={stroke}
+        />
+        {active && (
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={over ? "#DC2626" : color}
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            strokeDasharray={`${dash} ${circumference}`}
+          />
+        )}
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function HomeView({
   budgets,
   budgetsEnabled,
@@ -105,7 +184,7 @@ export function HomeView({
     <div
       className={cn(
         "space-y-5",
-        homeItemStyle === "ios" &&
+        isListLayout(homeItemStyle) &&
           "md:grid md:grid-cols-2 md:items-start md:gap-5 md:space-y-0",
       )}
     >
@@ -179,7 +258,6 @@ function CategoryQuickAddSection({
     () => categories.map((category) => category.id),
     [categories],
   );
-  const usesIosStyle = homeItemStyle === "ios";
   const totalsByCategoryId = useMemo(() => {
     const totals = new Map<string, number>();
 
@@ -258,9 +336,9 @@ function CategoryQuickAddSection({
           <SortableContext items={categoryIds} strategy={rectSortingStrategy}>
             <div
               className={cn(
-                usesIosStyle
+                isListLayout(homeItemStyle)
                   ? "overflow-hidden rounded-xl border border-border bg-card divide-y divide-border"
-                  : "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4",
+                  : gridLayoutClass(homeItemStyle),
               )}
             >
               {categories.map((category) => (
@@ -351,16 +429,18 @@ function SortableCategoryCard({
   };
   const hasBudgetTracking =
     budgetsEnabled && normalizeTransactionType(category.type) === "expense";
-  const usesIosStyle = homeItemStyle === "ios";
   const budgetStatus = budget
     ? total > budget.limit
       ? `${formatCurrency(total - budget.limit)} excess`
       : `${formatCurrency(budget.limit - total)} left`
     : "No budget set";
-  const budgetProgressWidth = `${Math.min(
-    100,
-    budget && budget.limit > 0 ? (total / budget.limit) * 100 : 0,
-  )}%`;
+  const budgetPct =
+    budget && budget.limit > 0
+      ? Math.min(100, (total / budget.limit) * 100)
+      : 0;
+  const budgetProgressWidth = `${budgetPct}%`;
+  const isOverBudget = budget ? total > budget.limit : false;
+  const barColor = isOverBudget ? "#DC2626" : category.color;
 
   return (
     <div
@@ -370,9 +450,7 @@ function SortableCategoryCard({
       {...listeners}
       className={cn(
         "relative bg-card text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        usesIosStyle
-          ? "flex min-h-[78px] items-center gap-3 border-0 px-4 py-3 md:hover:bg-[hsl(var(--hover-surface))]"
-          : "rounded-xl border border-border p-4 md:hover:bg-[hsl(var(--hover-surface))]",
+        CATEGORY_CARD_WRAPPER[homeItemStyle],
         editMode &&
           "cursor-grab touch-none select-none md:hover:border-border active:cursor-grabbing",
         isDragging && "opacity-20",
@@ -393,7 +471,7 @@ function SortableCategoryCard({
         }
       }}
     >
-      {usesIosStyle ? (
+      {homeItemStyle === "ios" && (
         <>
           <div className="shrink-0">
             <CategoryIconBadge
@@ -421,8 +499,7 @@ function SortableCategoryCard({
                     <div
                       className={cn("h-full rounded-full transition-all")}
                       style={{
-                        backgroundColor:
-                          total > budget.limit ? "#DC2626" : category.color,
+                        backgroundColor: barColor,
                         width: budgetProgressWidth,
                       }}
                     />
@@ -431,7 +508,7 @@ function SortableCategoryCard({
                 <p
                   className={cn(
                     "mt-1 text-xs leading-4 text-muted-foreground",
-                    budget && total > budget.limit && "text-destructive",
+                    isOverBudget && "text-destructive",
                   )}
                 >
                   {budgetStatus}
@@ -446,13 +523,142 @@ function SortableCategoryCard({
             />
           )}
         </>
-      ) : (
+      )}
+
+      {homeItemStyle === "compact" && (
         <>
-          <div className="mb-3 flex items-start justify-between">
+          <CategoryIconBadge
+            category={category}
+            className="h-9 w-9"
+            iconClassName="h-4 w-4"
+          />
+          <p className="min-w-0 flex-1 truncate text-sm font-medium leading-5">
+            {category.name}
+          </p>
+          <span className="shrink-0 text-sm font-medium leading-5 tabular-nums">
+            {formatCurrency(total)}
+          </span>
+          {hasBudgetTracking && budget && (
+            <div
+              aria-label={`${category.name} budget progress`}
+              className="h-1.5 w-10 shrink-0 overflow-hidden rounded-full bg-muted"
+            >
+              <div
+                className="h-full rounded-full"
+                style={{ width: budgetProgressWidth, backgroundColor: barColor }}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {homeItemStyle === "meter" && (
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <CategoryIconBadge
+                category={category}
+                className="h-7 w-7"
+                iconClassName="h-3.5 w-3.5"
+              />
+              <p className="truncate text-sm font-medium leading-5">
+                {category.name}
+              </p>
+            </div>
+            <span className="shrink-0 text-sm font-medium leading-5 tabular-nums">
+              {formatCurrency(total)}
+            </span>
+          </div>
+          {hasBudgetTracking ? (
+            <>
+              <div
+                aria-label={`${category.name} budget progress`}
+                className="mt-2.5 h-2.5 overflow-hidden rounded-full bg-muted"
+              >
+                {budget && (
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{
+                      width: budgetProgressWidth,
+                      backgroundColor: barColor,
+                    }}
+                  />
+                )}
+              </div>
+              <div className="mt-1.5 flex items-center justify-between gap-3">
+                <p
+                  className={cn(
+                    "text-xs leading-4 text-muted-foreground",
+                    isOverBudget && "text-destructive",
+                  )}
+                >
+                  {budgetStatus}
+                </p>
+                {budget && (
+                  <span className="shrink-0 text-xs font-medium leading-4 tabular-nums text-muted-foreground">
+                    {Math.round(budgetPct)}%
+                  </span>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="mt-2 text-xs leading-4 text-muted-foreground">
+              No budget set
+            </p>
+          )}
+        </>
+      )}
+
+      {homeItemStyle === "rings" && (
+        <>
+          <BudgetRing
+            active={hasBudgetTracking && Boolean(budget)}
+            color={category.color}
+            over={isOverBudget}
+            pct={budgetPct}
+          >
             <CategoryIconBadge
               category={category}
-              className="h-10 w-10"
-              iconClassName="h-5 w-5"
+              className="h-9 w-9"
+              iconClassName="h-[18px] w-[18px]"
+            />
+          </BudgetRing>
+          <div className="w-full min-w-0">
+            <p className="truncate text-xs font-medium leading-4">
+              {category.name}
+            </p>
+            <p className="truncate text-xs leading-4 text-muted-foreground tabular-nums">
+              {formatCurrency(total)}
+            </p>
+          </div>
+        </>
+      )}
+
+      {homeItemStyle === "tiles" && (
+        <>
+          <CategoryIconBadge
+            category={category}
+            className="h-11 w-11"
+            iconClassName="h-5 w-5"
+          />
+          <div className="w-full min-w-0">
+            <p className="truncate text-xs font-medium leading-4">
+              {category.name}
+            </p>
+            <p className="truncate text-xs leading-4 text-muted-foreground tabular-nums">
+              {formatCurrency(total)}
+            </p>
+          </div>
+        </>
+      )}
+
+      {homeItemStyle === "cards" && (
+        <>
+          <div className="mb-3 flex items-start justify-between">
+            <CardCategoryIcon
+              category={category}
+              budget={hasBudgetTracking ? budget : undefined}
+              total={total}
             />
             <span className="text-sm font-semibold leading-5">
               {formatCurrency(total)}
@@ -461,44 +667,101 @@ function SortableCategoryCard({
           <p className="truncate text-sm font-medium leading-5">
             {category.name}
           </p>
-          {hasBudgetTracking ? (
-            <div className="mt-2">
-              <div
-                aria-label={`${category.name} budget progress`}
-                className="h-1.5 overflow-hidden rounded-full bg-neutral-100"
-              >
-                {budget && (
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{
-                      backgroundColor:
-                        total > budget.limit ? "#DC2626" : category.color,
-                      width: budgetProgressWidth,
-                    }}
-                  />
-                )}
-              </div>
-              <p
-                className={cn(
-                  "mt-1 text-xs leading-4 text-muted-foreground",
-                  budget && total > budget.limit && "text-destructive",
-                )}
-              >
-                {budgetStatus}
-              </p>
-            </div>
-          ) : (
-            <p className="mt-1 text-xs leading-4 text-muted-foreground">
-              No budget set
-            </p>
-          )}
+          <p
+            className={cn(
+              "mt-1 text-xs leading-4 text-muted-foreground",
+              hasBudgetTracking && isOverBudget && "text-destructive",
+            )}
+          >
+            {hasBudgetTracking ? budgetStatus : "No budget set"}
+          </p>
         </>
       )}
     </div>
   );
 }
 
-export type HomeItemStyle = "ios" | "cards";
+// Card-layout category icon. When the category has a budget, a progress ring
+// wraps the icon: the filled arc is the category color (red when over budget)
+// and the remaining track is a muted tint of that same color.
+function CardCategoryIcon({
+  budget,
+  category,
+  total,
+}: {
+  budget?: Budget;
+  category: Category;
+  total: number;
+}) {
+  const size = 48;
+  const strokeWidth = 3;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const over = budget ? total > budget.limit : false;
+  const ratio = budget && budget.limit > 0 ? total / budget.limit : 0;
+  const fraction = over ? 1 : Math.min(Math.max(ratio, 0), 1);
+
+  return (
+    <div className="relative flex h-12 w-12 shrink-0 items-center justify-center">
+      {budget && (
+        <svg
+          className="absolute inset-0 h-full w-full -rotate-90"
+          viewBox={`0 0 ${size} ${size}`}
+          aria-label={`${category.name} budget progress`}
+          role="img"
+        >
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={category.color}
+            strokeOpacity={0.25}
+            strokeWidth={strokeWidth}
+          />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={over ? "#DC2626" : category.color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - fraction)}
+            className="transition-all"
+          />
+        </svg>
+      )}
+      <CategoryIconBadge
+        category={category}
+        className="h-10 w-10"
+        iconClassName="h-5 w-5"
+      />
+    </div>
+  );
+}
+
+export type HomeItemStyle =
+  | "ios"
+  | "cards"
+  | "compact"
+  | "meter"
+  | "rings"
+  | "tiles";
+
+const HOME_ITEM_STYLES: readonly HomeItemStyle[] = [
+  "ios",
+  "cards",
+  "compact",
+  "meter",
+  "rings",
+  "tiles",
+];
+
+export function isHomeItemStyle(value: string | null): value is HomeItemStyle {
+  return value !== null && (HOME_ITEM_STYLES as readonly string[]).includes(value);
+}
 
 export function ManageCategoriesView({
   expenseCategories,
