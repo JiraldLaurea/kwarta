@@ -1,92 +1,10 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { disableBodyScroll, enableBodyScroll } from "body-scroll-lock";
-import {
-    closestCenter,
-    DndContext,
-    DragOverlay,
-    KeyboardSensor,
-    PointerSensor,
-    type DragEndEvent,
-    type DragStartEvent,
-    useSensor,
-    useSensors,
-} from "@dnd-kit/core";
-import {
-    rectSortingStrategy,
-    SortableContext,
-    sortableKeyboardCoordinates,
-    useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import {
-    Calendar,
-    Check,
-    ChevronRight,
-    CircleDollarSign,
-    Info,
-    BadgeDollarSign,
-    Banknote,
-    BriefcaseBusiness,
-    Car,
-    Clapperboard,
-    GraduationCap,
-    GripVertical,
-    HeartPulse,
-    Home,
-    Laptop,
-    Landmark,
-    LayoutGrid,
-    List,
-    PiggyBank,
-    Download,
-    Edit3,
-    Ellipsis,
-    LogOut,
-    Minus,
-    Plus,
-    Receipt,
-    Repeat,
-    ShoppingBag,
-    Smartphone,
-    Trash2,
-    Utensils,
-    Upload,
-    Zap,
-    type LucideIcon,
-} from "lucide-react";
+import { ChevronRight, HelpCircle } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { RefObject } from "react";
-import { useForm } from "react-hook-form";
-import type { IconType } from "react-icons";
 import { RemoveScroll } from "react-remove-scroll";
-import {
-    IoHome,
-    IoHomeOutline,
-    IoPieChart,
-    IoPieChartOutline,
-    IoPricetagsOutline,
-    IoReceipt,
-    IoReceiptOutline,
-    IoSettings,
-    IoSettingsOutline,
-    IoStatsChart,
-    IoStatsChartOutline,
-    IoWallet,
-    IoWalletOutline,
-} from "react-icons/io5";
-import { RiLayoutFill } from "react-icons/ri";
-import {
-    FaMoon,
-    FaPalette,
-    FaChartBar,
-    FaDesktop,
-    FaSun,
-    FaAdjust,
-} from "react-icons/fa";
 import { DashboardView } from "@/components/kwarta/dashboard-view";
 import {
     type HomeItemStyle,
@@ -94,12 +12,7 @@ import {
     ManageCategoriesView,
     QuickTransactionModal,
 } from "@/components/kwarta/home-view";
-import {
-    TransactionForm,
-    TransactionTable,
-} from "@/components/kwarta/transactions";
 import { TransactionsView } from "@/components/kwarta/transactions-view";
-import { z } from "zod";
 import {
     accounts as seedAccounts,
     budgets as seedBudgets,
@@ -107,26 +20,13 @@ import {
     transactions as seedTransactions,
     transfers as seedTransfers,
 } from "@/lib/data";
-import {
-    authSchema,
-    budgetSchema,
-    categorySchema,
-    transactionSchema,
-    type AuthFormValues,
-    type BudgetFormValues,
-    type CategoryFormValues,
-    type SubcategoryFormValues,
-    type TransactionFormValues,
-    type AccountFormValues,
-    type TransferFormValues,
-} from "@/lib/schema";
+import { type SubcategoryFormValues } from "@/lib/schema";
 import {
     createWorkspaceBackupPayload,
     downloadWorkspaceBackupPayload,
     downloadWorkspaceBackupFile,
     parseWorkspaceBackupPayload,
     type WorkspaceBackup,
-    type WorkspaceBackupPayload,
 } from "@/lib/kwarta/backup";
 import {
     hasPendingWorkspaceSync,
@@ -142,44 +42,27 @@ import type {
     Category,
     Transaction,
     Transfer,
-    TransactionType,
 } from "@/lib/types";
-import { cn, formatCurrency, formatDate, percent } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import {
     budgetMatchesPeriod,
     createBudgetCyclePeriod,
     createMonthlyPeriod,
     defaultBudgetCycleSettings,
-    formatMonthLabel,
-    formatPickerDate,
     formatPeriodLabel,
     getBudgetPeriodFields,
     getPeriodNoun,
-    formatTime,
-    formatTransactionGroupDate,
-    getAverageExpenseDayCount,
-    getCalendarDays,
     getCurrentTimeInputValue,
-    getDefaultCategoryIcon,
-    getDefaultTransactionDate,
     getFirstAccountId,
-    getFirstCategoryId,
-    getSubcategoriesForCategory,
     getPeriodMonth,
-    getTransactionFormValues,
-    getTransactionGroupSummary,
     getUniqueCategoryId,
-    handleDecimalInput,
     isInDateRange,
-    isSameDay,
     normalizeBudgetCycleSettings,
     normalizeTimeValue,
     normalizeTransactionType,
     parseDateValue,
-    parseDecimalInput,
     parseMonthValue,
     reorderCategoriesByType,
-    slugifyCategoryValue,
     toDateInputValue,
     toMonthInputValue,
     upsertReusableBudgets,
@@ -187,103 +70,35 @@ import {
     type BudgetCycleSettings,
     type SelectedPeriod,
 } from "@/lib/kwarta/helpers";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Select } from "@/components/ui/select";
 import {
-    CategoryIconBadge,
-    DatePickerInput,
     EditModal,
-    EmptyState,
-    FieldError,
-    GoogleLogo,
     MetricCard,
-    ModalBackButton,
     PageHeader,
-    ProfileImage,
     PeriodSelector,
-    TransactionIcon,
-    categoryIconChoices,
-    colorChoices,
     getAccountName,
 } from "@/components/kwarta/shared";
-import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
 import { BudgetsView } from "@/components/kwarta/budgets-view";
 import { AccountsView } from "@/components/kwarta/accounts-view";
 import { CategoryForm, SubcategoryForm } from "@/components/kwarta/categories";
+import { ImportConfirmationModal, ImportLoadingModal } from "@/components/kwarta/backup-controls";
 import {
-    BackupActions,
-    ImportConfirmationModal,
-    ImportLoadingModal,
-} from "@/components/kwarta/backup-controls";
-
-type View =
-    | "dashboard"
-    | "transactions"
-    | "budgets"
-    | "accounts"
-    | "reports"
-    | "settings"
-    | "manage-categories";
-
-const navigationItems: Array<{
-    activeIcon: IconType;
-    icon: IconType;
-    label: string;
-    view: View;
-}> = [
-    {
-        icon: IoHomeOutline,
-        activeIcon: IoHome,
-        label: "Home",
-        view: "dashboard",
-    },
-    {
-        icon: IoReceiptOutline,
-        activeIcon: IoReceipt,
-        label: "Transactions",
-        view: "transactions",
-    },
-    {
-        icon: IoPieChartOutline,
-        activeIcon: IoPieChart,
-        label: "Budgets",
-        view: "budgets",
-    },
-    {
-        icon: IoWalletOutline,
-        activeIcon: IoWallet,
-        label: "Accounts",
-        view: "accounts",
-    },
-    {
-        icon: IoSettingsOutline,
-        activeIcon: IoSettings,
-        label: "Settings",
-        view: "settings",
-    },
-];
-
-type AccentTheme = "black" | "blue" | "green" | "purple";
-type ColorMode = "light" | "dark" | "system";
-
-const accentThemeOptions: Array<{
-    color: string;
-    label: string;
-    value: AccentTheme;
-}> = [
-    { color: "#171717", label: "Black", value: "black" },
-    { color: "#2563EB", label: "Blue", value: "blue" },
-    { color: "#15803D", label: "Green", value: "green" },
-    { color: "#7C3AED", label: "Purple", value: "purple" },
-];
-
-function isAccentTheme(value: string | null): value is AccentTheme {
-    return accentThemeOptions.some((option) => option.value === value);
-}
+    DesktopSidebar,
+    MobileTabBar,
+} from "@/components/kwarta/app-navigation";
+import { SettingsView } from "@/components/kwarta/settings-view";
+import { HelpPanel } from "@/components/kwarta/help-panel";
+import {
+    AuthLoadingScreen,
+    AuthScreen,
+} from "@/components/kwarta/auth-screen";
+import { DeleteCategoryConfirmationModal } from "@/components/kwarta/delete-category-modal";
+import {
+    isAccentTheme,
+    type AccentTheme,
+    type AutomaticBackupRecord,
+    type ColorMode,
+    type View,
+} from "@/components/kwarta/app-types";
 
 function applyAppearanceWithoutTransition(update: () => void) {
     const root = document.documentElement;
@@ -301,11 +116,6 @@ type StoredWorkspace = WorkspaceBackup;
 
 type PendingBackupImport = {
     workspace: StoredWorkspace;
-};
-
-type AutomaticBackupRecord = {
-    backup: WorkspaceBackupPayload;
-    createdAt: string;
 };
 
 async function persistWorkspace(workspace: StoredWorkspace, userId: string) {
@@ -519,6 +329,7 @@ export function KwartaApp() {
     const [quickAddCategory, setQuickAddCategory] = useState<Category | null>(
         null,
     );
+    const [helpOpen, setHelpOpen] = useState(false);
     const [homeCategoryFormOpen, setHomeCategoryFormOpen] = useState(false);
     const [subcategoryFormOpen, setSubcategoryFormOpen] = useState(false);
     const [categoryPendingDelete, setCategoryPendingDelete] =
@@ -1589,6 +1400,14 @@ export function KwartaApp() {
                                 onChange={setSelectedPeriod}
                             />
                         </div>
+                        <button
+                            aria-label="Help & tips"
+                            type="button"
+                            onClick={() => setHelpOpen(true)}
+                            className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
+                        >
+                            <HelpCircle className="h-5 w-5" aria-hidden />
+                        </button>
                     </div>
                 </header>
 
@@ -1914,6 +1733,7 @@ export function KwartaApp() {
                                 setView("manage-categories")
                             }
                             onViewReports={() => setView("reports")}
+                            onOpenHelp={() => setHelpOpen(true)}
                             onBudgetsEnabledChange={setBudgetsEnabled}
                             onBackupExport={() =>
                                 downloadWorkspaceBackupFile(
@@ -2007,6 +1827,12 @@ export function KwartaApp() {
                         />
                     )}
                 </div>
+                {helpOpen && (
+                    <HelpPanel
+                        view={view}
+                        onClose={() => setHelpOpen(false)}
+                    />
+                )}
                 {quickAddCategory && isDesktopLayout && (
                     <QuickTransactionModal
                         accounts={accounts}
@@ -2146,959 +1972,5 @@ export function KwartaApp() {
                 <MobileTabBar activeView={view} onSelect={setView} />
             </main>
         </>
-    );
-}
-
-function AuthLoadingScreen() {
-    return (
-        <main className="flex min-h-screen items-center justify-center bg-background px-5">
-            <div className="w-full max-w-sm p-6 text-center space-y-4">
-                <div className="flex gap-2 justify-center items-center">
-                    <div className="w-fit">
-                        <LogoMark size={40} />
-                    </div>
-                    <h1 className="text-4xl font-semibold">Kwarta</h1>
-                </div>
-                <p className="mt-2 inline-flex items-center justify-center gap-2 text-sm leading-5 text-muted-foreground">
-                    <span
-                        className="h-8 w-8 shrink-0 animate-spin rounded-full border-[3px] border-border border-t-foreground"
-                        aria-hidden
-                    />
-                </p>
-            </div>
-        </main>
-    );
-}
-
-function DesktopSidebar({
-    activeView,
-    onSelect,
-}: {
-    activeView: View;
-    onSelect: (view: View) => void;
-}) {
-    const currentNavView =
-        activeView === "manage-categories" || activeView === "reports"
-            ? "settings"
-            : activeView;
-
-    return (
-        <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border bg-white md:flex">
-            <div className="w-full mb-2 pt-4 border-border px-4 text-left">
-                <button
-                    aria-label="Go to Home"
-                    type="button"
-                    onClick={() => onSelect("dashboard")}
-                    className="cursor-pointer gap-2 items-center flex focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                >
-                    <LogoMark size={30} />
-                    <span className="text-xl font-semibold leading-7">
-                        Kwarta
-                    </span>
-                </button>
-            </div>
-            <nav
-                aria-label="Primary navigation"
-                className="flex-1 space-y-1 p-3"
-            >
-                {navigationItems.map((item) => {
-                    const active = currentNavView === item.view;
-                    const Icon = item.icon;
-
-                    return (
-                        <button
-                            className={cn(
-                                "flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-sm font-medium text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground",
-                                active &&
-                                    "bg-[hsl(var(--hover-surface))] text-foreground",
-                            )}
-                            key={item.view}
-                            type="button"
-                            onClick={() => onSelect(item.view)}
-                        >
-                            <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                            <span className="truncate">{item.label}</span>
-                        </button>
-                    );
-                })}
-            </nav>
-        </aside>
-    );
-}
-
-function MobileTabBar({
-    activeView,
-    onSelect,
-}: {
-    activeView: View;
-    onSelect: (view: View) => void;
-}) {
-    const currentNavView =
-        activeView === "manage-categories" || activeView === "reports"
-            ? "settings"
-            : activeView;
-    return (
-        <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-white/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] backdrop-blur-md md:hidden">
-            <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
-                {navigationItems.map((item) => {
-                    const active = currentNavView === item.view;
-                    const Icon = active ? item.activeIcon : item.icon;
-
-                    return (
-                        <button
-                            className={cn(
-                                "flex h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-md px-1 text-[10px] font-medium leading-3 text-[#9CA3AF] transition-colors",
-                                active && "text-primary dark:text-white",
-                            )}
-                            key={item.view}
-                            type="button"
-                            onClick={() => onSelect(item.view)}
-                        >
-                            <Icon className="h-6 w-6" aria-hidden />
-                            <span className="max-w-full truncate">
-                                {item.label}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
-        </nav>
-    );
-}
-
-function SettingsView({
-    accentTheme,
-    accountName,
-    automaticBackup,
-    previousBackup,
-    backupImportError,
-    backupImportInputRef,
-    budgetsEnabled,
-    colorMode,
-    email,
-    homeItemStyle,
-    user,
-    onBackupExport,
-    onBackupImportClick,
-    onBackupImportFile,
-    onAutomaticBackupDownload,
-    onAutomaticBackupRestore,
-    onPreviousBackupDownload,
-    onPreviousBackupRestore,
-    onColorModeChange,
-    onAccentThemeChange,
-    onBudgetsEnabledChange,
-    onHomeItemStyleChange,
-    onManageCategories,
-    onViewReports,
-    onSignOut,
-}: {
-    accentTheme: AccentTheme;
-    accountName: string;
-    automaticBackup: AutomaticBackupRecord | null;
-    previousBackup: AutomaticBackupRecord | null;
-    backupImportError: string | null;
-    backupImportInputRef: RefObject<HTMLInputElement>;
-    budgetsEnabled: boolean;
-    colorMode: ColorMode;
-    email: string;
-    homeItemStyle: HomeItemStyle;
-    user: User | null;
-    onBackupExport: () => void;
-    onBackupImportClick: () => void;
-    onBackupImportFile: (file: File) => void;
-    onAutomaticBackupDownload: () => void;
-    onAutomaticBackupRestore: () => void;
-    onPreviousBackupDownload: () => void;
-    onPreviousBackupRestore: () => void;
-    onColorModeChange: (mode: ColorMode) => void;
-    onAccentThemeChange: (theme: AccentTheme) => void;
-    onBudgetsEnabledChange: (enabled: boolean) => void;
-    onHomeItemStyleChange: (style: HomeItemStyle) => void;
-    onManageCategories: () => void;
-    onViewReports: () => void;
-    onSignOut: () => void;
-}) {
-    const currentAccentColor = accentThemeOptions.find(
-        (o) => o.value === accentTheme,
-    )?.color;
-    const isDarkEffective =
-        colorMode === "dark" ||
-        (colorMode === "system" &&
-            typeof window !== "undefined" &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-    const options: Array<{
-        icon: LucideIcon;
-        label: string;
-        value: HomeItemStyle;
-    }> = [
-        {
-            icon: List,
-            label: "List",
-            value: "ios",
-        },
-        {
-            icon: LayoutGrid,
-            label: "Cards",
-            value: "cards",
-        },
-    ];
-
-    return (
-        <div className="w-full space-y-5">
-            <PageHeader
-                title="Settings"
-                description="Manage app preferences, budget behavior, and account access."
-                actions={
-                    <div className="flex w-full gap-2 sm:w-auto">
-                        <Button
-                            className="min-w-0 flex-1 sm:flex-none"
-                            type="button"
-                            variant="secondary"
-                            onClick={onViewReports}
-                        >
-                            <IoStatsChart className="h-4 w-4" aria-hidden />
-                            Reports
-                        </Button>
-                        <Button
-                            className="min-w-0 flex-1 sm:flex-none"
-                            type="button"
-                            onClick={onManageCategories}
-                        >
-                            <IoPricetagsOutline
-                                className="h-4 w-4"
-                                aria-hidden
-                            />
-                            Manage categories
-                        </Button>
-                    </div>
-                }
-            />
-
-            <div className="grid gap-4 md:gap-5 lg:grid-cols-2">
-                <Card className="overflow-visible rounded-xl">
-                    <CardHeader className="p-5 pb-2">
-                        <CardTitle className="text-base font-semibold">
-                            General
-                        </CardTitle>
-                        <p className="text-sm leading-5 text-muted-foreground">
-                            How Kwarta looks and behaves.
-                        </p>
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-1 px-5 pb-4 pt-1">
-                        <div className="flex items-center justify-between gap-3 py-3 first:pt-0">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <SettingIconBadge icon={RiLayoutFill} />
-                                <div className="min-w-0">
-                                    <p className="text-sm font-medium leading-5">
-                                        Home layout
-                                    </p>
-                                    <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
-                                        How categories appear on the home
-                                        screen.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="w-40 shrink-0 sm:w-[200px]">
-                                <Select
-                                    aria-label="Home layout"
-                                    options={options.map((option) => {
-                                        const Icon = option.icon;
-
-                                        return {
-                                            icon: (
-                                                <Icon
-                                                    className="h-4 w-4"
-                                                    aria-hidden
-                                                />
-                                            ),
-                                            label: option.label,
-                                            value: option.value,
-                                        };
-                                    })}
-                                    value={homeItemStyle}
-                                    onValueChange={(value) =>
-                                        onHomeItemStyleChange(
-                                            value as HomeItemStyle,
-                                        )
-                                    }
-                                />
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between gap-3 py-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <SettingIconBadge icon={FaPalette} />
-                                <div className="min-w-0">
-                                    <p className="text-sm font-medium leading-5">
-                                        Accent color
-                                    </p>
-                                    <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
-                                        The highlight color across the app.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="w-40 shrink-0 sm:w-[200px]">
-                                <Select
-                                    aria-label="Accent color"
-                                    compactOptions
-                                    options={accentThemeOptions.map(
-                                        (option) => ({
-                                            icon: (
-                                                <span
-                                                    className="h-2 w-2 rounded-full bg-current"
-                                                    style={{
-                                                        color:
-                                                            isDarkEffective &&
-                                                            option.value ===
-                                                                "black"
-                                                                ? "#F5F5F5"
-                                                                : option.color,
-                                                    }}
-                                                />
-                                            ),
-                                            label:
-                                                isDarkEffective &&
-                                                option.value === "black"
-                                                    ? "White"
-                                                    : option.label,
-                                            value: option.value,
-                                        }),
-                                    )}
-                                    value={accentTheme}
-                                    onValueChange={(value) =>
-                                        onAccentThemeChange(
-                                            value as AccentTheme,
-                                        )
-                                    }
-                                />
-                            </div>
-                        </div>
-                        <div className="flex items-center justify-between gap-3 py-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <SettingIconBadge icon={FaAdjust} />
-                                <div className="min-w-0">
-                                    <p className="text-sm font-medium leading-5">
-                                        Theme
-                                    </p>
-                                    <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
-                                        Follow your system, or pick light or
-                                        dark.
-                                    </p>
-                                </div>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-0.5 rounded-full border border-border p-1">
-                                {(
-                                    [
-                                        {
-                                            value: "system" as ColorMode,
-                                            icon: FaDesktop,
-                                            label: "System",
-                                        },
-                                        {
-                                            value: "light" as ColorMode,
-                                            icon: FaSun,
-                                            label: "Light",
-                                        },
-                                        {
-                                            value: "dark" as ColorMode,
-                                            icon: FaMoon,
-                                            label: "Dark",
-                                        },
-                                    ] as const
-                                ).map(({ value, icon: Icon, label }) => (
-                                    <button
-                                        key={value}
-                                        type="button"
-                                        aria-label={label}
-                                        onClick={() => onColorModeChange(value)}
-                                        className={cn(
-                                            "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                                            colorMode === value
-                                                ? "ring-1 ring-border text-foreground"
-                                                : "text-muted-foreground hover:bg-[hsl(var(--hover-surface))] hover:text-foreground",
-                                        )}
-                                    >
-                                        <Icon className="h-3.5 w-3.5" />
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="py-3 last:pb-0">
-                            <SettingsSwitch
-                                checked={!budgetsEnabled}
-                                description="Add expenses without setting category budgets."
-                                descriptionDisplay="inline"
-                                icon={FaChartBar}
-                                id="disable-budget-tracking"
-                                label="Disable Budget Tracking"
-                                accentColor={currentAccentColor}
-                                onChange={(checked) =>
-                                    onBudgetsEnabledChange(!checked)
-                                }
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="overflow-hidden rounded-xl">
-                    <CardHeader className="p-5 pb-3">
-                        <CardTitle className="text-base font-semibold">
-                            Backup
-                        </CardTitle>
-                        <p className="text-sm leading-5 text-muted-foreground">
-                            Import or export your full workspace.
-                        </p>
-                    </CardHeader>
-                    <CardContent className="space-y-3 px-5 pb-5">
-                        <BackupActionRow
-                            description="Transactions, budgets, accounts, categories, and subcategories."
-                            error={backupImportError}
-                            importInputRef={backupImportInputRef}
-                            label="Workspace data"
-                            onExport={onBackupExport}
-                            onImportClick={onBackupImportClick}
-                            onImportFile={onBackupImportFile}
-                        />
-                        <AutomaticBackupSummary
-                            backup={automaticBackup}
-                            previousBackup={previousBackup}
-                            onDownload={onAutomaticBackupDownload}
-                            onRestore={onAutomaticBackupRestore}
-                            onPreviousDownload={onPreviousBackupDownload}
-                            onPreviousRestore={onPreviousBackupRestore}
-                        />
-                    </CardContent>
-                </Card>
-
-                <Card className="overflow-hidden rounded-xl">
-                    <CardHeader className="p-5 pb-3">
-                        <CardTitle className="text-base font-semibold">
-                            Account
-                        </CardTitle>
-                        <p className="text-sm leading-5 text-muted-foreground">
-                            Your profile and session.
-                        </p>
-                    </CardHeader>
-                    <CardContent className="space-y-4 px-5 pb-5">
-                        <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:bg-[hsl(var(--hover-surface))]">
-                            <LogoMark size={40} />
-                            <div>
-                                <p className="font-medium leading-5">Kwarta</p>
-                                <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                                    Personal budget workspace
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:bg-[hsl(var(--hover-surface))]">
-                            <ProfileImage user={user} size="md" />
-                            <div className="min-w-0">
-                                <p className="truncate font-medium leading-5">
-                                    {accountName}
-                                </p>
-                                <p className="mt-1 truncate text-sm leading-5 text-muted-foreground">
-                                    {email}
-                                </p>
-                            </div>
-                        </div>
-                        <Button
-                            asChild
-                            className="w-full justify-between"
-                            variant="secondary"
-                        >
-                            <a
-                                href="/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                <span>About Kwarta</span>
-                                <ChevronRight className="h-4 w-4" aria-hidden />
-                            </a>
-                        </Button>
-                        <Button
-                            className="w-full justify-between"
-                            type="button"
-                            variant="secondary"
-                            onClick={onSignOut}
-                        >
-                            <span>Log Out</span>
-                            <LogOut className="h-4 w-4" aria-hidden />
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
-    );
-}
-
-function SettingIconBadge({ icon: Icon }: { icon: IconType }) {
-    return (
-        <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-muted text-accent-muted-foreground"
-            aria-hidden
-        >
-            <Icon className="h-[18px] w-[18px]" />
-        </span>
-    );
-}
-
-function SettingsSwitch({
-    checked,
-    description,
-    descriptionDisplay = "inline",
-    icon,
-    id,
-    label,
-    accentColor,
-    onChange,
-}: {
-    checked: boolean;
-    description: string;
-    descriptionDisplay?: "inline" | "menu";
-    icon?: IconType;
-    id: string;
-    label: string;
-    accentColor?: string;
-    onChange: (checked: boolean) => void;
-}) {
-    const [isInfoOpen, setIsInfoOpen] = useState(false);
-    const infoRef = useRef<HTMLDivElement>(null);
-    const normalizedAccent = accentColor?.replace(/\s/g, "").toLowerCase();
-    const isWhiteAccent =
-        normalizedAccent === "#fff" ||
-        normalizedAccent === "#ffffff" ||
-        normalizedAccent === "white";
-    // Only use a black knob when checked — the track is white (accent) and
-    // needs contrast. When unchecked the track is neutral-300, so white is fine.
-    const knobColor = isWhiteAccent && checked ? "#000" : "#fff";
-
-    useEffect(() => {
-        if (!isInfoOpen) {
-            return;
-        }
-
-        function handlePointerDown(event: PointerEvent) {
-            if (
-                infoRef.current &&
-                !infoRef.current.contains(event.target as Node)
-            ) {
-                setIsInfoOpen(false);
-            }
-        }
-
-        document.addEventListener("pointerdown", handlePointerDown);
-
-        return () => {
-            document.removeEventListener("pointerdown", handlePointerDown);
-        };
-    }, [isInfoOpen]);
-
-    return (
-        <div className="relative flex w-full items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
-                {icon && <SettingIconBadge icon={icon} />}
-                <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                        <Label htmlFor={id}>{label}</Label>
-                        {descriptionDisplay === "menu" && (
-                            <div className="sm:relative" ref={infoRef}>
-                                <button
-                                    aria-expanded={isInfoOpen}
-                                    aria-haspopup="dialog"
-                                    aria-label={`About ${label}`}
-                                    className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
-                                    type="button"
-                                    onClick={() =>
-                                        setIsInfoOpen((open) => !open)
-                                    }
-                                >
-                                    <Info className="h-3.5 w-3.5" aria-hidden />
-                                </button>
-                                {isInfoOpen && (
-                                    <div
-                                        className="absolute bottom-full left-1/2 z-20 mb-2 w-[min(16rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-border bg-white p-3 shadow-sm sm:left-0 sm:w-64 sm:translate-x-0"
-                                        role="dialog"
-                                    >
-                                        <p className="text-sm leading-5 text-muted-foreground">
-                                            {description}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                    {descriptionDisplay === "inline" && (
-                        <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
-                            {description}
-                        </p>
-                    )}
-                </div>
-            </div>
-            <button
-                aria-checked={checked}
-                data-theme-switch={id === "dark-mode" ? "true" : undefined}
-                className={cn(
-                    "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-                    checked ? "bg-accent" : "bg-neutral-300",
-                )}
-                id={id}
-                role="switch"
-                type="button"
-                style={
-                    isWhiteAccent && !checked
-                        ? { backgroundColor: "#525252" }
-                        : undefined
-                }
-                onClick={() => onChange(!checked)}
-            >
-                <span
-                    className={cn(
-                        "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
-                        checked && "left-[18px]",
-                    )}
-                    style={{ backgroundColor: knobColor }}
-                />
-            </button>
-        </div>
-    );
-}
-
-function AutomaticBackupSummary({
-    backup,
-    previousBackup,
-    onDownload,
-    onRestore,
-    onPreviousDownload,
-    onPreviousRestore,
-}: {
-    backup: AutomaticBackupRecord | null;
-    previousBackup: AutomaticBackupRecord | null;
-    onDownload: () => void;
-    onRestore: () => void;
-    onPreviousDownload: () => void;
-    onPreviousRestore: () => void;
-}) {
-    function formatRecord(record: AutomaticBackupRecord) {
-        const createdAt = new Date(record.createdAt).toLocaleString("en-US", {
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-            month: "short",
-            year: "numeric",
-        });
-        const details = [
-            `${record.backup.transactions.length} transactions`,
-            `${record.backup.budgets.length} budgets`,
-            `${record.backup.accounts.length} accounts`,
-            `${record.backup.categories.length} categories`,
-        ].join(", ");
-        return { createdAt, details };
-    }
-
-    return (
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
-            <div className="min-w-0">
-                <p className="text-sm font-medium leading-5">
-                    Latest automatic backup
-                </p>
-                <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                    {backup
-                        ? (() => {
-                              const { createdAt, details } =
-                                  formatRecord(backup);
-                              return `Created ${createdAt}. ${details}.`;
-                          })()
-                        : "A daily snapshot will appear here after the workspace loads."}
-                </p>
-            </div>
-            <div className="grid w-full grid-cols-2 gap-2">
-                <Button
-                    className="w-full justify-center"
-                    disabled={!backup}
-                    type="button"
-                    variant="secondary"
-                    onClick={onRestore}
-                >
-                    <Upload className="h-4 w-4" aria-hidden />
-                    Restore
-                </Button>
-                <Button
-                    className="w-full justify-center"
-                    disabled={!backup}
-                    type="button"
-                    variant="secondary"
-                    onClick={onDownload}
-                >
-                    <Download className="h-4 w-4" aria-hidden />
-                    Download
-                </Button>
-            </div>
-            {previousBackup && (
-                <>
-                    <div className="min-w-0 pt-2">
-                        <p className="text-sm font-medium leading-5">
-                            Previous backup
-                        </p>
-                        <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                            {(() => {
-                                const { createdAt, details } =
-                                    formatRecord(previousBackup);
-                                return `Created ${createdAt}. ${details}.`;
-                            })()}
-                        </p>
-                    </div>
-                    <div className="grid w-full grid-cols-2 gap-2">
-                        <Button
-                            className="w-full justify-center"
-                            type="button"
-                            variant="secondary"
-                            onClick={onPreviousRestore}
-                        >
-                            <Upload className="h-4 w-4" aria-hidden />
-                            Restore
-                        </Button>
-                        <Button
-                            className="w-full justify-center"
-                            type="button"
-                            variant="secondary"
-                            onClick={onPreviousDownload}
-                        >
-                            <Download className="h-4 w-4" aria-hidden />
-                            Download
-                        </Button>
-                    </div>
-                </>
-            )}
-        </div>
-    );
-}
-
-function BackupActionRow({
-    description,
-    error,
-    importInputRef,
-    label,
-    onExport,
-    onImportClick,
-    onImportFile,
-}: {
-    description: string;
-    error: string | null;
-    importInputRef: RefObject<HTMLInputElement>;
-    label: string;
-    onExport: () => void;
-    onImportClick: () => void;
-    onImportFile: (file: File) => void;
-}) {
-    return (
-        <div className="flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
-            <div>
-                <p className="text-sm font-medium leading-5">{label}</p>
-                <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                    {description}
-                </p>
-            </div>
-            <BackupActions
-                error={error}
-                importInputRef={importInputRef}
-                onExport={onExport}
-                onImportClick={onImportClick}
-                onImportFile={onImportFile}
-            />
-        </div>
-    );
-}
-
-function LogoMark({ size }: { size: number }) {
-    return (
-        <Image
-            alt=""
-            aria-hidden
-            className="shrink-0 rounded-md bg-black p-[2px] dark:invert"
-            height={size}
-            priority
-            src="/icons/icon-192.png"
-            unoptimized
-            width={size}
-        />
-    );
-}
-
-function AuthScreen({
-    error,
-    mode,
-    onEmailSubmit,
-    onModeChange,
-    onGoogleLogin,
-}: {
-    error: string | null;
-    mode: AuthMode;
-    onEmailSubmit: (values: AuthFormValues) => void | Promise<void>;
-    onModeChange: (mode: AuthMode) => void;
-    onGoogleLogin: () => void;
-}) {
-    const form = useForm<AuthFormValues>({
-        resolver: zodResolver(authSchema),
-        defaultValues: {
-            email: "",
-            password: "",
-        },
-    });
-
-    return (
-        <main className="min-h-screen bg-background">
-            <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center gap-5 px-5 py-8 sm:gap-10 sm:py-10 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-                <section>
-                    <div className="mb-0 flex items-center gap-2 sm:mb-8">
-                        <LogoMark size={40} />
-                        <span className="text-4xl font-semibold">Kwarta</span>
-                    </div>
-                    <h1 className="hidden max-w-2xl text-4xl font-semibold leading-tight tracking-normal text-foreground sm:block md:text-5xl">
-                        A precise budget tracker for clearer everyday money
-                        decisions.
-                    </h1>
-                    <p className="mt-5 hidden max-w-xl text-base leading-7 text-muted-foreground sm:block">
-                        Manage income, expenses, categories, and budget limits
-                        in a focused product workspace designed for repeat use.
-                    </p>
-                </section>
-
-                <Card className="bg-white">
-                    <CardHeader>
-                        <CardTitle className="text-3xl font-semibold leading-9">
-                            {mode === "login" ? "Sign in" : "Create account"}
-                        </CardTitle>
-                        <p className="text-base leading-6 text-muted-foreground">
-                            {mode === "login"
-                                ? "Welcome back! Let's sign in to your account."
-                                : "Create an account to start tracking your money."}
-                        </p>
-                    </CardHeader>
-                    <CardContent>
-                        <Button
-                            className="mt-4 w-full"
-                            type="button"
-                            variant="secondary"
-                            onClick={onGoogleLogin}
-                        >
-                            <GoogleLogo className="h-5 w-5" />
-                            {mode === "login"
-                                ? "Sign in with Google"
-                                : "Sign up with Google"}
-                        </Button>
-                        <div className="my-4 flex items-center gap-3">
-                            <div className="flex-1 border-t border-border" />
-                            <span className="text-sm leading-5 text-muted-foreground">
-                                or
-                            </span>
-                            <div className="flex-1 border-t border-border" />
-                        </div>
-                        {error && (
-                            <p className="mb-4 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm leading-5 text-destructive">
-                                {error}
-                            </p>
-                        )}
-                        <form
-                            className="space-y-4"
-                            onSubmit={form.handleSubmit(onEmailSubmit)}
-                        >
-                            <FieldError
-                                message={form.formState.errors.email?.message}
-                            >
-                                <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    {...form.register("email")}
-                                />
-                            </FieldError>
-                            <FieldError
-                                message={
-                                    form.formState.errors.password?.message
-                                }
-                            >
-                                <Label htmlFor="password">Password</Label>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    {...form.register("password")}
-                                />
-                            </FieldError>
-                            <Button className="w-full" type="submit">
-                                {mode === "login"
-                                    ? "Sign in"
-                                    : "Create account"}
-                            </Button>
-                        </form>
-                        <div className="mt-4 flex items-center justify-between border-t pt-4 text-sm">
-                            <span className="text-muted-foreground">
-                                {mode === "login"
-                                    ? "Don't have an account?"
-                                    : "Already registered?"}
-                            </span>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                    onModeChange(
-                                        mode === "login" ? "register" : "login",
-                                    )
-                                }
-                            >
-                                {mode === "login" ? "Sign up" : "Sign in"}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </main>
-    );
-}
-
-function DeleteCategoryConfirmationModal({
-    category,
-    onCancel,
-    onConfirm,
-}: {
-    category: Category;
-    onCancel: () => void;
-    onConfirm: () => void;
-}) {
-    return (
-        <EditModal onClose={onCancel}>
-            <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
-                <div className="px-6 pb-6 pt-5">
-                    <ModalBackButton onClick={onCancel} />
-                    <CardTitle className="text-2xl font-medium leading-8">
-                        Delete {category.name}?
-                    </CardTitle>
-                    <p className="mt-2 text-base leading-6 text-muted-foreground">
-                        This will remove the card, its transactions, and any
-                        budgets linked to this category.
-                    </p>
-                    <Button
-                        className="mt-6 w-full sm:hidden"
-                        type="button"
-                        onClick={onConfirm}
-                    >
-                        Delete card
-                    </Button>
-                </div>
-                <div className="hidden items-center justify-between border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
-                    <Button
-                        data-modal-close
-                        type="button"
-                        variant="secondary"
-                        onClick={onCancel}
-                    >
-                        Cancel
-                    </Button>
-                    <Button type="button" onClick={onConfirm}>
-                        Delete card
-                    </Button>
-                </div>
-            </Card>
-        </EditModal>
     );
 }

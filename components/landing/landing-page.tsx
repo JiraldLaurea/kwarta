@@ -524,12 +524,11 @@ function ReportsPreview() {
         </div>
         <div className="mt-4 flex h-24 items-end gap-2">
           {bars.map((h, i) => (
-            <div key={i} className="flex-1">
-              <div
-                className="w-full rounded-t bg-accent"
-                style={{ height: `${h}%` }}
-              />
-            </div>
+            <div
+              key={i}
+              className="flex-1 rounded-t bg-accent"
+              style={{ height: `${h}%` }}
+            />
           ))}
         </div>
       </div>
