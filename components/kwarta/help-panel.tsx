@@ -1,5 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ImageOff, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  ImageOff,
+  PieChart,
+  Receipt,
+  Settings,
+  Tags,
+  Wallet,
+  X,
+} from "lucide-react";
+import { RiLayoutFill } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { Card, CardTitle } from "@/components/ui/card";
 import {
@@ -16,8 +30,20 @@ type HelpStep = {
 
 type HelpTopic = {
   title: string;
+  icon: LucideIcon | typeof RiLayoutFill;
   steps: HelpStep[];
 };
+
+// Order the index list follows.
+const topicOrder: View[] = [
+  "dashboard",
+  "transactions",
+  "budgets",
+  "accounts",
+  "reports",
+  "manage-categories",
+  "settings",
+];
 
 // Each step's screenshot lives at
 //   /help/{view}/step-{n}-{mobile|desktop}.png
@@ -26,6 +52,7 @@ type HelpTopic = {
 const helpTopics: Partial<Record<View, HelpTopic>> = {
   dashboard: {
     title: "Home",
+    icon: RiLayoutFill,
     steps: [
       {
         caption: "Log money in a tap",
@@ -40,6 +67,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   transactions: {
     title: "Transactions",
+    icon: Receipt,
     steps: [
       {
         caption: "Every entry, by day",
@@ -54,6 +82,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   budgets: {
     title: "Budgets",
+    icon: PieChart,
     steps: [
       {
         caption: "See the whole picture",
@@ -72,6 +101,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   accounts: {
     title: "Accounts",
+    icon: Wallet,
     steps: [
       {
         caption: "Track every balance",
@@ -85,6 +115,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   settings: {
     title: "Settings",
+    icon: Settings,
     steps: [
       {
         caption: "Make it yours",
@@ -104,6 +135,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   reports: {
     title: "Reports",
+    icon: BarChart3,
     steps: [
       {
         caption: "Your money at a glance",
@@ -123,6 +155,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   "manage-categories": {
     title: "Manage categories",
+    icon: Tags,
     steps: [
       {
         caption: "Add a category",
@@ -142,13 +175,139 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
 
 export function HelpPanel({
   view,
+  showIndex = false,
   onClose,
 }: {
   view: View;
+  showIndex?: boolean;
   onClose: () => void;
 }) {
-  const topic = helpTopics[view] ?? helpTopics.dashboard!;
-  const topicKey: View = helpTopics[view] ? view : "dashboard";
+  // When opened from the account panel (`showIndex`), start on the page list;
+  // otherwise open the current page's tips directly.
+  const initialView: View | null = showIndex
+    ? null
+    : helpTopics[view]
+      ? view
+      : "dashboard";
+  const [selectedView, setSelectedView] = useState<View | null>(initialView);
+
+  // Back returns to the list when we came from it, otherwise it closes.
+  const canReturnToList = showIndex && selectedView !== null;
+  const handleBack = () => {
+    if (canReturnToList) {
+      setSelectedView(null);
+    } else {
+      onClose();
+    }
+  };
+
+  return (
+    <EditModal allowContentScroll onClose={onClose}>
+      <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
+        <div className="flex flex-col px-5 pb-5 pt-5 sm:px-6">
+          <ModalBackButton onClick={handleBack} />
+          {selectedView ? (
+            <HelpTopicView
+              topicKey={selectedView}
+              canReturnToList={canReturnToList}
+              onReturnToList={() => setSelectedView(null)}
+              onClose={onClose}
+            />
+          ) : (
+            <HelpIndex
+              onSelect={(key) => setSelectedView(key)}
+              onClose={onClose}
+            />
+          )}
+        </div>
+      </Card>
+    </EditModal>
+  );
+}
+
+function CloseButton({ onClose }: { onClose: () => void }) {
+  return (
+    <button
+      aria-label="Close"
+      data-modal-close
+      type="button"
+      onClick={onClose}
+      className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
+    >
+      <X className="h-5 w-5" aria-hidden />
+    </button>
+  );
+}
+
+function HelpIndex({
+  onSelect,
+  onClose,
+}: {
+  onSelect: (key: View) => void;
+  onClose: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Help
+          </p>
+          <CardTitle className="mt-0.5 text-2xl font-medium leading-8">
+            Tips by page
+          </CardTitle>
+        </div>
+        <CloseButton onClose={onClose} />
+      </div>
+
+      <div className="mt-5 overflow-hidden rounded-xl border border-border divide-y divide-border">
+        {topicOrder.map((key) => {
+          const topic = helpTopics[key];
+          if (!topic) {
+            return null;
+          }
+          const Icon = topic.icon;
+
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => onSelect(key)}
+              className="flex w-full items-center gap-3 bg-card px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))]"
+            >
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-muted text-accent-muted-foreground"
+                aria-hidden
+              >
+                <Icon className="h-[18px] w-[18px]" />
+              </span>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium leading-5">
+                {topic.title}
+              </span>
+              <ChevronRight
+                className="h-5 w-5 shrink-0 text-muted-foreground/60"
+                aria-hidden
+              />
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function HelpTopicView({
+  topicKey,
+  canReturnToList,
+  onReturnToList,
+  onClose,
+}: {
+  topicKey: View;
+  canReturnToList: boolean;
+  onReturnToList: () => void;
+  onClose: () => void;
+}) {
+  const topic = helpTopics[topicKey] ?? helpTopics.dashboard!;
   const [index, setIndex] = useState(0);
   const stepCount = topic.steps.length;
   const startXRef = useRef<number | null>(null);
@@ -173,114 +332,114 @@ export function HelpPanel({
   const step = topic.steps[index];
 
   return (
-    <EditModal allowContentScroll onClose={onClose}>
-      <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
-        <div className="flex flex-col px-5 pb-5 pt-5 sm:px-6">
-          <ModalBackButton onClick={onClose} />
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Help
-              </p>
-              <CardTitle className="mt-0.5 text-2xl font-medium leading-8">
-                {topic.title}
-              </CardTitle>
-            </div>
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          {canReturnToList && (
             <button
-              aria-label="Close"
-              data-modal-close
+              aria-label="Back to all tips"
               type="button"
+              onClick={onReturnToList}
               className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
             >
-              <X className="h-5 w-5" aria-hidden />
+              <ArrowLeft className="h-5 w-5" aria-hidden />
             </button>
+          )}
+          <div className="min-w-0">
+            <CardTitle className="text-2xl font-medium leading-8">
+              {topic.title}
+            </CardTitle>
           </div>
+        </div>
+        <CloseButton onClose={onClose} />
+      </div>
+
+      <div
+        className="mt-5"
+        onTouchStart={(event) => {
+          // Keep this gesture local to the carousel so it doesn't also trigger
+          // the mobile form's swipe-to-close.
+          event.stopPropagation();
+          startXRef.current = event.touches[0]?.clientX ?? null;
+        }}
+        onTouchEnd={(event) => {
+          if (startXRef.current === null) {
+            return;
+          }
+
+          const delta =
+            (event.changedTouches[0]?.clientX ?? startXRef.current) -
+            startXRef.current;
+          startXRef.current = null;
+
+          if (delta > 50) {
+            goTo(index - 1);
+          } else if (delta < -50) {
+            goTo(index + 1);
+          }
+        }}
+      >
+        <HelpImage
+          topicKey={topicKey}
+          stepNumber={index + 1}
+          alt={`${topic.title}: ${step.caption}`}
+        />
+      </div>
+
+      <div className="mt-4 min-h-[3.5rem]">
+        <p className="text-base font-semibold leading-6">{step.caption}</p>
+        <p className="mt-1 text-sm leading-5 text-muted-foreground">
+          {step.detail}
+        </p>
+      </div>
+
+      {stepCount > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-6">
+          <button
+            aria-label="Previous"
+            type="button"
+            disabled={index === 0}
+            onClick={() => goTo(index - 1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 md:hover:bg-[hsl(var(--hover-surface))]"
+          >
+            <ChevronLeft className="h-5 w-5" aria-hidden />
+          </button>
 
           <div
-            className="mt-5"
-            onTouchStart={(event) => {
-              startXRef.current = event.touches[0]?.clientX ?? null;
-            }}
-            onTouchEnd={(event) => {
-              if (startXRef.current === null) {
-                return;
-              }
-
-              const delta =
-                (event.changedTouches[0]?.clientX ?? startXRef.current) -
-                startXRef.current;
-              startXRef.current = null;
-
-              if (delta > 50) {
-                goTo(index - 1);
-              } else if (delta < -50) {
-                goTo(index + 1);
-              }
-            }}
+            className="flex items-center gap-1.5"
+            role="tablist"
+            aria-label="Steps"
           >
-            <HelpImage
-              topicKey={topicKey}
-              stepNumber={index + 1}
-              alt={`${topic.title}: ${step.caption}`}
-            />
+            {topic.steps.map((s, i) => (
+              <button
+                key={s.caption}
+                type="button"
+                role="tab"
+                aria-selected={i === index}
+                aria-label={`Step ${i + 1}: ${s.caption}`}
+                onClick={() => goTo(i)}
+                className={cn(
+                  "h-2 rounded-full transition-all",
+                  i === index
+                    ? "w-5 bg-foreground"
+                    : "w-2 bg-neutral-300 md:hover:bg-neutral-400",
+                )}
+              />
+            ))}
           </div>
 
-          <div className="mt-4 min-h-[3.5rem]">
-            <p className="text-base font-semibold leading-6">{step.caption}</p>
-            <p className="mt-1 text-sm leading-5 text-muted-foreground">
-              {step.detail}
-            </p>
-          </div>
-
-          {stepCount > 1 && (
-            <div className="mt-4 flex items-center justify-between">
-              <button
-                aria-label="Previous"
-                type="button"
-                disabled={index === 0}
-                onClick={() => goTo(index - 1)}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 md:hover:bg-[hsl(var(--hover-surface))]"
-              >
-                <ChevronLeft className="h-5 w-5" aria-hidden />
-              </button>
-
-              <div
-                className="flex items-center gap-1.5"
-                role="tablist"
-                aria-label="Steps"
-              >
-                {topic.steps.map((s, i) => (
-                  <button
-                    key={s.caption}
-                    type="button"
-                    role="tab"
-                    aria-selected={i === index}
-                    aria-label={`Step ${i + 1}: ${s.caption}`}
-                    onClick={() => goTo(i)}
-                    className={cn(
-                      "h-2 rounded-full transition-all",
-                      i === index
-                        ? "w-5 bg-accent"
-                        : "w-2 bg-neutral-300 md:hover:bg-neutral-400",
-                    )}
-                  />
-                ))}
-              </div>
-
-              <button
-                aria-label="Next"
-                type="button"
-                disabled={index === stepCount - 1}
-                onClick={() => goTo(index + 1)}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 md:hover:bg-[hsl(var(--hover-surface))]"
-              >
-                <ChevronRight className="h-5 w-5" aria-hidden />
-              </button>
-            </div>
-          )}
+          <button
+            aria-label="Next"
+            type="button"
+            disabled={index === stepCount - 1}
+            onClick={() => goTo(index + 1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 md:hover:bg-[hsl(var(--hover-surface))]"
+          >
+            <ChevronRight className="h-5 w-5" aria-hidden />
+          </button>
         </div>
-      </Card>
-    </EditModal>
+      )}
+    </>
   );
 }
 

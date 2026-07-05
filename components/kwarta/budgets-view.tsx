@@ -243,7 +243,7 @@ function MonthlyBudgetSummary({
                             {isOverBudget ? "excess" : "left"}
                         </span>
                     </div>
-                    <div className="h-4 overflow-hidden rounded-md bg-muted">
+                    <div className="h-4 overflow-hidden rounded bg-muted">
                         <div className="flex h-full">
                             {segments.map((segment) => (
                                 <span

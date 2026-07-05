@@ -1,7 +1,8 @@
 "use client";
 
 import { disableBodyScroll, enableBodyScroll } from "body-scroll-lock";
-import { ChevronRight, HelpCircle } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { FaRegLightbulb } from "react-icons/fa6";
 import type { User } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RemoveScroll } from "react-remove-scroll";
@@ -75,6 +76,7 @@ import {
     MetricCard,
     PageHeader,
     PeriodSelector,
+    SwipeBackArea,
     getAccountName,
 } from "@/components/kwarta/shared";
 import { BudgetsView } from "@/components/kwarta/budgets-view";
@@ -330,6 +332,15 @@ export function KwartaApp() {
         null,
     );
     const [helpOpen, setHelpOpen] = useState(false);
+    const [helpShowIndex, setHelpShowIndex] = useState(false);
+    const openHelp = (_targetView: View) => {
+        setHelpShowIndex(false);
+        setHelpOpen(true);
+    };
+    const openHelpIndex = () => {
+        setHelpShowIndex(true);
+        setHelpOpen(true);
+    };
     const [homeCategoryFormOpen, setHomeCategoryFormOpen] = useState(false);
     const [subcategoryFormOpen, setSubcategoryFormOpen] = useState(false);
     const [categoryPendingDelete, setCategoryPendingDelete] =
@@ -1403,10 +1414,10 @@ export function KwartaApp() {
                         <button
                             aria-label="Help & tips"
                             type="button"
-                            onClick={() => setHelpOpen(true)}
-                            className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
+                            onClick={() => openHelp(view)}
+                            className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-9 sm:w-9 md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
                         >
-                            <HelpCircle className="h-5 w-5" aria-hidden />
+                            <FaRegLightbulb className="h-5 w-5" aria-hidden />
                         </button>
                     </div>
                 </header>
@@ -1660,7 +1671,10 @@ export function KwartaApp() {
                     )}
 
                     {view === "reports" && (
-                        <div className="space-y-6">
+                        <SwipeBackArea
+                            className="space-y-6"
+                            onBack={() => setView("settings")}
+                        >
                             <nav
                                 aria-label="Breadcrumb"
                                 className="flex items-center gap-1 text-sm leading-5"
@@ -1713,7 +1727,7 @@ export function KwartaApp() {
                                 financialHealth={financialHealth}
                                 trendData={trendData}
                             />
-                        </div>
+                        </SwipeBackArea>
                     )}
 
                     {view === "settings" && (
@@ -1733,7 +1747,7 @@ export function KwartaApp() {
                                 setView("manage-categories")
                             }
                             onViewReports={() => setView("reports")}
-                            onOpenHelp={() => setHelpOpen(true)}
+                            onOpenHelp={openHelpIndex}
                             onBudgetsEnabledChange={setBudgetsEnabled}
                             onBackupExport={() =>
                                 downloadWorkspaceBackupFile(
@@ -1803,33 +1817,38 @@ export function KwartaApp() {
                         />
                     )}
                     {view === "manage-categories" && (
-                        <ManageCategoriesView
-                            expenseCategories={expenseCategories}
-                            incomeCategories={incomeCategories}
-                            onAddCategory={() => setHomeCategoryFormOpen(true)}
-                            onBack={() => setView("settings")}
-                            onEditCategory={(category) =>
-                                setEditingCategoryId(category.id)
-                            }
-                            onManageSubcategories={() =>
-                                setSubcategoryFormOpen(true)
-                            }
-                            onReorderCategory={(type, fromId, toId) =>
-                                setCategories((current) =>
-                                    reorderCategoriesByType(
-                                        current,
-                                        type,
-                                        fromId,
-                                        toId,
-                                    ),
-                                )
-                            }
-                        />
+                        <SwipeBackArea onBack={() => setView("settings")}>
+                            <ManageCategoriesView
+                                expenseCategories={expenseCategories}
+                                incomeCategories={incomeCategories}
+                                onAddCategory={() =>
+                                    setHomeCategoryFormOpen(true)
+                                }
+                                onBack={() => setView("settings")}
+                                onEditCategory={(category) =>
+                                    setEditingCategoryId(category.id)
+                                }
+                                onManageSubcategories={() =>
+                                    setSubcategoryFormOpen(true)
+                                }
+                                onReorderCategory={(type, fromId, toId) =>
+                                    setCategories((current) =>
+                                        reorderCategoriesByType(
+                                            current,
+                                            type,
+                                            fromId,
+                                            toId,
+                                        ),
+                                    )
+                                }
+                            />
+                        </SwipeBackArea>
                     )}
                 </div>
                 {helpOpen && (
                     <HelpPanel
                         view={view}
+                        showIndex={helpShowIndex}
                         onClose={() => setHelpOpen(false)}
                     />
                 )}

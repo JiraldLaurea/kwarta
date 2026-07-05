@@ -118,13 +118,13 @@ export function LandingPage() {
         <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 md:grid md:grid-cols-[1fr_auto_1fr]">
           <Logo className="justify-self-start" />
           <nav className="hidden items-center gap-8 justify-self-center text-sm font-medium text-muted-foreground md:flex">
-            <a className="transition-colors hover:text-foreground" href="#features">
+            <a className="transition-colors md:hover:text-foreground" href="#features">
               Features
             </a>
-            <a className="transition-colors hover:text-foreground" href="#reports">
+            <a className="transition-colors md:hover:text-foreground" href="#reports">
               Reports
             </a>
-            <a className="transition-colors hover:text-foreground" href="#faq">
+            <a className="transition-colors md:hover:text-foreground" href="#faq">
               FAQ
             </a>
           </nav>
@@ -133,7 +133,7 @@ export function LandingPage() {
             <Button asChild size="sm" className="group">
               <Link href="/app">
                 Get started
-                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 md:group-hover:translate-x-0.5" />
               </Link>
             </Button>
           </div>
@@ -175,7 +175,7 @@ export function LandingPage() {
               <Button asChild size="default" className="group w-full sm:w-auto">
                 <Link href="/app">
                   Get started free
-                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  <ArrowRight className="h-4 w-4 transition-transform duration-200 md:group-hover:translate-x-0.5" />
                 </Link>
               </Button>
               <Button
@@ -215,7 +215,7 @@ export function LandingPage() {
                   alt={logo}
                   width={92}
                   height={28}
-                  className="h-6 w-auto opacity-60 grayscale transition hover:opacity-100 hover:grayscale-0 dark:opacity-70"
+                  className="h-6 w-auto opacity-60 grayscale transition md:hover:opacity-100 md:hover:grayscale-0 dark:opacity-70"
                 />
               ))}
             </div>
@@ -236,8 +236,8 @@ export function LandingPage() {
           <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((feature, index) => (
               <Reveal key={feature.title} delay={(index % 3) * 90}>
-                <div className="group h-full rounded-xl border border-border bg-card p-6 transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(0,0,0,0.06)]">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent-muted text-accent-muted-foreground transition-transform duration-300 group-hover:scale-105">
+                <div className="group h-full rounded-xl border border-border bg-card p-6 transition-[transform,box-shadow] duration-300 md:hover:-translate-y-1 md:hover:shadow-[0_14px_34px_rgba(0,0,0,0.06)]">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent-muted text-accent-muted-foreground transition-transform duration-300 md:group-hover:scale-105">
                     <feature.icon className="h-5 w-5" />
                   </div>
                   <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
@@ -305,7 +305,7 @@ export function LandingPage() {
                 <Button asChild className="group">
                   <Link href="/app">
                     Open Kwarta
-                    <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                    <ArrowRight className="h-4 w-4 transition-transform duration-200 md:group-hover:translate-x-0.5" />
                   </Link>
                 </Button>
               </div>
@@ -318,7 +318,7 @@ export function LandingPage() {
               ].map((item) => (
                 <li
                   key={item.label}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-background p-4 text-sm font-medium transition-colors hover:bg-[hsl(var(--hover-surface))]"
+                  className="flex items-center gap-3 rounded-lg border border-border bg-background p-4 text-sm font-medium transition-colors md:hover:bg-[hsl(var(--hover-surface))]"
                 >
                   <item.icon className="h-5 w-5 text-accent-muted-foreground" />
                   {item.label}
@@ -369,7 +369,7 @@ export function LandingPage() {
               <Button asChild variant="secondary" size="default" className="group">
                 <Link href="/app">
                   Get started free
-                  <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  <ArrowRight className="h-4 w-4 transition-transform duration-200 md:group-hover:translate-x-0.5" />
                 </Link>
               </Button>
             </div>
@@ -382,13 +382,13 @@ export function LandingPage() {
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center gap-4 px-5 py-8 sm:grid sm:grid-cols-3 sm:gap-0">
           <Logo className="sm:justify-self-start" />
           <nav className="flex items-center gap-6 text-sm text-muted-foreground sm:justify-self-center">
-            <a className="transition-colors hover:text-foreground" href="#features">
+            <a className="transition-colors md:hover:text-foreground" href="#features">
               Features
             </a>
-            <a className="transition-colors hover:text-foreground" href="#reports">
+            <a className="transition-colors md:hover:text-foreground" href="#reports">
               Reports
             </a>
-            <a className="transition-colors hover:text-foreground" href="#faq">
+            <a className="transition-colors md:hover:text-foreground" href="#faq">
               FAQ
             </a>
           </nav>

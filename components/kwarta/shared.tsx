@@ -1230,6 +1230,52 @@ export function useSwipeToClose(
     };
 }
 
+// Wraps an in-flow sub-page (e.g. Reports, Manage categories) so a rightward
+// swipe on mobile navigates back. Vertical scrolling and taps on interactive
+// elements are preserved (the underlying hook ignores those).
+export function SwipeBackArea({
+    children,
+    className,
+    onBack,
+}: {
+    children: React.ReactNode;
+    className?: string;
+    onBack: () => void;
+}) {
+    const {
+        dragOffset,
+        isDragging,
+        isSwipeDismissing,
+        onTouchStart,
+        onTouchMove,
+        onTouchEnd,
+        onTouchCancel,
+    } = useSwipeToClose(onBack, "right");
+    const transform = isSwipeDismissing
+        ? "translateX(100%)"
+        : isDragging
+          ? `translateX(${dragOffset}px)`
+          : undefined;
+
+    return (
+        <div
+            className={className}
+            style={{
+                transform,
+                transition: isDragging
+                    ? "none"
+                    : "transform 220ms cubic-bezier(0.22,1,0.36,1)",
+            }}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onTouchCancel={onTouchCancel}
+        >
+            {children}
+        </div>
+    );
+}
+
 // Tracks the user's reduced-motion preference. SSR-safe: starts false on the
 // server and first client render, then syncs to the media query.
 function usePrefersReducedMotion() {
@@ -1305,6 +1351,20 @@ function MobileFormPage({
 }) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const [mounted, setMounted] = useState(false);
+    const {
+        dragOffset,
+        isDragging,
+        isSwipeDismissing,
+        onTouchStart: onSwipeStart,
+        onTouchMove: onSwipeMove,
+        onTouchEnd: onSwipeEnd,
+        onTouchCancel: onSwipeCancel,
+    } = useSwipeToClose(onClose, "right");
+    const swipeTransform = isSwipeDismissing
+        ? "translateX(100%)"
+        : isDragging
+          ? `translateX(${dragOffset}px)`
+          : undefined;
 
     useEffect(() => {
         setMounted(true);
@@ -1474,7 +1534,7 @@ function MobileFormPage({
     return createPortal(
         <RemoveScroll
             allowPinchZoom
-            className="fixed inset-0 z-[60] overflow-hidden bg-white"
+            className="fixed inset-0 z-[60] overflow-hidden"
             removeScrollBar={false}
         >
             <div
@@ -1484,8 +1544,18 @@ function MobileFormPage({
                     allowContentScroll && "overflow-y-auto overscroll-contain",
                     className,
                 )}
+                style={{
+                    transform: swipeTransform,
+                    transition: isDragging
+                        ? "none"
+                        : "transform 220ms cubic-bezier(0.22,1,0.36,1)",
+                }}
                 role="dialog"
                 aria-modal="true"
+                onTouchStart={onSwipeStart}
+                onTouchMove={onSwipeMove}
+                onTouchEnd={onSwipeEnd}
+                onTouchCancel={onSwipeCancel}
                 onPointerDownCapture={(event) => {
                     const target = event.target;
 

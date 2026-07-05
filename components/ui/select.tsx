@@ -165,7 +165,7 @@ export function Select({
                     <span
                       className={cn(
                         "flex h-6 w-6 shrink-0 items-center justify-center",
-                        compactOptions && "w-2 justify-start",
+                        compactOptions && "w-auto justify-start",
                       )}
                     >
                       {option.icon}

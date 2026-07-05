@@ -3,7 +3,6 @@ import type { IconType } from "react-icons";
 import {
   ChevronRight,
   Download,
-  HelpCircle,
   Info,
   LayoutGrid,
   List,
@@ -164,6 +163,7 @@ export function SettingsView({
               control={
                 <Select
                   aria-label="Home layout"
+                  compactOptions
                   options={homeLayoutOptions.map((option) => {
                     const Icon = option.icon;
                     return {
@@ -229,7 +229,7 @@ export function SettingsView({
                         "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
                         colorMode === value
                           ? "ring-1 ring-border text-foreground"
-                          : "text-muted-foreground hover:bg-[hsl(var(--hover-surface))] hover:text-foreground",
+                          : "text-muted-foreground md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground",
                       )}
                     >
                       <Icon className="h-3.5 w-3.5" />
@@ -291,7 +291,7 @@ export function SettingsView({
             </p>
           </CardHeader>
           <CardContent className="space-y-4 px-5 pb-5">
-            <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:bg-[hsl(var(--hover-surface))]">
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 transition-colors md:hover:bg-[hsl(var(--hover-surface))]">
               <LogoMark size={40} />
               <div>
                 <p className="font-medium leading-5">Kwarta</p>
@@ -300,7 +300,7 @@ export function SettingsView({
                 </p>
               </div>
             </div>
-            <div className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:bg-[hsl(var(--hover-surface))]">
+            <div className="flex min-w-0 items-center gap-3 rounded-lg border border-border bg-background p-3 transition-colors md:hover:bg-[hsl(var(--hover-surface))]">
               <ProfileImage user={user} size="md" />
               <div className="min-w-0">
                 <p className="truncate font-medium leading-5">{accountName}</p>
@@ -315,10 +315,7 @@ export function SettingsView({
               variant="secondary"
               onClick={onOpenHelp}
             >
-              <span className="flex items-center gap-2">
-                <HelpCircle className="h-4 w-4" aria-hidden />
-                Help &amp; tips
-              </span>
+              <span>Help &amp; tips</span>
               <ChevronRight className="h-4 w-4" aria-hidden />
             </Button>
             <Button
