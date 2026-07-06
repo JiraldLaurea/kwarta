@@ -312,6 +312,7 @@ export function MonthPickerInput({
     id,
     mobileFullWidth = false,
     onChange,
+    triggerClassName,
     value,
 }: {
     ariaLabel?: string;
@@ -319,6 +320,7 @@ export function MonthPickerInput({
     id?: string;
     mobileFullWidth?: boolean;
     onChange: (value: string) => void;
+    triggerClassName?: string;
     value: string;
 }) {
     const selectedMonth = parseMonthValue(value);
@@ -378,6 +380,7 @@ export function MonthPickerInput({
                     compact &&
                         "rounded-full border-0 bg-accent-muted text-accent-muted-foreground shadow-none md:hover:bg-accent-muted",
                     isOpen && "border-ring ring-2 ring-ring/20",
+                    triggerClassName,
                 )}
                 id={id}
                 type="button"
@@ -524,6 +527,7 @@ export function PeriodSelector({
                         { label: "Weekly", value: "weekly" },
                         { label: "Cycle", value: "cycle" },
                     ]}
+                    triggerClassName="h-11 rounded-xl"
                     value={value.frequency}
                 />
             </div>
@@ -532,6 +536,7 @@ export function PeriodSelector({
                     <MonthPickerInput
                         ariaLabel="Select month"
                         mobileFullWidth
+                        triggerClassName="h-11 rounded-xl"
                         value={getPeriodMonth(value)}
                         onChange={(month) =>
                             onChange(createMonthlyPeriod(month))
@@ -542,6 +547,7 @@ export function PeriodSelector({
             {value.frequency === "weekly" && (
                 <div className="min-w-0 flex-1 sm:w-64 sm:flex-none">
                     <WeekPickerInput
+                        triggerClassName="h-11 rounded-xl"
                         value={value.startDate}
                         onChange={(date) => onChange(createWeeklyPeriod(date))}
                     />
@@ -551,6 +557,7 @@ export function PeriodSelector({
                 <div className="min-w-0 flex-1 sm:w-64 sm:flex-none">
                     <BudgetCyclePickerInput
                         settings={budgetCycleSettings}
+                        triggerClassName="h-11 rounded-xl"
                         value={value.startDate}
                         onSettingsChange={(settings) => {
                             onBudgetCycleSettingsChange(settings);
@@ -584,11 +591,13 @@ export function BudgetCyclePickerInput({
     onChange,
     onSettingsChange,
     settings,
+    triggerClassName,
     value,
 }: {
     onChange: (value: string) => void;
     onSettingsChange?: (value: BudgetCycleSettings) => void;
     settings: BudgetCycleSettings;
+    triggerClassName?: string;
     value: string;
 }) {
     const selectedCycle = getBudgetCycleRange(value, settings);
@@ -718,6 +727,7 @@ export function BudgetCyclePickerInput({
                 className={cn(
                     "w-full justify-start px-3 text-left font-normal md:hover:bg-card",
                     isOpen && "border-ring ring-2 ring-ring/20",
+                    triggerClassName,
                 )}
                 type="button"
                 variant="secondary"
@@ -889,9 +899,11 @@ export function BudgetCyclePickerInput({
 
 export function WeekPickerInput({
     onChange,
+    triggerClassName,
     value,
 }: {
     onChange: (value: string) => void;
+    triggerClassName?: string;
     value: string;
 }) {
     const selectedWeek = getWeekRange(value);
@@ -964,6 +976,7 @@ export function WeekPickerInput({
                 className={cn(
                     "w-full justify-start px-3 text-left font-normal md:hover:bg-card",
                     isOpen && "border-ring ring-2 ring-ring/20",
+                    triggerClassName,
                 )}
                 type="button"
                 variant="secondary"

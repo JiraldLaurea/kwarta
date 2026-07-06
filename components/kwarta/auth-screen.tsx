@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { ArrowRight, Check } from "lucide-react";
 import { authSchema, type AuthFormValues } from "@/lib/schema";
 import type { AuthMode } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,12 @@ import {
   LogoMark,
 } from "@/components/kwarta/shared";
 
+const AUTH_HIGHLIGHTS = [
+  "Track income, expenses, and budgets in seconds",
+  "Works offline and installs like an app",
+  "Reports that turn your numbers into decisions",
+] as const;
+
 export function AuthLoadingScreen() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-5">
@@ -20,7 +27,7 @@ export function AuthLoadingScreen() {
           <div className="w-fit">
             <LogoMark size={40} />
           </div>
-          <h1 className="text-4xl font-semibold">Kwarta</h1>
+          <h1 className="text-4xl font-semibold tracking-tight">Kwarta</h1>
         </div>
         <p className="mt-2 inline-flex items-center justify-center gap-2 text-sm leading-5 text-muted-foreground">
           <span
@@ -55,25 +62,46 @@ export function AuthScreen({
   });
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center gap-5 px-5 py-8 sm:gap-10 sm:py-10 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+    <main className="relative min-h-screen overflow-hidden bg-background">
+      {/* Decorative glow, echoing the landing hero */}
+      <div className="pointer-events-none absolute inset-x-0 -top-24 flex justify-center">
+        <div className="h-72 w-[46rem] max-w-full rounded-full bg-accent/10 blur-3xl" />
+      </div>
+
+      <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col justify-center gap-5 px-5 py-8 sm:gap-10 sm:py-10 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <section>
           <div className="mb-0 flex items-center gap-2 sm:mb-8">
             <LogoMark size={40} />
-            <span className="text-4xl font-semibold">Kwarta</span>
+            <span className="text-4xl font-semibold tracking-tight">
+              Kwarta
+            </span>
           </div>
-          <h1 className="hidden max-w-2xl text-4xl font-semibold leading-tight tracking-normal text-foreground sm:block md:text-5xl">
+          <span className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground sm:inline-flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+            Free · Works offline · Installs like an app
+          </span>
+          <h1 className="mt-6 hidden max-w-2xl text-4xl font-semibold leading-tight tracking-tight text-foreground sm:block md:text-5xl">
             A precise budget tracker for clearer everyday money decisions.
           </h1>
           <p className="mt-5 hidden max-w-xl text-base leading-7 text-muted-foreground sm:block">
             Manage income, expenses, categories, and budget limits in a focused
             product workspace designed for repeat use.
           </p>
+          <ul className="mt-8 hidden space-y-3 sm:block">
+            {AUTH_HIGHLIGHTS.map((item) => (
+              <li key={item} className="flex items-start gap-3 text-sm leading-6">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent-muted text-accent-muted-foreground">
+                  <Check className="h-3 w-3" />
+                </span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
         </section>
 
-        <Card className="bg-white">
-          <CardHeader>
-            <CardTitle className="text-3xl font-semibold leading-9">
+        <Card className="bg-card shadow-[0_24px_60px_-24px_rgba(0,0,0,0.2)]">
+          <CardHeader className="p-6 pb-4">
+            <CardTitle className="text-3xl font-semibold leading-9 tracking-tight">
               {mode === "login" ? "Sign in" : "Create account"}
             </CardTitle>
             <p className="text-base leading-6 text-muted-foreground">
@@ -82,9 +110,9 @@ export function AuthScreen({
                 : "Create an account to start tracking your money."}
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6 pt-0">
             <Button
-              className="mt-4 w-full"
+              className="w-full"
               type="button"
               variant="secondary"
               onClick={onGoogleLogin}
@@ -102,7 +130,7 @@ export function AuthScreen({
               <div className="flex-1 border-t border-border" />
             </div>
             {error && (
-              <p className="mb-4 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-sm leading-5 text-destructive">
+              <p className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm leading-5 text-destructive">
                 {error}
               </p>
             )}
@@ -122,8 +150,9 @@ export function AuthScreen({
                   {...form.register("password")}
                 />
               </FieldError>
-              <Button className="w-full" type="submit">
+              <Button className="group w-full" type="submit">
                 {mode === "login" ? "Sign in" : "Create account"}
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 md:group-hover:translate-x-0.5" />
               </Button>
             </form>
             <div className="mt-4 flex items-center justify-between border-t pt-4 text-sm">

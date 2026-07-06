@@ -17,6 +17,7 @@ export type SelectProps = {
   onValueChange: (value: string) => void;
   options: SelectOption[];
   placeholder?: string;
+  triggerClassName?: string;
   value: string;
 };
 
@@ -28,6 +29,7 @@ export function Select({
   onValueChange,
   options,
   placeholder = "Select an option",
+  triggerClassName,
   value,
 }: SelectProps) {
   const buttonId = React.useId();
@@ -111,6 +113,7 @@ export function Select({
         className={cn(
           "flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-input bg-white px-3 py-2 text-left text-base text-foreground transition-[border-color,box-shadow] duration-150 ease-out focus-visible:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm",
           isOpen && "border-ring ring-2 ring-ring/20",
+          triggerClassName,
         )}
         disabled={disabled}
         id={id ?? buttonId}

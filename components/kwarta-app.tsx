@@ -1416,7 +1416,7 @@ export function KwartaApp() {
                             aria-label="Help & tips"
                             type="button"
                             onClick={() => openHelp(view)}
-                            className="ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-9 sm:w-9 md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
+                            className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
                         >
                             <FaRegLightbulb className="h-5 w-5" aria-hidden />
                         </button>

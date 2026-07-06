@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import type { RefObject } from "react";
 import type { IconType } from "react-icons";
 import {
+  Check,
   ChevronRight,
   Download,
   Gauge,
   Grid3x3,
-  Info,
   LayoutGrid,
   List,
   LogOut,
@@ -28,7 +28,6 @@ import type { User } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
 import {
   LogoMark,
   PageHeader,
@@ -154,112 +153,168 @@ export function SettingsView({
         }
       />
 
-      <div className="grid gap-4 md:gap-5 xl:grid-cols-2">
-        <Card className="overflow-visible rounded-xl">
+      <div className="grid min-w-0 grid-cols-1 gap-4 md:gap-5 xl:grid-cols-2">
+        <Card className="min-w-0 overflow-visible rounded-2xl">
           <CardHeader className="p-5 pb-2">
-            <CardTitle className="text-base font-semibold">General</CardTitle>
+            <CardTitle className="text-lg font-bold tracking-tight">
+              General
+            </CardTitle>
             <p className="text-sm leading-5 text-muted-foreground">
               How Kwarta looks and behaves.
             </p>
           </CardHeader>
-          <CardContent className="flex flex-col gap-1 px-5 pb-4 pt-1">
-            <SettingRow
+          <CardContent className="flex flex-col gap-6 px-5 pb-5 pt-2">
+            <GeneralBlock
               icon={RiLayoutFill}
               label="Home layout"
               description="How categories appear on the home screen."
-              controlClassName="w-36 sm:w-[200px]"
-              control={
-                <Select
-                  aria-label="Home layout"
-                  compactOptions
-                  options={homeLayoutOptions.map((option) => {
-                    const Icon = option.icon;
-                    return {
-                      icon: <Icon className="h-4 w-4" aria-hidden />,
-                      label: option.label,
-                      value: option.value,
-                    };
-                  })}
-                  value={homeItemStyle}
-                  onValueChange={(value) =>
-                    onHomeItemStyleChange(value as HomeItemStyle)
-                  }
-                />
-              }
-            />
-            <SettingRow
+            >
+              {/* Mobile: horizontal scroll (self-contained so the page never
+                  scrolls). Desktop (sm+): wraps into a grid. */}
+              <div className="flex gap-3 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0">
+                {homeLayoutOptions.map((option) => {
+                  const selected = homeItemStyle === option.value;
+
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => onHomeItemStyleChange(option.value)}
+                      className={cn(
+                        "relative flex w-52 shrink-0 snap-start flex-col gap-3 rounded-2xl border-[1.6px] bg-muted p-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 sm:w-auto sm:shrink",
+                        selected
+                          ? "border-accent"
+                          : "border-border md:hover:bg-[hsl(var(--hover-surface))]",
+                      )}
+                    >
+                      <div className="h-14">
+                        <HomeLayoutPreview style={option.value} />
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold leading-5">
+                          {option.label}
+                        </span>
+                        <span
+                          className={cn(
+                            "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full transition-opacity",
+                            selected
+                              ? "bg-accent text-accent-foreground opacity-100"
+                              : "opacity-0",
+                          )}
+                          aria-hidden
+                        >
+                          <Check className="h-3 w-3" strokeWidth={3} />
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </GeneralBlock>
+
+            <GeneralBlock
               icon={FaPalette}
               label="Accent color"
-              description="The highlight color across the app."
-              controlClassName="w-36 sm:w-[200px]"
-              control={
-                <Select
-                  aria-label="Accent color"
-                  compactOptions
-                  options={accentThemeOptions.map((option) => ({
-                    icon: (
+              description="Tap to apply instantly."
+            >
+              <div className="flex flex-wrap gap-3">
+                {accentThemeOptions.map((option) => {
+                  const selected = accentTheme === option.value;
+                  const isWhiteSwatch =
+                    isDarkEffective && option.value === "black";
+                  const swatchColor = isWhiteSwatch ? "#F5F5F5" : option.color;
+                  // Dark check on the light pastel swatches (and the white
+                  // swatch in dark mode); white check only on the black swatch
+                  // in light mode.
+                  const checkColor =
+                    option.value === "black" && !isDarkEffective
+                      ? "#FFFFFF"
+                      : "#0A0A0A";
+                  const optionLabel = isWhiteSwatch ? "White" : option.label;
+
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-label={optionLabel}
+                      aria-pressed={selected}
+                      onClick={() =>
+                        onAccentThemeChange(option.value as AccentTheme)
+                      }
+                      className="relative flex h-10 w-10 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                    >
                       <span
-                        className="h-2 w-2 rounded-full bg-current"
-                        style={{
-                          color:
-                            isDarkEffective && option.value === "black"
-                              ? "#F5F5F5"
-                              : option.color,
-                        }}
+                        className={cn(
+                          "h-7 w-7 rounded-full",
+                          selected &&
+                            "ring-2 ring-accent ring-offset-2 ring-offset-card",
+                        )}
+                        style={{ backgroundColor: swatchColor }}
                       />
-                    ),
-                    label:
-                      isDarkEffective && option.value === "black"
-                        ? "White"
-                        : option.label,
-                    value: option.value,
-                  }))}
-                  value={accentTheme}
-                  onValueChange={(value) =>
-                    onAccentThemeChange(value as AccentTheme)
-                  }
-                />
-              }
-            />
-            <SettingRow
+                      {selected && (
+                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                          <Check
+                            className="h-3.5 w-3.5"
+                            strokeWidth={3}
+                            style={{ color: checkColor }}
+                            aria-hidden
+                          />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </GeneralBlock>
+
+            <GeneralBlock
               icon={FaAdjust}
               label="Theme"
               description="Follow your system, or pick light or dark."
-              control={
-                <div className="flex items-center gap-0.5 rounded-full border border-border p-1">
-                  {colorModeOptions.map(({ value, icon: Icon, label }) => (
+            >
+              <div className="flex gap-1 rounded-2xl border border-border bg-muted p-1.5">
+                {colorModeOptions.map(({ value, icon: Icon, label }) => {
+                  const selected = colorMode === value;
+
+                  return (
                     <button
                       key={value}
                       type="button"
-                      aria-label={label}
+                      aria-pressed={selected}
                       onClick={() => onColorModeChange(value)}
                       className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                        colorMode === value
-                          ? "ring-1 ring-border text-foreground"
-                          : "text-muted-foreground md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground",
+                        "flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                        selected
+                          ? "bg-accent text-accent-foreground"
+                          : "text-muted-foreground md:hover:text-foreground",
                       )}
                     >
-                      <Icon className="h-3.5 w-3.5" />
+                      <Icon className="h-3.5 w-3.5" aria-hidden />
+                      {label}
                     </button>
-                  ))}
-                </div>
-              }
-            />
-            <SettingRow
-              icon={FaChartBar}
-              label="Disable Budget Tracking"
-              description="Add expenses without setting category budgets."
-              showInfoOnMobile
-              control={
-                <SettingsSwitch
-                  checked={!budgetsEnabled}
-                  id="disable-budget-tracking"
-                  accentColor={currentAccentColor}
-                  onChange={(checked) => onBudgetsEnabledChange(!checked)}
-                />
-              }
-            />
+                  );
+                })}
+              </div>
+            </GeneralBlock>
+
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-4">
+              <SettingIconBadge icon={FaChartBar} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-5">
+                  Disable Budget Tracking
+                </p>
+                <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                  Hide budgets &amp; spend limits across the app.
+                </p>
+              </div>
+              <SettingsSwitch
+                checked={!budgetsEnabled}
+                id="disable-budget-tracking"
+                accentColor={currentAccentColor}
+                onChange={(checked) => onBudgetsEnabledChange(!checked)}
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -352,87 +407,110 @@ export function SettingsView({
   );
 }
 
-function SettingRow({
-  icon,
-  label,
-  description,
-  control,
-  controlClassName,
-  showInfoOnMobile = false,
-}: {
-  icon: IconType;
-  label: string;
-  description: string;
-  control: React.ReactNode;
-  controlClassName?: string;
-  // When true, the description is replaced by a tappable info popup on mobile
-  // (where descriptions are hidden). Use for rows whose behavior isn't
-  // self-explanatory.
-  showInfoOnMobile?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-      <SettingIconBadge icon={icon} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <p className="text-sm font-medium leading-5">{label}</p>
-          {showInfoOnMobile && (
-            <span className="sm:hidden">
-              <InfoPopover text={description} label={label} />
-            </span>
-          )}
-        </div>
-        <p className="mt-0.5 hidden text-xs leading-4 text-muted-foreground sm:block">
-          {description}
-        </p>
+// A small skeleton snippet hinting at each home layout's structure, shown in
+// the horizontally-scrollable layout picker. Uses neutral/accent tokens so it
+// tracks the active theme.
+function HomeLayoutPreview({ style }: { style: HomeItemStyle }) {
+  if (style === "ios") {
+    return (
+      <div className="flex h-full flex-col justify-center gap-2">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <span className="h-3 w-3 shrink-0 rounded-full bg-foreground/25" />
+            <span className="h-1.5 flex-1 rounded-full bg-foreground/15" />
+          </div>
+        ))}
       </div>
-      <div className={cn("shrink-0", controlClassName)}>{control}</div>
+    );
+  }
+
+  if (style === "compact") {
+    return (
+      <div className="flex h-full flex-col justify-center gap-1">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <span className="h-2 w-2 shrink-0 rounded-full bg-foreground/25" />
+            <span className="h-1 flex-1 rounded-full bg-foreground/15" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (style === "meter") {
+    return (
+      <div className="flex h-full flex-col justify-center gap-2">
+        {[80, 55, 92].map((width, i) => (
+          <div key={i} className="space-y-1">
+            <span className="block h-1 w-6 rounded-full bg-foreground/15" />
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
+              <div
+                className="h-full rounded-full bg-accent-muted-foreground/70"
+                style={{ width: `${width}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (style === "cards") {
+    return (
+      <div className="grid h-full grid-cols-2 gap-1.5">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="rounded-md bg-foreground/15" />
+        ))}
+      </div>
+    );
+  }
+
+  if (style === "tiles") {
+    return (
+      <div className="grid h-full grid-cols-3 grid-rows-3 gap-1">
+        {Array.from({ length: 9 }).map((_, i) => (
+          <div key={i} className="rounded-[3px] bg-foreground/15" />
+        ))}
+      </div>
+    );
+  }
+
+  // rings
+  return (
+    <div className="flex h-full items-center justify-center gap-2.5">
+      {[0, 1].map((i) => (
+        <span
+          key={i}
+          className="h-9 w-9 rounded-full border-[3px] border-foreground/15 [border-top-color:hsl(var(--accent-muted-foreground))]"
+        />
+      ))}
     </div>
   );
 }
 
-function InfoPopover({ text, label }: { text: string; label: string }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    function handlePointerDown(event: PointerEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [open]);
-
+function GeneralBlock({
+  icon,
+  label,
+  description,
+  children,
+}: {
+  icon: IconType;
+  label: string;
+  description: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="relative" ref={ref}>
-      <button
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        aria-label={`About ${label}`}
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-      >
-        <Info className="h-3.5 w-3.5" aria-hidden />
-      </button>
-      {open && (
-        <div
-          className="absolute left-1/2 top-full z-20 mt-2 w-[min(16rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-border bg-card p-3 shadow-[0_10px_30px_rgba(0,0,0,0.12)]"
-          role="dialog"
-        >
-          <p className="text-sm leading-5 text-muted-foreground">{text}</p>
+    <div className="space-y-3.5">
+      <div className="flex items-center gap-3">
+        <SettingIconBadge icon={icon} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold leading-5">{label}</p>
+          <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+            {description}
+          </p>
         </div>
-      )}
+      </div>
+      {children}
     </div>
   );
 }
@@ -471,7 +549,7 @@ function SettingsSwitch({
       aria-checked={checked}
       data-theme-switch={id === "dark-mode" ? "true" : undefined}
       className={cn(
-        "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+        "relative inline-block h-6 w-11 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
         checked ? "bg-accent" : "bg-neutral-300",
       )}
       id={id}
@@ -484,8 +562,8 @@ function SettingsSwitch({
     >
       <span
         className={cn(
-          "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
-          checked && "left-[18px]",
+          "pointer-events-none absolute left-[2px] top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
+          checked && "left-[22px]",
         )}
         style={{ backgroundColor: knobColor }}
       />
