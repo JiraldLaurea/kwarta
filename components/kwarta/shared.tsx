@@ -65,15 +65,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 
+// Deeper tones of the eight accent hues (see accentThemeOptions). Categories
+// render as solid chips with a white icon, so the palette is stored at a depth
+// that keeps a white glyph legible while sharing the accent hue family. The
+// picker swatch, the icon badge, and progress bars all use this exact value.
 export const colorChoices = [
-    "#2563EB",
-    "#7C3AED",
-    "#16A34A",
-    "#F59E0B",
-    "#0891B2",
-    "#DC2626",
-    "#DB2777",
-    "#4F46E5",
+    "#25C18B", // green
+    "#25B9C1", // teal
+    "#257AC1", // blue
+    "#253BC1", // indigo
+    "#4F25C1", // purple
+    "#C12588", // rose
+    "#C18A25", // amber
+    "#C12539", // pink
 ];
 
 export const categoryIconChoices = [
@@ -1937,7 +1941,7 @@ export function CategoryIconBadge({
                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white",
                 className,
             )}
-            style={{ color: "white", backgroundColor: category.color }}
+            style={{ color: "#FFFFFF", backgroundColor: category.color }}
         >
             <Icon className={cn("h-4 w-4", iconClassName)} aria-hidden />
         </span>
@@ -1963,7 +1967,7 @@ export function IconBadge({
                 "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white",
                 className,
             )}
-            style={{ color: "white", backgroundColor: color }}
+            style={{ color: "#FFFFFF", backgroundColor: color }}
         >
             <Icon className={cn("h-4 w-4", iconClassName)} aria-hidden />
         </span>

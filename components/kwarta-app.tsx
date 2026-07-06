@@ -595,7 +595,7 @@ export function KwartaApp() {
             // existing category using it migrates to blue on next save.
             const migratedCategories = workspace.categories.map((category) =>
                 category.color === "#171717"
-                    ? { ...category, color: "#2563EB" }
+                    ? { ...category, color: "#257AC1" }
                     : category,
             );
             setCategories(
