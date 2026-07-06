@@ -281,7 +281,7 @@ export function KwartaApp() {
     const [isDesktopLayout, setIsDesktopLayout] = useState(false);
     const [accentTheme, setAccentTheme] = useState<AccentTheme>("black");
     const [colorMode, setColorMode] = useState<ColorMode>("light");
-    const [homeItemStyle, setHomeItemStyle] = useState<HomeItemStyle>("ios");
+    const [homeItemStyle, setHomeItemStyle] = useState<HomeItemStyle>("cards");
     const [budgetsEnabled, setBudgetsEnabled] = useState(true);
     const [budgetCycleSettings, setBudgetCycleSettings] =
         useState<BudgetCycleSettings>(defaultBudgetCycleSettings);

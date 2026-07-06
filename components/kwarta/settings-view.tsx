@@ -45,10 +45,10 @@ const homeLayoutOptions: Array<{
     label: string;
     value: HomeItemStyle;
 }> = [
+    { icon: LayoutGrid, label: "Cards", value: "cards" },
     { icon: List, label: "List", value: "ios" },
     { icon: Rows3, label: "Compact", value: "compact" },
     { icon: Gauge, label: "Meter", value: "meter" },
-    { icon: LayoutGrid, label: "Cards", value: "cards" },
     { icon: Target, label: "Rings", value: "rings" },
 ];
 
