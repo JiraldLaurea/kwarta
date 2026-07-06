@@ -80,21 +80,51 @@
   --ring: 352 75% 58%;
 }
 
+:root[data-accent="teal"] {
+  --primary: 183 62% 64%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 183 62% 64%;
+  --accent-foreground: 0 0% 8%;
+  --accent-muted: 183 52% 90%;
+  --accent-muted-foreground: 184 50% 28%;
+  --ring: 183 60% 40%;
+}
+
+:root[data-accent="indigo"] {
+  --primary: 231 95% 80%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 231 95% 80%;
+  --accent-foreground: 0 0% 8%;
+  --accent-muted: 231 90% 94%;
+  --accent-muted-foreground: 231 55% 54%;
+  --ring: 231 75% 64%;
+}
+
+:root[data-accent="rose"] {
+  --primary: 322 85% 78%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 322 85% 78%;
+  --accent-foreground: 0 0% 8%;
+  --accent-muted: 322 85% 94%;
+  --accent-muted-foreground: 322 52% 46%;
+  --ring: 322 68% 56%;
+}
+
 :root.dark {
   color-scheme: dark;
-  --background: 0 0% 8%;
+  --background: 216 13% 6%;
   --foreground: 0 0% 96%;
-  --card: 0 0% 13%;
+  --card: 216 11% 9.7%;
   --card-foreground: 0 0% 96%;
   --secondary: 0 0% 64%;
   --secondary-foreground: 0 0% 96%;
-  --muted: 0 0% 18%;
+  --muted: 216 9% 13%;
   --muted-foreground: 0 0% 64%;
-  --hover-surface: 0 0% 22%;
+  --hover-surface: 218 8% 16.5%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --border: 0 0% 22%;
-  --input: 0 0% 24%;
+  --border: 216 8% 15%;
+  --input: 216 8% 18%;
 }
 
 :root.dark[data-accent="black"] {
@@ -129,6 +159,21 @@
 :root.dark[data-accent="pink"] {
   --accent-muted: 352 40% 22%;
   --accent-muted-foreground: 352 95% 82%;
+}
+
+:root.dark[data-accent="teal"] {
+  --accent-muted: 183 40% 17%;
+  --accent-muted-foreground: 183 65% 74%;
+}
+
+:root.dark[data-accent="indigo"] {
+  --accent-muted: 231 45% 26%;
+  --accent-muted-foreground: 231 90% 84%;
+}
+
+:root.dark[data-accent="rose"] {
+  --accent-muted: 322 42% 22%;
+  --accent-muted-foreground: 322 90% 82%;
 }
 
 .appearance-changing,
@@ -182,11 +227,11 @@ body {
 
 .dark .bg-neutral-50,
 .dark .bg-neutral-100 {
-  background-color: hsl(0 0% 9%);
+  background-color: hsl(216 9% 12%);
 }
 
 .dark .bg-neutral-300 {
-  background-color: hsl(0 0% 34%);
+  background-color: hsl(216 6% 34%);
 }
 
 .dark .border-neutral-200 {
@@ -199,7 +244,7 @@ body {
 
 .dark .kwarta-scrollbar,
 .dark [data-radix-select-viewport].kwarta-scrollbar {
-  scrollbar-color: hsl(0 0% 35%) transparent;
+  scrollbar-color: hsl(216 6% 35%) transparent;
 }
 
 button,

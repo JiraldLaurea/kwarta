@@ -12,8 +12,11 @@ export type View =
 export type AccentTheme =
   | "black"
   | "green"
+  | "teal"
   | "blue"
+  | "indigo"
   | "purple"
+  | "rose"
   | "amber"
   | "pink";
 export type ColorMode = "light" | "dark" | "system";
@@ -32,8 +35,11 @@ export const accentThemeOptions: Array<{
 }> = [
   { color: "#171717", label: "Black", value: "black" },
   { color: "#74E8C0", label: "Green", value: "green" },
+  { color: "#6AD6DC", label: "Teal", value: "teal" },
   { color: "#7CC4FF", label: "Blue", value: "blue" },
+  { color: "#9CAAFC", label: "Indigo", value: "indigo" },
   { color: "#B79CFF", label: "Purple", value: "purple" },
+  { color: "#F797D4", label: "Rose", value: "rose" },
   { color: "#F5C56B", label: "Amber", value: "amber" },
   { color: "#FF9BA8", label: "Pink", value: "pink" },
 ];
