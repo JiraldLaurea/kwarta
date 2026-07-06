@@ -18,25 +18,42 @@ export function BackupActions({
     onImportFile: (file: File) => void;
 }) {
     return (
-        <div className="relative grid w-full grid-cols-2 gap-2">
-            <Button
-                className="w-full justify-center"
-                type="button"
-                variant="secondary"
-                onClick={onImportClick}
-            >
-                <Upload className="h-4 w-4" aria-hidden />
-                Import
-            </Button>
-            <Button
-                className="w-full justify-center"
-                type="button"
-                variant="secondary"
-                onClick={onExport}
-            >
-                <Download className="h-4 w-4" aria-hidden />
-                Export
-            </Button>
+        <div className="w-full">
+            <div className="grid grid-cols-2 gap-3">
+                <button
+                    type="button"
+                    onClick={onExport}
+                    className="flex flex-col gap-3 rounded-2xl bg-accent p-4 text-left text-accent-foreground transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:opacity-90"
+                >
+                    <Upload className="h-5 w-5" aria-hidden />
+                    <span className="block">
+                        <span className="block text-sm font-bold leading-5">
+                            Export
+                        </span>
+                        <span className="mt-0.5 block text-xs leading-4 opacity-80">
+                            Save a snapshot
+                        </span>
+                    </span>
+                </button>
+                <button
+                    type="button"
+                    onClick={onImportClick}
+                    className="flex flex-col gap-3 rounded-2xl border border-border bg-muted p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
+                >
+                    <Download
+                        className="h-5 w-5 text-muted-foreground"
+                        aria-hidden
+                    />
+                    <span className="block">
+                        <span className="block text-sm font-bold leading-5">
+                            Import
+                        </span>
+                        <span className="mt-0.5 block text-xs leading-4 text-muted-foreground">
+                            Load a file
+                        </span>
+                    </span>
+                </button>
+            </div>
             <input
                 ref={importInputRef}
                 className="hidden"
@@ -52,7 +69,7 @@ export function BackupActions({
                 }}
             />
             {error && (
-                <p className="absolute right-0 top-12 z-10 w-64 text-right text-xs leading-4 text-destructive sm:w-80">
+                <p className="mt-2 text-xs leading-4 text-destructive">
                     {error}
                 </p>
             )}

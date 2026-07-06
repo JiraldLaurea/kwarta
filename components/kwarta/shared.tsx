@@ -2101,7 +2101,7 @@ export function ProfileImage({
     size = "sm",
     user,
 }: {
-    size?: "xs" | "sm" | "md";
+    size?: "xs" | "sm" | "md" | "xl";
     user: User | null;
 }) {
     const avatarUrl =
@@ -2112,11 +2112,13 @@ export function ProfileImage({
         xs: 20,
         sm: 24,
         md: 40,
+        xl: 96,
     };
     const classNames = {
-        xs: "h-5 w-5",
-        sm: "h-6 w-6",
-        md: "h-10 w-10",
+        xs: "h-5 w-5 text-xs",
+        sm: "h-6 w-6 text-xs",
+        md: "h-10 w-10 text-xs",
+        xl: "h-24 w-24 text-3xl",
     };
     const dimension = dimensions[size];
     const className = classNames[size];
@@ -2136,11 +2138,11 @@ export function ProfileImage({
     return (
         <span
             className={cn(
-                "flex items-center justify-center rounded-full bg-neutral-100 text-xs font-medium",
+                "flex items-center justify-center rounded-full bg-[hsl(var(--hover-surface))] font-medium text-foreground",
                 className,
             )}
         >
-            {getAccountInitial(user)}
+            {getAccountInitials(user)}
         </span>
     );
 }
@@ -2157,8 +2159,14 @@ export function getAccountName(user: User | null) {
     return name || user?.email?.split("@")[0] || "Account";
 }
 
-export function getAccountInitial(user: User | null) {
-    return getAccountName(user).charAt(0).toUpperCase();
+export function getAccountInitials(user: User | null) {
+    const parts = getAccountName(user).trim().split(/\s+/).filter(Boolean);
+
+    if (parts.length >= 2) {
+        return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+    }
+
+    return parts[0]?.slice(0, 2).toUpperCase() ?? "";
 }
 
 export function GoogleLogo({ className }: { className?: string }) {
