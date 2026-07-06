@@ -5,7 +5,6 @@ import {
   ChevronRight,
   Download,
   Gauge,
-  Grid3x3,
   LayoutGrid,
   List,
   LogOut,
@@ -51,7 +50,6 @@ const homeLayoutOptions: Array<{
   { icon: Rows3, label: "Compact", value: "compact" },
   { icon: Gauge, label: "Meter", value: "meter" },
   { icon: LayoutGrid, label: "Cards", value: "cards" },
-  { icon: Grid3x3, label: "Tiles", value: "tiles" },
   { icon: Target, label: "Rings", value: "rings" },
 ];
 
@@ -468,16 +466,6 @@ function HomeLayoutPreview({ style }: { style: HomeItemStyle }) {
       <div className="grid h-full grid-cols-2 gap-1.5">
         {[0, 1, 2, 3].map((i) => (
           <div key={i} className="rounded-md bg-foreground/15" />
-        ))}
-      </div>
-    );
-  }
-
-  if (style === "tiles") {
-    return (
-      <div className="grid h-full grid-cols-3 grid-rows-3 gap-1">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className="rounded-[3px] bg-foreground/15" />
         ))}
       </div>
     );
