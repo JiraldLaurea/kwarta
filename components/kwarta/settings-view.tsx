@@ -169,9 +169,14 @@ export function SettingsView({
               label="Home layout"
               description="How categories appear on the home screen."
             >
-              {/* Mobile: horizontal scroll (self-contained so the page never
-                  scrolls). Desktop (sm+): wraps into a grid. */}
-              <div className="flex gap-3 overflow-x-auto overscroll-x-contain pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0">
+              {/* Mobile: horizontal scroll, bled past the card's own x padding
+                  so cards aren't clipped by it; pl-5 restores the initial
+                  left inset. Browsers don't honor a scroll container's
+                  trailing padding once scrolled to the end, so a real spacer
+                  element (below) reserves the matching space on the right.
+                  Desktop (sm+): wraps into a grid within the normal card
+                  padding. */}
+              <div className="-mx-5 flex gap-3 overflow-x-auto overscroll-x-contain pb-1 pl-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0">
                 {homeLayoutOptions.map((option) => {
                   const selected = homeItemStyle === option.value;
 
@@ -210,6 +215,10 @@ export function SettingsView({
                     </button>
                   );
                 })}
+                {/* Trailing spacer: reserves the same 20px inset as pl-5 at
+                    the start (8px width + the existing gap-3 before it).
+                    Not part of the desktop grid. */}
+                <div className="w-2 shrink-0 sm:hidden" aria-hidden />
               </div>
             </GeneralBlock>
 
@@ -242,26 +251,25 @@ export function SettingsView({
                       onClick={() =>
                         onAccentThemeChange(option.value as AccentTheme)
                       }
-                      className="relative flex h-10 w-10 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                      className="flex h-10 w-10 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
                     >
                       <span
                         className={cn(
-                          "h-7 w-7 rounded-full",
+                          "relative flex h-7 w-7 items-center justify-center rounded-full",
                           selected &&
                             "ring-2 ring-accent ring-offset-2 ring-offset-card",
                         )}
                         style={{ backgroundColor: swatchColor }}
-                      />
-                      {selected && (
-                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                      >
+                        {selected && (
                           <Check
-                            className="h-3.5 w-3.5"
+                            className="pointer-events-none h-3.5 w-3.5"
                             strokeWidth={3}
                             style={{ color: checkColor }}
                             aria-hidden
                           />
-                        </span>
-                      )}
+                        )}
+                      </span>
                     </button>
                   );
                 })}
@@ -273,7 +281,7 @@ export function SettingsView({
               label="Theme"
               description="Follow your system, or pick light or dark."
             >
-              <div className="flex gap-1 rounded-2xl border border-border bg-muted p-1.5">
+              <div className="flex gap-1 rounded-full border border-border bg-muted p-1.5">
                 {colorModeOptions.map(({ value, icon: Icon, label }) => {
                   const selected = colorMode === value;
 
@@ -284,7 +292,7 @@ export function SettingsView({
                       aria-pressed={selected}
                       onClick={() => onColorModeChange(value)}
                       className={cn(
-                        "flex h-10 flex-1 items-center justify-center gap-1.5 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                        "flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                         selected
                           ? "bg-accent text-accent-foreground"
                           : "text-muted-foreground md:hover:text-foreground",
@@ -298,7 +306,7 @@ export function SettingsView({
               </div>
             </GeneralBlock>
 
-            <div className="flex items-center gap-3 rounded-2xl border border-border bg-background p-4">
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted p-4">
               <SettingIconBadge icon={FaChartBar} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold leading-5">
