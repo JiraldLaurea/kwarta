@@ -428,7 +428,7 @@ export function SettingsView({
                             </span>
                         </div>
 
-                        <div className="divide-y divide-border overflow-hidden rounded-2xl bg-muted">
+                        <div className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-muted">
                             <button
                                 type="button"
                                 onClick={onOpenHelp}
