@@ -1266,6 +1266,29 @@ export function QuickTransactionModal({
     setAmount((previous) => previous.slice(0, -1));
   }
 
+  // Long-pressing backspace clears the amount outright; the click handler
+  // checks backspaceLongPressTriggeredRef to skip the single-digit delete
+  // that would otherwise also fire once the press is released.
+  const backspaceHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const backspaceLongPressTriggeredRef = useRef(false);
+
+  function startBackspaceHold() {
+    backspaceLongPressTriggeredRef.current = false;
+    backspaceHoldTimerRef.current = setTimeout(() => {
+      backspaceLongPressTriggeredRef.current = true;
+      setAmount("");
+    }, 500);
+  }
+
+  function cancelBackspaceHold() {
+    if (backspaceHoldTimerRef.current) {
+      clearTimeout(backspaceHoldTimerRef.current);
+      backspaceHoldTimerRef.current = null;
+    }
+  }
+
   function formatAmountDisplay(value: string) {
     if (!value) {
       return "0.00";
@@ -1535,7 +1558,7 @@ export function QuickTransactionModal({
             <>
               <div>
                 <Label className="text-muted-foreground">Amount</Label>
-                <div className="mt-2 flex h-16 items-baseline gap-1 rounded-2xl border border-border bg-muted px-4 tabular-nums">
+                <div className="mt-2 flex h-16 items-center gap-1 rounded-2xl border border-border bg-muted px-4 tabular-nums">
                   <span className="text-lg text-muted-foreground">₱</span>
                   <span
                     className={cn(
@@ -1622,9 +1645,13 @@ export function QuickTransactionModal({
                           ? "Add decimal point"
                           : undefined
                     }
-                    className="flex h-14 items-center justify-center rounded-2xl border border-border bg-muted text-xl font-semibold text-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))]"
+                    className="flex h-14 select-none items-center justify-center rounded-2xl border border-border bg-muted text-xl font-semibold text-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))]"
                     onClick={() => {
                       if (key === "backspace") {
+                        if (backspaceLongPressTriggeredRef.current) {
+                          backspaceLongPressTriggeredRef.current = false;
+                          return;
+                        }
                         backspaceAmountDigit();
                       } else if (key === ".") {
                         appendAmountDecimalPoint();
@@ -1632,6 +1659,15 @@ export function QuickTransactionModal({
                         appendAmountDigit(key);
                       }
                     }}
+                    onPointerDown={
+                      key === "backspace" ? startBackspaceHold : undefined
+                    }
+                    onPointerLeave={
+                      key === "backspace" ? cancelBackspaceHold : undefined
+                    }
+                    onPointerUp={
+                      key === "backspace" ? cancelBackspaceHold : undefined
+                    }
                   >
                     {key === "backspace" ? (
                       <Delete className="h-5 w-5" aria-hidden />
@@ -1704,7 +1740,7 @@ export function QuickTransactionModal({
               "mt-6 w-full",
               !isPage && "sm:hidden",
               isPage &&
-                "h-14 rounded-2xl text-base font-bold disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100",
+                "h-14 select-none rounded-2xl text-base font-bold disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100",
               isPage &&
                 canSubmit &&
                 "bg-accent text-accent-foreground md:hover:bg-accent",
