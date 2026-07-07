@@ -23,6 +23,7 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   ChevronLeft,
   ChevronRight,
+  Delete,
   Edit3,
   Ellipsis,
   GripVertical,
@@ -86,7 +87,7 @@ const AMOUNT_KEYPAD_KEYS = [
   "7",
   "8",
   "9",
-  "clear",
+  ".",
   "0",
   "backspace",
 ] as const;
@@ -1239,41 +1240,30 @@ export function QuickTransactionModal({
   const parsedAmount = parseDecimalInput(amount);
   const canSubmit = Number.isFinite(parsedAmount) && parsedAmount > 0;
 
-  // Mobile quick-add types digits into a cents buffer (like a POS till) rather
-  // than a free-text decimal field, so append/backspace shift by one digit.
-  function centsFromAmount(value: string) {
-    if (!value) {
-      return 0;
-    }
-
-    const [whole, fraction = "00"] = value.split(".");
-    return Number(`${whole}${fraction.padEnd(2, "0").slice(0, 2)}`);
-  }
-
-  function formatCentsToAmount(cents: number) {
-    if (cents <= 0) {
-      return "";
-    }
-
-    return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
-  }
-
+  // Mobile quick-add types the whole number first; a "." digit switches to
+  // fraction entry, capped at 2 digits, matching a normal calculator.
   function appendAmountDigit(digit: string) {
+    setAmount((previous) => {
+      const dotIndex = previous.indexOf(".");
+
+      if (dotIndex === -1) {
+        const whole = `${previous}${digit}`.replace(/^0+(?=\d)/, "");
+        return whole.length > 9 ? previous : whole;
+      }
+
+      const fraction = previous.slice(dotIndex + 1);
+      return fraction.length >= 2 ? previous : `${previous}${digit}`;
+    });
+  }
+
+  function appendAmountDecimalPoint() {
     setAmount((previous) =>
-      formatCentsToAmount(
-        Math.min(centsFromAmount(previous) * 10 + Number(digit), 999_999_999),
-      ),
+      previous.includes(".") ? previous : `${previous || "0"}.`,
     );
   }
 
   function backspaceAmountDigit() {
-    setAmount((previous) =>
-      formatCentsToAmount(Math.floor(centsFromAmount(previous) / 10)),
-    );
-  }
-
-  function clearAmount() {
-    setAmount("");
+    setAmount((previous) => previous.slice(0, -1));
   }
 
   function formatAmountDisplay(value: string) {
@@ -1281,8 +1271,12 @@ export function QuickTransactionModal({
       return "0.00";
     }
 
-    const [whole, fraction = "00"] = value.split(".");
-    return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${fraction.padStart(2, "0")}`;
+    const [whole, ...rest] = value.split(".");
+    const formattedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",") || "0";
+
+    return rest.length > 0
+      ? `${formattedWhole}.${rest.join("")}`
+      : formattedWhole;
   }
 
   const [limit, setLimit] = useState("");
@@ -1613,22 +1607,26 @@ export function QuickTransactionModal({
                     aria-label={
                       key === "backspace"
                         ? "Delete last digit"
-                        : key === "clear"
-                          ? "Clear amount"
+                        : key === "."
+                          ? "Add decimal point"
                           : undefined
                     }
                     className="flex h-14 items-center justify-center rounded-2xl bg-muted text-xl font-semibold text-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))]"
                     onClick={() => {
-                      if (key === "clear") {
-                        clearAmount();
-                      } else if (key === "backspace") {
+                      if (key === "backspace") {
                         backspaceAmountDigit();
+                      } else if (key === ".") {
+                        appendAmountDecimalPoint();
                       } else {
                         appendAmountDigit(key);
                       }
                     }}
                   >
-                    {key === "backspace" ? "⌫" : key === "clear" ? "C" : key}
+                    {key === "backspace" ? (
+                      <Delete className="h-5 w-5" aria-hidden />
+                    ) : (
+                      key
+                    )}
                   </button>
                 ))}
               </div>
@@ -1691,7 +1689,15 @@ export function QuickTransactionModal({
             </>
           )}
           <Button
-            className={cn("mt-6 w-full", !isPage && "sm:hidden")}
+            className={cn(
+              "mt-6 w-full",
+              !isPage && "sm:hidden",
+              isPage &&
+                "h-14 rounded-2xl text-base disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100",
+              isPage &&
+                canSubmit &&
+                "bg-accent text-accent-foreground md:hover:bg-accent",
+            )}
             type="submit"
             disabled={!canSubmit}
           >
