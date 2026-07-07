@@ -1289,6 +1289,28 @@ export function QuickTransactionModal({
     }
   }
 
+  // Tracks which keypad key is currently pressed so it can darken (light
+  // theme) / lighten (dark theme) for tactile press feedback.
+  const [pressedKeypadKey, setPressedKeypadKey] = useState<string | null>(
+    null,
+  );
+
+  function handleKeypadPointerDown(key: string) {
+    setPressedKeypadKey(key);
+
+    if (key === "backspace") {
+      startBackspaceHold();
+    }
+  }
+
+  function handleKeypadPointerUp(key: string) {
+    setPressedKeypadKey((current) => (current === key ? null : current));
+
+    if (key === "backspace") {
+      cancelBackspaceHold();
+    }
+  }
+
   function formatAmountDisplay(value: string) {
     if (!value) {
       return "0.00";
@@ -1645,7 +1667,12 @@ export function QuickTransactionModal({
                           ? "Add decimal point"
                           : undefined
                     }
-                    className="flex h-14 select-none items-center justify-center rounded-2xl border border-border bg-muted text-xl font-semibold text-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))]"
+                    className={cn(
+                      "flex h-14 select-none items-center justify-center rounded-2xl border border-border text-xl font-semibold text-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))]",
+                      pressedKeypadKey === key
+                        ? "bg-[hsl(var(--hover-surface))]"
+                        : "bg-muted",
+                    )}
                     onClick={() => {
                       if (key === "backspace") {
                         if (backspaceLongPressTriggeredRef.current) {
@@ -1659,15 +1686,9 @@ export function QuickTransactionModal({
                         appendAmountDigit(key);
                       }
                     }}
-                    onPointerDown={
-                      key === "backspace" ? startBackspaceHold : undefined
-                    }
-                    onPointerLeave={
-                      key === "backspace" ? cancelBackspaceHold : undefined
-                    }
-                    onPointerUp={
-                      key === "backspace" ? cancelBackspaceHold : undefined
-                    }
+                    onPointerDown={() => handleKeypadPointerDown(key)}
+                    onPointerLeave={() => handleKeypadPointerUp(key)}
+                    onPointerUp={() => handleKeypadPointerUp(key)}
                   >
                     {key === "backspace" ? (
                       <Delete className="h-5 w-5" aria-hidden />
