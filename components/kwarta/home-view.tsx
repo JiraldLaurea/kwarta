@@ -1534,17 +1534,25 @@ export function QuickTransactionModal({
           {isPage ? (
             <>
               <div>
-                <Label>Amount</Label>
-                <div className="mt-2 flex h-16 items-center gap-1 rounded-2xl border border-border bg-muted px-4 text-3xl font-bold tabular-nums">
-                  <span className="text-muted-foreground">₱</span>
-                  <span className={cn(!amount && "text-muted-foreground")}>
+                <Label className="text-muted-foreground">Amount</Label>
+                <div className="mt-2 flex h-16 items-baseline gap-1 rounded-2xl border border-border bg-muted px-4 tabular-nums">
+                  <span className="text-lg text-muted-foreground">₱</span>
+                  <span
+                    className={cn(
+                      "text-3xl font-semibold",
+                      !amount && "text-muted-foreground",
+                    )}
+                  >
                     {formatAmountDisplay(amount)}
                   </span>
                 </div>
               </div>
               <div className="mt-4">
-                <Label>Subcategory</Label>
-                <div className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <Label className="text-muted-foreground">Subcategory</Label>
+                <div
+                  className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  data-quick-add-scroll
+                >
                   {subcategories.map((subcategory) => {
                     const selected = subcategory === selectedSubcategory;
 
@@ -1554,10 +1562,10 @@ export function QuickTransactionModal({
                         type="button"
                         aria-pressed={selected}
                         className={cn(
-                          "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                          "flex h-10 shrink-0 items-center whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                           selected
-                            ? "bg-accent text-accent-foreground"
-                            : "bg-muted text-foreground",
+                            ? "border-accent bg-accent text-accent-foreground"
+                            : "border-border bg-muted text-foreground",
                         )}
                         onClick={() => setSelectedSubcategory(subcategory)}
                       >
@@ -1569,8 +1577,11 @@ export function QuickTransactionModal({
               </div>
               {accounts.length > 0 && (
                 <div className="mt-4">
-                  <Label>Account</Label>
-                  <div className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  <Label className="text-muted-foreground">Account</Label>
+                  <div
+                    className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    data-quick-add-scroll
+                  >
                     {accounts.map((account) => {
                       const selected = account.id === selectedAccountId;
 
@@ -1580,10 +1591,10 @@ export function QuickTransactionModal({
                           type="button"
                           aria-pressed={selected}
                           className={cn(
-                            "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full py-2 pl-2 pr-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                            "flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border pl-2 pr-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                             selected
-                              ? "bg-accent text-accent-foreground"
-                              : "bg-muted text-foreground",
+                              ? "border-accent bg-accent text-accent-foreground"
+                              : "border-border bg-muted text-foreground",
                           )}
                           onClick={() => setSelectedAccountId(account.id)}
                         >
@@ -1611,7 +1622,7 @@ export function QuickTransactionModal({
                           ? "Add decimal point"
                           : undefined
                     }
-                    className="flex h-14 items-center justify-center rounded-2xl bg-muted text-xl font-semibold text-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))]"
+                    className="flex h-14 items-center justify-center rounded-2xl border border-border bg-muted text-xl font-semibold text-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))]"
                     onClick={() => {
                       if (key === "backspace") {
                         backspaceAmountDigit();
@@ -1693,7 +1704,7 @@ export function QuickTransactionModal({
               "mt-6 w-full",
               !isPage && "sm:hidden",
               isPage &&
-                "h-14 rounded-2xl text-base disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100",
+                "h-14 rounded-2xl text-base font-bold disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100",
               isPage &&
                 canSubmit &&
                 "bg-accent text-accent-foreground md:hover:bg-accent",

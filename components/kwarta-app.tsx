@@ -417,7 +417,9 @@ export function KwartaApp() {
 
         lockViewport();
         disableBodyScroll(target, {
-            allowTouchMove: () => false,
+            allowTouchMove: (el) =>
+                el instanceof HTMLElement &&
+                el.closest("[data-quick-add-scroll]") !== null,
             reserveScrollBarGap: false,
         });
         window.addEventListener("scroll", lockViewport, { passive: true });
