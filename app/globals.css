@@ -14,6 +14,7 @@
   --muted: 0 0% 96%;
   --muted-foreground: 0 0% 32%;
   --hover-surface: 0 0% 90%;
+  --pressed-surface: 0 0% 80%;
   --accent: 0 0% 9%;
   --accent-foreground: 0 0% 100%;
   --accent-muted: 0 0% 90%;
@@ -26,85 +27,86 @@
   --radius: 8px;
 }
 
-/* Colored accents use the design-file palette: light, pastel accents paired
-   with a dark foreground (dark text/icons sit on the accent, as in the design).
-   The pastel is applied in both light and dark mode; only the muted surface
-   pair is retuned per mode below. */
+/* Colored accents are deeper/saturated with a white foreground in light mode
+   (better suited to sit on a light background), and switch to the
+   design-file's light pastel with a dark foreground in dark mode. Each
+   color's light-mode tuning lives here; the dark-mode pastel + muted-surface
+   pair are defined in the :root.dark[data-accent="…"] rules below. */
 :root[data-accent="green"] {
-  --primary: 159 72% 68%;
-  --primary-foreground: 0 0% 8%;
-  --accent: 159 72% 68%;
-  --accent-foreground: 0 0% 8%;
+  --primary: 155 55% 38%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 155 55% 38%;
+  --accent-foreground: 0 0% 100%;
   --accent-muted: 159 55% 90%;
   --accent-muted-foreground: 160 55% 26%;
   --ring: 159 65% 42%;
 }
 
 :root[data-accent="blue"] {
-  --primary: 207 100% 74%;
-  --primary-foreground: 0 0% 8%;
-  --accent: 207 100% 74%;
-  --accent-foreground: 0 0% 8%;
+  --primary: 210 85% 46%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 210 85% 46%;
+  --accent-foreground: 0 0% 100%;
   --accent-muted: 207 90% 92%;
   --accent-muted-foreground: 208 75% 38%;
   --ring: 207 80% 50%;
 }
 
 :root[data-accent="purple"] {
-  --primary: 256 100% 81%;
-  --primary-foreground: 0 0% 8%;
-  --accent: 256 100% 81%;
-  --accent-foreground: 0 0% 8%;
+  --primary: 258 60% 54%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 258 60% 54%;
+  --accent-foreground: 0 0% 100%;
   --accent-muted: 256 90% 94%;
   --accent-muted-foreground: 256 50% 48%;
   --ring: 256 70% 60%;
 }
 
 :root[data-accent="amber"] {
-  --primary: 39 87% 69%;
-  --primary-foreground: 0 0% 8%;
-  --accent: 39 87% 69%;
-  --accent-foreground: 0 0% 8%;
+  --primary: 32 85% 38%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 32 85% 38%;
+  --accent-foreground: 0 0% 100%;
   --accent-muted: 39 90% 90%;
   --accent-muted-foreground: 32 70% 32%;
   --ring: 39 80% 45%;
 }
 
 :root[data-accent="pink"] {
-  --primary: 352 100% 80%;
-  --primary-foreground: 0 0% 8%;
-  --accent: 352 100% 80%;
-  --accent-foreground: 0 0% 8%;
+  --primary: 350 70% 48%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 350 70% 48%;
+  --accent-foreground: 0 0% 100%;
   --accent-muted: 352 100% 94%;
   --accent-muted-foreground: 352 60% 45%;
   --ring: 352 75% 58%;
 }
 
 :root[data-accent="teal"] {
-  --primary: 183 62% 64%;
-  --primary-foreground: 0 0% 8%;
-  --accent: 183 62% 64%;
-  --accent-foreground: 0 0% 8%;
+  --primary: 183 55% 34%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 183 55% 34%;
+  --accent-foreground: 0 0% 100%;
   --accent-muted: 183 52% 90%;
   --accent-muted-foreground: 184 50% 28%;
   --ring: 183 60% 40%;
 }
 
 :root[data-accent="indigo"] {
-  --primary: 231 95% 80%;
-  --primary-foreground: 0 0% 8%;
-  --accent: 231 95% 80%;
-  --accent-foreground: 0 0% 8%;
+  --primary: 231 65% 56%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 231 65% 56%;
+  --accent-foreground: 0 0% 100%;
   --accent-muted: 231 90% 94%;
   --accent-muted-foreground: 231 55% 54%;
   --ring: 231 75% 64%;
 }
 
 :root[data-accent="rose"] {
-  --primary: 322 85% 78%;
-  --primary-foreground: 0 0% 8%;
-  --accent: 322 85% 78%;
-  --accent-foreground: 0 0% 8%;
+  --primary: 322 60% 46%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 322 60% 46%;
+  --accent-foreground: 0 0% 100%;
   --accent-muted: 322 85% 94%;
   --accent-muted-foreground: 322 52% 46%;
   --ring: 322 68% 56%;
@@ -121,6 +123,7 @@
   --muted: 216 9% 13%;
   --muted-foreground: 0 0% 64%;
   --hover-surface: 218 8% 16.5%;
+  --pressed-surface: 218 8% 26%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
   --border: 216 8% 15%;
@@ -137,41 +140,73 @@
 }
 
 :root.dark[data-accent="green"] {
+  --primary: 159 72% 68%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 159 72% 68%;
+  --accent-foreground: 0 0% 8%;
   --accent-muted: 159 35% 16%;
   --accent-muted-foreground: 159 65% 72%;
 }
 
 :root.dark[data-accent="blue"] {
+  --primary: 207 100% 74%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 207 100% 74%;
+  --accent-foreground: 0 0% 8%;
   --accent-muted: 207 45% 20%;
   --accent-muted-foreground: 207 90% 78%;
 }
 
 :root.dark[data-accent="purple"] {
+  --primary: 256 100% 81%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 256 100% 81%;
+  --accent-foreground: 0 0% 8%;
   --accent-muted: 256 40% 24%;
   --accent-muted-foreground: 256 90% 84%;
 }
 
 :root.dark[data-accent="amber"] {
+  --primary: 39 87% 69%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 39 87% 69%;
+  --accent-foreground: 0 0% 8%;
   --accent-muted: 39 40% 18%;
   --accent-muted-foreground: 39 85% 72%;
 }
 
 :root.dark[data-accent="pink"] {
+  --primary: 352 100% 80%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 352 100% 80%;
+  --accent-foreground: 0 0% 8%;
   --accent-muted: 352 40% 22%;
   --accent-muted-foreground: 352 95% 82%;
 }
 
 :root.dark[data-accent="teal"] {
+  --primary: 183 62% 64%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 183 62% 64%;
+  --accent-foreground: 0 0% 8%;
   --accent-muted: 183 40% 17%;
   --accent-muted-foreground: 183 65% 74%;
 }
 
 :root.dark[data-accent="indigo"] {
+  --primary: 231 95% 80%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 231 95% 80%;
+  --accent-foreground: 0 0% 8%;
   --accent-muted: 231 45% 26%;
   --accent-muted-foreground: 231 90% 84%;
 }
 
 :root.dark[data-accent="rose"] {
+  --primary: 322 85% 78%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 322 85% 78%;
+  --accent-foreground: 0 0% 8%;
   --accent-muted: 322 42% 22%;
   --accent-muted-foreground: 322 90% 82%;
 }

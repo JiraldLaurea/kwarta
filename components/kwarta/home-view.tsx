@@ -1670,7 +1670,7 @@ export function QuickTransactionModal({
                     className={cn(
                       "flex h-14 select-none items-center justify-center rounded-2xl border border-border text-xl font-semibold text-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))]",
                       pressedKeypadKey === key
-                        ? "bg-[hsl(var(--hover-surface))]"
+                        ? "bg-[hsl(var(--pressed-surface))]"
                         : "bg-muted",
                     )}
                     onClick={() => {
