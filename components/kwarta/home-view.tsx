@@ -75,6 +75,22 @@ import {
   ModalBackButton,
 } from "@/components/kwarta/shared";
 
+// Keys for the mobile quick-add amount keypad, laid out 3 per row.
+const AMOUNT_KEYPAD_KEYS = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "clear",
+  "0",
+  "backspace",
+] as const;
+
 // Layouts that stack full-width rows inside a single divided card; the rest are
 // grids. Kept as a list so new list-style layouts only need adding here.
 const LIST_LAYOUTS: readonly HomeItemStyle[] = ["ios", "compact", "meter"];
@@ -1222,6 +1238,53 @@ export function QuickTransactionModal({
   );
   const parsedAmount = parseDecimalInput(amount);
   const canSubmit = Number.isFinite(parsedAmount) && parsedAmount > 0;
+
+  // Mobile quick-add types digits into a cents buffer (like a POS till) rather
+  // than a free-text decimal field, so append/backspace shift by one digit.
+  function centsFromAmount(value: string) {
+    if (!value) {
+      return 0;
+    }
+
+    const [whole, fraction = "00"] = value.split(".");
+    return Number(`${whole}${fraction.padEnd(2, "0").slice(0, 2)}`);
+  }
+
+  function formatCentsToAmount(cents: number) {
+    if (cents <= 0) {
+      return "";
+    }
+
+    return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
+  }
+
+  function appendAmountDigit(digit: string) {
+    setAmount((previous) =>
+      formatCentsToAmount(
+        Math.min(centsFromAmount(previous) * 10 + Number(digit), 999_999_999),
+      ),
+    );
+  }
+
+  function backspaceAmountDigit() {
+    setAmount((previous) =>
+      formatCentsToAmount(Math.floor(centsFromAmount(previous) / 10)),
+    );
+  }
+
+  function clearAmount() {
+    setAmount("");
+  }
+
+  function formatAmountDisplay(value: string) {
+    if (!value) {
+      return "0.00";
+    }
+
+    const [whole, fraction = "00"] = value.split(".");
+    return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${fraction.padStart(2, "0")}`;
+  }
+
   const [limit, setLimit] = useState("");
   const [reuseBudget, setReuseBudget] = useState(true);
   const parsedLimit = parseDecimalInput(limit);
@@ -1265,15 +1328,20 @@ export function QuickTransactionModal({
       return;
     }
 
-    const input =
-      initialPageFocusTarget === "limit"
-        ? limitInputRef.current
-        : amountInputRef.current;
-
-    if (document.activeElement === mobileFocusBridgeRef?.current) {
-      input?.focus({ preventScroll: true });
-      window.scrollTo(0, 0);
+    if (document.activeElement !== mobileFocusBridgeRef?.current) {
+      return;
     }
+
+    // The budget-limit step still uses a native input, so hand focus off to
+    // it. The transaction-amount step uses the on-screen keypad instead, so
+    // just dismiss the decoy's OS keyboard rather than opening a real one.
+    if (initialPageFocusTarget === "limit") {
+      limitInputRef.current?.focus({ preventScroll: true });
+    } else {
+      mobileFocusBridgeRef?.current?.blur();
+    }
+
+    window.scrollTo(0, 0);
   }, [initialPageFocusTarget, isPage, mobileFocusBridgeRef]);
   const backButton = isPage ? (
     <Button
@@ -1469,63 +1537,158 @@ export function QuickTransactionModal({
           </p>
         </CardHeader>
         <CardContent className="px-6 pb-6 pt-0">
-          <div
-            className={cn(
-              "grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3",
-            )}
-          >
-            <FieldError>
-              <Label htmlFor="quick-amount">Amount</Label>
-              <Input
-                id="quick-amount"
-                autoFocus={!isPage}
-                inputMode="decimal"
-                onInput={handleDecimalInput}
-                pattern="[0-9]*[.]?[0-9]*"
-                {...getPageInputProps("amount")}
-                ref={amountInputRef}
-                type="text"
-                value={amount}
-                onChange={(event) => setAmount(event.currentTarget.value)}
-              />
-            </FieldError>
-            <div>
-              <Label htmlFor="quick-subcategory">Subcategory</Label>
-              <div className="mt-2">
-                <Select
-                  id="quick-subcategory"
-                  onValueChange={setSelectedSubcategory}
-                  options={subcategories.map((subcategory) => ({
-                    label: subcategory,
-                    value: subcategory,
-                  }))}
-                  value={selectedSubcategory}
-                />
+          {isPage ? (
+            <>
+              <div>
+                <Label>Amount</Label>
+                <div className="mt-2 flex h-16 items-center gap-1 rounded-2xl border border-border bg-muted px-4 text-3xl font-bold tabular-nums">
+                  <span className="text-muted-foreground">₱</span>
+                  <span className={cn(!amount && "text-muted-foreground")}>
+                    {formatAmountDisplay(amount)}
+                  </span>
+                </div>
               </div>
-            </div>
-          </div>
-          {accounts.length > 0 && (
-            <div className="mt-4">
-              <Label htmlFor="quick-account">Account</Label>
-              <div className="mt-2">
-                <Select
-                  id="quick-account"
-                  onValueChange={setSelectedAccountId}
-                  options={accounts.map((account) => ({
-                    icon: (
-                      <AccountLogo
-                        account={account}
-                        className="h-6 w-6"
-                        iconClassName="h-3.5 w-3.5"
-                      />
-                    ),
-                    label: getAccountLabel(account),
-                    value: account.id,
-                  }))}
-                  value={selectedAccountId}
-                />
+              <div className="mt-4">
+                <Label>Subcategory</Label>
+                <div className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {subcategories.map((subcategory) => {
+                    const selected = subcategory === selectedSubcategory;
+
+                    return (
+                      <button
+                        key={subcategory}
+                        type="button"
+                        aria-pressed={selected}
+                        className={cn(
+                          "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                          selected
+                            ? "bg-accent text-accent-foreground"
+                            : "bg-muted text-foreground",
+                        )}
+                        onClick={() => setSelectedSubcategory(subcategory)}
+                      >
+                        {subcategory}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+              {accounts.length > 0 && (
+                <div className="mt-4">
+                  <Label>Account</Label>
+                  <div className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {accounts.map((account) => {
+                      const selected = account.id === selectedAccountId;
+
+                      return (
+                        <button
+                          key={account.id}
+                          type="button"
+                          aria-pressed={selected}
+                          className={cn(
+                            "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full py-2 pl-2 pr-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                            selected
+                              ? "bg-accent text-accent-foreground"
+                              : "bg-muted text-foreground",
+                          )}
+                          onClick={() => setSelectedAccountId(account.id)}
+                        >
+                          <AccountLogo
+                            account={account}
+                            className="h-6 w-6"
+                            iconClassName="h-3.5 w-3.5"
+                          />
+                          {getAccountLabel(account)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                {AMOUNT_KEYPAD_KEYS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-label={
+                      key === "backspace"
+                        ? "Delete last digit"
+                        : key === "clear"
+                          ? "Clear amount"
+                          : undefined
+                    }
+                    className="flex h-14 items-center justify-center rounded-2xl bg-muted text-xl font-semibold text-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))]"
+                    onClick={() => {
+                      if (key === "clear") {
+                        clearAmount();
+                      } else if (key === "backspace") {
+                        backspaceAmountDigit();
+                      } else {
+                        appendAmountDigit(key);
+                      }
+                    }}
+                  >
+                    {key === "backspace" ? "⌫" : key === "clear" ? "C" : key}
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] gap-3">
+                <FieldError>
+                  <Label htmlFor="quick-amount">Amount</Label>
+                  <Input
+                    id="quick-amount"
+                    autoFocus
+                    inputMode="decimal"
+                    onInput={handleDecimalInput}
+                    pattern="[0-9]*[.]?[0-9]*"
+                    ref={amountInputRef}
+                    type="text"
+                    value={amount}
+                    onChange={(event) => setAmount(event.currentTarget.value)}
+                  />
+                </FieldError>
+                <div>
+                  <Label htmlFor="quick-subcategory">Subcategory</Label>
+                  <div className="mt-2">
+                    <Select
+                      id="quick-subcategory"
+                      onValueChange={setSelectedSubcategory}
+                      options={subcategories.map((subcategory) => ({
+                        label: subcategory,
+                        value: subcategory,
+                      }))}
+                      value={selectedSubcategory}
+                    />
+                  </div>
+                </div>
+              </div>
+              {accounts.length > 0 && (
+                <div className="mt-4">
+                  <Label htmlFor="quick-account">Account</Label>
+                  <div className="mt-2">
+                    <Select
+                      id="quick-account"
+                      onValueChange={setSelectedAccountId}
+                      options={accounts.map((account) => ({
+                        icon: (
+                          <AccountLogo
+                            account={account}
+                            className="h-6 w-6"
+                            iconClassName="h-3.5 w-3.5"
+                          />
+                        ),
+                        label: getAccountLabel(account),
+                        value: account.id,
+                      }))}
+                      value={selectedAccountId}
+                    />
+                  </div>
+                </div>
+              )}
+            </>
           )}
           <Button
             className={cn("mt-6 w-full", !isPage && "sm:hidden")}
