@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import { LuChevronRight as ChevronRight } from "react-icons/lu";
 import type { Budget, Category, Transaction } from "@/lib/types";
 import { cn, formatCurrency, percent } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

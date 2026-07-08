@@ -1,18 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  ArrowRight,
-  BarChart3,
-  Check,
-  Palette,
-  PieChart,
-  ShieldCheck,
-  Smartphone,
-  Tags,
-  TrendingUp,
-  WalletMinimal,
-  WifiOff,
-} from "lucide-react";
+  LuArrowRight as ArrowRight,
+  LuChartColumn as BarChart3,
+  LuCheck as Check,
+  LuPalette as Palette,
+  LuChartPie as PieChart,
+  LuShieldCheck as ShieldCheck,
+  LuSmartphone as Smartphone,
+  LuTags as Tags,
+  LuTrendingUp as TrendingUp,
+  LuWalletMinimal as WalletMinimal,
+  LuWifiOff as WifiOff,
+} from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
 import { ThemeToggle } from "@/components/landing/theme-toggle";

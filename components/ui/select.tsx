@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { LuCheck as Check, LuChevronDown as ChevronDown } from "react-icons/lu";
 import { cn } from "@/lib/utils";
 
 export type SelectOption = {

@@ -1,21 +1,20 @@
 import { Fragment, type RefObject } from "react";
 import type { IconType } from "react-icons";
 import {
-    Check,
-    ChevronRight,
-    Download,
-    Gauge,
-    HelpCircle,
-    Info,
-    LayoutGrid,
-    List,
-    LogOut,
-    Package,
-    RotateCcw,
-    Rows3,
-    Target,
-    type LucideIcon,
-} from "lucide-react";
+    LuCheck as Check,
+    LuChevronRight as ChevronRight,
+    LuDownload as Download,
+    LuGauge as Gauge,
+    LuCircleHelp as HelpCircle,
+    LuInfo as Info,
+    LuLayoutGrid as LayoutGrid,
+    LuList as List,
+    LuLogOut as LogOut,
+    LuPackage as Package,
+    LuRotateCcw as RotateCcw,
+    LuRows3 as Rows3,
+    LuTarget as Target,
+} from "react-icons/lu";
 import {
     FaAdjust,
     FaChartBar,
@@ -41,7 +40,7 @@ import {
 } from "@/components/kwarta/app-types";
 
 const homeLayoutOptions: Array<{
-    icon: LucideIcon;
+    icon: IconType;
     label: string;
     value: HomeItemStyle;
 }> = [

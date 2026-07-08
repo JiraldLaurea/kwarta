@@ -1,7 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeftRight, Link2, Plus, Sparkles } from "lucide-react";
+import {
+    LuArrowLeftRight as ArrowLeftRight,
+    LuLink2 as Link2,
+    LuPlus as Plus,
+    LuSparkles as Sparkles,
+} from "react-icons/lu";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import {

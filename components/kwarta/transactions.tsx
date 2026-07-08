@@ -1,7 +1,11 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit3, Plus, Trash2 } from "lucide-react";
+import {
+  LuPenLine as Edit3,
+  LuPlus as Plus,
+  LuTrash2 as Trash2,
+} from "react-icons/lu";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { transactionSchema, type TransactionFormValues } from "@/lib/schema";

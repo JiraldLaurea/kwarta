@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Upload } from "lucide-react";
+import { LuDownload as Download, LuUpload as Upload } from "react-icons/lu";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 

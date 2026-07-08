@@ -21,16 +21,16 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  ChevronLeft,
-  ChevronRight,
-  Delete,
-  Edit3,
-  Ellipsis,
-  GripVertical,
-  Plus,
-  Tags,
-  Trash2,
-} from "lucide-react";
+  LuChevronLeft as ChevronLeft,
+  LuChevronRight as ChevronRight,
+  LuDelete as Delete,
+  LuPenLine as Edit3,
+  LuEllipsis as Ellipsis,
+  LuGripVertical as GripVertical,
+  LuPlus as Plus,
+  LuTags as Tags,
+  LuTrash2 as Trash2,
+} from "react-icons/lu";
 import {
   forwardRef,
   useEffect,
@@ -1707,7 +1707,7 @@ export function QuickTransactionModal({
                     onPointerUp={() => handleKeypadPointerUp(key)}
                   >
                     {key === "backspace" ? (
-                      <Delete className="h-5 w-5" aria-hidden />
+                      <Delete className="h-7 w-7" aria-hidden />
                     ) : (
                       key
                     )}

@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import type { LucideIcon } from "lucide-react";
+import type { IconType } from "react-icons";
 import {
-  ArrowLeft,
-  BarChart3,
-  ChevronLeft,
-  ChevronRight,
-  ImageOff,
-  PieChart,
-  Receipt,
-  Settings,
-  Tags,
-  Wallet,
-  X,
-} from "lucide-react";
+  LuArrowLeft as ArrowLeft,
+  LuChartColumn as BarChart3,
+  LuChevronLeft as ChevronLeft,
+  LuChevronRight as ChevronRight,
+  LuImageOff as ImageOff,
+  LuChartPie as PieChart,
+  LuReceipt as Receipt,
+  LuSettings as Settings,
+  LuTags as Tags,
+  LuWallet as Wallet,
+  LuX as X,
+} from "react-icons/lu";
 import { RiLayoutFill } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -30,7 +30,7 @@ type HelpStep = {
 
 type HelpTopic = {
   title: string;
-  icon: LucideIcon | typeof RiLayoutFill;
+  icon: IconType;
   steps: HelpStep[];
 };
 

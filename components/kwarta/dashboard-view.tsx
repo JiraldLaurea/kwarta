@@ -9,7 +9,11 @@ import {
     XAxis,
     YAxis,
 } from "recharts";
-import { ArrowDown, ArrowUp, Minus } from "lucide-react";
+import {
+    LuArrowDown as ArrowDown,
+    LuArrowUp as ArrowUp,
+    LuMinus as Minus,
+} from "react-icons/lu";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/kwarta/shared";

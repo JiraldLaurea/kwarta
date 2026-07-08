@@ -1,7 +1,7 @@
 "use client";
 
 import { disableBodyScroll, enableBodyScroll } from "body-scroll-lock";
-import { ChevronRight } from "lucide-react";
+import { LuChevronRight as ChevronRight } from "react-icons/lu";
 import { FaRegLightbulb } from "react-icons/fa6";
 import type { User } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

@@ -3,15 +3,15 @@
 import { type User } from "@supabase/supabase-js";
 import { disableBodyScroll, enableBodyScroll } from "body-scroll-lock";
 import {
-    Calendar,
-    ChevronLeft,
-    ChevronRight,
-    CircleDollarSign,
-    Minus,
-    Pencil,
-    Plus,
-    Receipt,
-} from "lucide-react";
+    LuCalendar as Calendar,
+    LuChevronLeft as ChevronLeft,
+    LuChevronRight as ChevronRight,
+    LuCircleDollarSign as CircleDollarSign,
+    LuMinus as Minus,
+    LuPencil as Pencil,
+    LuPlus as Plus,
+    LuReceipt as Receipt,
+} from "react-icons/lu";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";

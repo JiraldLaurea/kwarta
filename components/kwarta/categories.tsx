@@ -22,7 +22,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit3, GripVertical, Plus, Trash2 } from "lucide-react";
+import {
+  LuPenLine as Edit3,
+  LuGripVertical as GripVertical,
+  LuPlus as Plus,
+  LuTrash2 as Trash2,
+} from "react-icons/lu";
 import { useEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";

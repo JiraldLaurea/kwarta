@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ArrowRight, Check } from "lucide-react";
+import { LuArrowRight as ArrowRight, LuCheck as Check } from "react-icons/lu";
 import { authSchema, type AuthFormValues } from "@/lib/schema";
 import type { AuthMode } from "@/lib/types";
 import { Button } from "@/components/ui/button";
