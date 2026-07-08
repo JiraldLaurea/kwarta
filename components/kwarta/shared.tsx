@@ -1828,11 +1828,18 @@ export function AmountDisplay({
             )}
         >
             <div className="flex items-end gap-1">
-                <span className="text-lg text-muted-foreground">₱</span>
+                <span
+                    className={cn(
+                        "text-3xl text-muted-foreground",
+                        !value && "text-muted-foreground/50",
+                    )}
+                >
+                    ₱
+                </span>
                 <span
                     className={cn(
                         "text-3xl font-semibold",
-                        !value && "text-muted-foreground",
+                        !value && "text-muted-foreground/50",
                     )}
                 >
                     {formatAmountDisplay(value)}
