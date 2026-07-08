@@ -210,7 +210,7 @@ export function DatePickerInput({
                 aria-haspopup="dialog"
                 aria-label={ariaLabel}
                 className={cn(
-                    "w-full justify-start px-3 text-left font-normal md:hover:bg-card",
+                    "w-full justify-start rounded-xl px-3 text-left font-normal md:hover:bg-card",
                     isOpen && "border-ring ring-2 ring-ring/20",
                 )}
                 type="button"
@@ -380,7 +380,7 @@ export function MonthPickerInput({
                 aria-haspopup="dialog"
                 aria-label={ariaLabel}
                 className={cn(
-                    "w-full justify-start px-3 text-left font-normal md:hover:bg-card",
+                    "w-full justify-start rounded-xl px-3 text-left font-normal md:hover:bg-card",
                     compact &&
                         "rounded-full border-0 bg-accent-muted text-accent-muted-foreground shadow-none md:hover:bg-accent-muted",
                     isOpen && "border-ring ring-2 ring-ring/20",
@@ -729,7 +729,7 @@ export function BudgetCyclePickerInput({
                 aria-haspopup="dialog"
                 aria-label="Select budget cycle"
                 className={cn(
-                    "w-full justify-start px-3 text-left font-normal md:hover:bg-card",
+                    "w-full justify-start rounded-xl px-3 text-left font-normal md:hover:bg-card",
                     isOpen && "border-ring ring-2 ring-ring/20",
                     triggerClassName,
                 )}
@@ -978,7 +978,7 @@ export function WeekPickerInput({
                 aria-haspopup="dialog"
                 aria-label="Select week"
                 className={cn(
-                    "w-full justify-start px-3 text-left font-normal md:hover:bg-card",
+                    "w-full justify-start rounded-xl px-3 text-left font-normal md:hover:bg-card",
                     isOpen && "border-ring ring-2 ring-ring/20",
                     triggerClassName,
                 )}
