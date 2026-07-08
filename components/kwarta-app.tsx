@@ -1457,32 +1457,6 @@ export function KwartaApp() {
         />
     );
 
-    if (quickAddCategory && !isDesktopLayout) {
-        return (
-            <>
-                {quickAddFocusBridge}
-                <QuickAddSheet contentRef={quickAddPageRef} onClose={closeQuickAdd}>
-                    <QuickTransactionModal
-                        accounts={accounts}
-                        budget={quickAddBudget}
-                        budgetsEnabled={budgetsEnabled}
-                        category={quickAddCategory}
-                        mobileFocusBridgeRef={quickAddFocusBridgeRef}
-                        month={selectedMonth}
-                        defaultDate={quickAddDefaultDate}
-                        periodLabel={selectedPeriodLabel}
-                        periodNoun={getPeriodNoun(selectedPeriod)}
-                        presentation="page"
-                        onClose={closeQuickAdd}
-                        onSetBudget={handleQuickAddBudget}
-                        onSetReusableBudget={handleQuickAddReusableBudget}
-                        onSubmit={handleQuickAddTransaction}
-                    />
-                </QuickAddSheet>
-            </>
-        );
-    }
-
     return (
         <>
             {quickAddFocusBridge}
@@ -1956,6 +1930,29 @@ export function KwartaApp() {
                         onSetReusableBudget={handleQuickAddReusableBudget}
                         onSubmit={handleQuickAddTransaction}
                     />
+                )}
+                {quickAddCategory && !isDesktopLayout && (
+                    <QuickAddSheet
+                        contentRef={quickAddPageRef}
+                        onClose={closeQuickAdd}
+                    >
+                        <QuickTransactionModal
+                            accounts={accounts}
+                            budget={quickAddBudget}
+                            budgetsEnabled={budgetsEnabled}
+                            category={quickAddCategory}
+                            mobileFocusBridgeRef={quickAddFocusBridgeRef}
+                            month={selectedMonth}
+                            defaultDate={quickAddDefaultDate}
+                            periodLabel={selectedPeriodLabel}
+                            periodNoun={getPeriodNoun(selectedPeriod)}
+                            presentation="page"
+                            onClose={closeQuickAdd}
+                            onSetBudget={handleQuickAddBudget}
+                            onSetReusableBudget={handleQuickAddReusableBudget}
+                            onSubmit={handleQuickAddTransaction}
+                        />
+                    </QuickAddSheet>
                 )}
                 {homeCategoryFormOpen && (
                     <EditModal onClose={() => setHomeCategoryFormOpen(false)}>
