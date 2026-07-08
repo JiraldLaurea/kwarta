@@ -1369,8 +1369,21 @@ export function MobileBottomSheet({
 
         closingRef.current = true;
         setIsVisible(false);
-        window.setTimeout(onClose, 240);
-    }, [onClose]);
+    }, []);
+
+    // Scheduled here (rather than inline in requestClose) so the timer is
+    // tied to this instance's effect lifecycle: if the sheet is keyed to
+    // different content and this instance unmounts mid-close, the cleanup
+    // cancels the pending close instead of leaving a stale timer that would
+    // later fire onClose against whatever content replaced it.
+    useEffect(() => {
+        if (!closingRef.current) {
+            return;
+        }
+
+        const timeout = window.setTimeout(onClose, 240);
+        return () => window.clearTimeout(timeout);
+    }, [isVisible, onClose]);
 
     const {
         dragOffset,
@@ -1576,7 +1589,7 @@ export function MobileBottomSheet({
             <button
                 aria-label="Close"
                 className={cn(
-                    "absolute inset-0 cursor-default bg-black/40 transition-opacity duration-200",
+                    "absolute inset-0 cursor-default bg-black/40 transition-opacity duration-[240ms]",
                     isVisible ? "opacity-100" : "opacity-0",
                 )}
                 style={
@@ -1908,11 +1921,24 @@ function DesktopEditModal({
 
         closingRef.current = true;
         setIsVisible(false);
-        window.setTimeout(
+    }, []);
+
+    // Scheduled here (rather than inline in requestClose) so the timer is
+    // tied to this instance's effect lifecycle: if this instance unmounts
+    // mid-close (e.g. keyed to different content), the cleanup cancels the
+    // pending close instead of leaving a stale timer that would later fire
+    // onClose against whatever content replaced it.
+    useEffect(() => {
+        if (!closingRef.current) {
+            return;
+        }
+
+        const timeout = window.setTimeout(
             onClose,
             prefersReducedMotion ? 0 : window.innerWidth >= 640 ? 100 : 240,
         );
-    }, [onClose, prefersReducedMotion]);
+        return () => window.clearTimeout(timeout);
+    }, [isVisible, onClose, prefersReducedMotion]);
     const {
         dragOffset,
         isDragging,

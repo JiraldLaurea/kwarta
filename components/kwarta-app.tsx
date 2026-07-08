@@ -1783,6 +1783,7 @@ export function KwartaApp() {
                 )}
                 {quickAddCategory && !isDesktopLayout && (
                     <MobileBottomSheet
+                        key={quickAddCategory.id}
                         allowContentScroll
                         onClose={closeQuickAdd}
                     >
@@ -1842,7 +1843,10 @@ export function KwartaApp() {
                     categories.find(
                         (category) => category.id === editingCategoryId,
                     ) && (
-                        <EditModal onClose={() => setEditingCategoryId(null)}>
+                        <EditModal
+                            key={editingCategoryId}
+                            onClose={() => setEditingCategoryId(null)}
+                        >
                             <CategoryForm
                                 editing={
                                     categories.find(
@@ -1891,6 +1895,7 @@ export function KwartaApp() {
                     )}
                 {categoryPendingDelete && (
                     <DeleteCategoryConfirmationModal
+                        key={categoryPendingDelete.id}
                         category={categoryPendingDelete}
                         onCancel={() => setCategoryPendingDelete(null)}
                         onConfirm={() => {

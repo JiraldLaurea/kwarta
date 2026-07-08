@@ -68,7 +68,11 @@ export function TransactionsView({
             </div>
             {editing &&
                 (isMobile ? (
-                    <MobileBottomSheet allowContentScroll onClose={onCancelEdit}>
+                    <MobileBottomSheet
+                        key={editing.id}
+                        allowContentScroll
+                        onClose={onCancelEdit}
+                    >
                         {editForm}
                     </MobileBottomSheet>
                 ) : (

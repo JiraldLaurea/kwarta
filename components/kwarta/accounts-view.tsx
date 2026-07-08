@@ -252,7 +252,7 @@ export function AccountsView({
                 </EditModal>
             )}
             {editing && (
-                <EditModal onClose={onCancelEdit}>
+                <EditModal key={editing.id} onClose={onCancelEdit}>
                     <AccountForm
                         canDelete={normalizedAccounts.length > 1}
                         editing={editing}
@@ -282,7 +282,10 @@ export function AccountsView({
                 </EditModal>
             )}
             {editingTransfer && (
-                <EditModal onClose={onCancelEditTransfer}>
+                <EditModal
+                    key={editingTransfer.id}
+                    onClose={onCancelEditTransfer}
+                >
                     <TransferForm
                         accounts={normalizedAccounts}
                         editing={editingTransfer}

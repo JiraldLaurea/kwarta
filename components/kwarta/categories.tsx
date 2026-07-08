@@ -110,7 +110,7 @@ export function CategoriesView({
         </div>
       </div>
       {editing && (
-        <EditModal onClose={onCancelEdit}>
+        <EditModal key={editing.id} onClose={onCancelEdit}>
           <CategoryForm
             editing={editing}
             onCancel={onCancelEdit}

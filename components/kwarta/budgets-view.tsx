@@ -122,7 +122,10 @@ export function BudgetsView({
                 />
             </div>
             {addingBudgetCategory && (
-                <EditModal onClose={() => setAddingBudgetCategory(null)}>
+                <EditModal
+                    key={addingBudgetCategory.id}
+                    onClose={() => setAddingBudgetCategory(null)}
+                >
                         <BudgetForm
                             category={addingBudgetCategory}
                             cycleSettings={cycleSettings}
@@ -138,7 +141,7 @@ export function BudgetsView({
                 </EditModal>
             )}
             {editing && editingCategory && (
-                <EditModal onClose={onCancelEdit}>
+                <EditModal key={editing.id} onClose={onCancelEdit}>
                     <BudgetForm
                         category={editingCategory}
                         cycleSettings={cycleSettings}
