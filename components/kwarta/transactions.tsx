@@ -244,7 +244,7 @@ export function TransactionForm({
                                 className={cn(
                                   "flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                   selected
-                                    ? "border-accent bg-muted text-foreground ring-2 ring-inset ring-accent"
+                                    ? "border-accent bg-accent text-accent-foreground"
                                     : "border-border bg-muted text-foreground",
                                 )}
                                 onClick={() => {
@@ -289,7 +289,7 @@ export function TransactionForm({
                                 className={cn(
                                   "flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border pl-2 pr-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                   selected
-                                    ? "border-accent bg-muted text-foreground ring-2 ring-inset ring-accent"
+                                    ? "border-accent bg-accent text-accent-foreground"
                                     : "border-border bg-muted text-foreground",
                                 )}
                                 onClick={() =>
@@ -330,7 +330,7 @@ export function TransactionForm({
                                   className={cn(
                                     "flex h-10 shrink-0 items-center whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                     selected
-                                      ? "border-accent bg-muted text-foreground ring-2 ring-inset ring-accent"
+                                      ? "border-accent bg-accent text-accent-foreground"
                                       : "border-border bg-muted text-foreground",
                                   )}
                                   onClick={() =>
@@ -367,7 +367,7 @@ export function TransactionForm({
                                   className={cn(
                                     "flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border pl-2 pr-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                     selected
-                                      ? "border-accent bg-muted text-foreground ring-2 ring-inset ring-accent"
+                                      ? "border-accent bg-accent text-accent-foreground"
                                       : "border-border bg-muted text-foreground",
                                   )}
                                   onClick={() =>
