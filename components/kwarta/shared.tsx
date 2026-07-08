@@ -1386,13 +1386,29 @@ export function MobileBottomSheet({
         setMounted(true);
     }, []);
 
+    // Two rAFs, not one: the sheet only enters the DOM (in its off-screen
+    // position) once `mounted` flips true, so a single rAF scheduled here
+    // can fire before that first paint ever lands, collapsing the slide-up
+    // into an instant jump. Waiting a full extra frame guarantees the
+    // off-screen state has actually been painted before animating in.
     useEffect(() => {
-        const frame = window.requestAnimationFrame(() => {
-            setIsVisible(true);
-            onOpenComplete?.();
+        if (!mounted) {
+            return;
+        }
+
+        let innerFrame = 0;
+        const outerFrame = window.requestAnimationFrame(() => {
+            innerFrame = window.requestAnimationFrame(() => {
+                setIsVisible(true);
+                onOpenComplete?.();
+            });
         });
-        return () => window.cancelAnimationFrame(frame);
-    }, [onOpenComplete]);
+
+        return () => {
+            window.cancelAnimationFrame(outerFrame);
+            window.cancelAnimationFrame(innerFrame);
+        };
+    }, [mounted, onOpenComplete]);
 
     useEffect(() => {
         // Lock the underlying page scroll so the sheet's content is the only
@@ -1438,7 +1454,7 @@ export function MobileBottomSheet({
             document.body.style.overscrollBehavior =
                 previousBodyOverscrollBehavior;
         };
-    }, [allowContentScroll]);
+    }, [allowContentScroll, mounted]);
 
     useEffect(() => {
         // While an input is focused, the mobile browser scrolls it into view
