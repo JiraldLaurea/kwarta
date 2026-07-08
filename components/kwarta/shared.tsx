@@ -2572,7 +2572,7 @@ export function LogoMark({ size }: { size: number }) {
         <Image
             alt=""
             aria-hidden
-            className="shrink-0 rounded-md bg-black p-[2px] dark:invert"
+            className="shrink-0 rounded-md"
             height={size}
             priority
             src="/icons/icon-192.png"
