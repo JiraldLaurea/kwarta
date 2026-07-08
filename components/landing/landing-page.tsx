@@ -98,7 +98,7 @@ function Logo({ className }: { className?: string }) {
     >
       <Image
         aria-hidden
-        className="shrink-0 rounded-md bg-black p-[2px] dark:invert"
+        className="shrink-0 rounded-md"
         height={28}
         src="/icons/icon-192.png"
         alt=""
