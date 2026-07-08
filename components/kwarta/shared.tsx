@@ -1358,6 +1358,8 @@ export function MobileBottomSheet({
     onClose: () => void;
 }) {
     const scrollRef = useRef<HTMLDivElement>(null);
+    const sheetRef = useRef<HTMLDivElement>(null);
+    const backdropRef = useRef<HTMLButtonElement>(null);
     const [mounted, setMounted] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const closingRef = useRef(false);
@@ -1385,19 +1387,149 @@ export function MobileBottomSheet({
         return () => window.clearTimeout(timeout);
     }, [isVisible, onClose]);
 
-    const {
-        dragOffset,
-        isDragging,
-        isSwipeDismissing,
-        onTouchStart: onSwipeStart,
-        onTouchMove: onSwipeMove,
-        onTouchEnd: onSwipeEnd,
-        onTouchCancel: onSwipeCancel,
-    } = useSwipeToClose(requestClose, "bottom");
-
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Swipe-to-dismiss, driven imperatively: the sheet and backdrop are moved
+    // by writing to their DOM styles directly inside the touch handlers, never
+    // through React state. A React re-render per touchmove (the previous
+    // approach) reconciles on every frame and drops them, making the drag feel
+    // laggy; touching the DOM directly keeps it on the compositor. React still
+    // owns the resting transform/opacity (via isVisible) and the class-based
+    // transitions, so releasing hands control cleanly back to it — settle back
+    // to open, or route through requestClose for one coherent slide-out.
+    useEffect(() => {
+        const sheet = sheetRef.current;
+
+        if (!sheet || !mounted) {
+            return;
+        }
+
+        let startY = 0;
+        let tracking = false;
+        let dragging = false;
+
+        function isInteractive(target: EventTarget | null) {
+            return (
+                target instanceof HTMLElement &&
+                Boolean(
+                    target.closest(
+                        "button,input,select,textarea,[role='button'],[role='combobox'],[data-radix-select-trigger]",
+                    ),
+                )
+            );
+        }
+
+        function handleStart(event: TouchEvent) {
+            if (
+                window.innerWidth >= 640 ||
+                event.touches.length !== 1 ||
+                closingRef.current ||
+                isInteractive(event.target)
+            ) {
+                return;
+            }
+
+            // Only start a drag from the top of the content; if it's scrolled
+            // down, let the scroll happen instead.
+            const scroller =
+                event.target instanceof HTMLElement
+                    ? event.target.closest<HTMLElement>(
+                          "[data-bottom-sheet-scroll]",
+                      )
+                    : null;
+
+            if (scroller && scroller.scrollTop > 0) {
+                return;
+            }
+
+            startY = event.touches[0].clientY;
+            tracking = true;
+            dragging = false;
+        }
+
+        function handleMove(event: TouchEvent) {
+            if (!tracking || !sheet) {
+                return;
+            }
+
+            const offset = event.touches[0].clientY - startY;
+
+            if (!dragging) {
+                // Wait for a clear downward intent before capturing, so taps
+                // and small jitters still reach the content underneath.
+                if (offset < 6) {
+                    return;
+                }
+
+                dragging = true;
+                sheet.style.transition = "none";
+
+                if (backdropRef.current) {
+                    backdropRef.current.style.transition = "none";
+                }
+            }
+
+            event.preventDefault();
+            sheet.style.transform = `translateY(${Math.max(0, offset)}px)`;
+
+            if (backdropRef.current) {
+                backdropRef.current.style.opacity = String(
+                    Math.max(0, 1 - Math.max(0, offset) / (window.innerHeight * 0.5)),
+                );
+            }
+        }
+
+        function handleEnd(event: TouchEvent) {
+            if (!tracking || !sheet) {
+                return;
+            }
+
+            tracking = false;
+
+            if (!dragging) {
+                return;
+            }
+
+            dragging = false;
+
+            const offset =
+                (event.changedTouches[0]?.clientY ?? startY) - startY;
+
+            // Hand the resting transition back to the CSS classes.
+            sheet.style.transition = "";
+
+            if (backdropRef.current) {
+                backdropRef.current.style.transition = "";
+            }
+
+            if (offset > Math.min(window.innerHeight * 0.25, 160)) {
+                // Leave the inline transform where the finger left it; React
+                // flips isVisible and writes the off-screen target, so the
+                // slide-out continues from here in one direction.
+                requestClose();
+            } else {
+                sheet.style.transform = "translateY(0px)";
+
+                if (backdropRef.current) {
+                    backdropRef.current.style.opacity = "1";
+                }
+            }
+        }
+
+        sheet.addEventListener("touchstart", handleStart, { passive: true });
+        sheet.addEventListener("touchmove", handleMove, { passive: false });
+        sheet.addEventListener("touchend", handleEnd);
+        sheet.addEventListener("touchcancel", handleEnd);
+
+        return () => {
+            sheet.removeEventListener("touchstart", handleStart);
+            sheet.removeEventListener("touchmove", handleMove);
+            sheet.removeEventListener("touchend", handleEnd);
+            sheet.removeEventListener("touchcancel", handleEnd);
+        };
+    }, [mounted, requestClose]);
 
     // Two rAFs, not one: the sheet only enters the DOM (in its off-screen
     // position) once `mounted` flips true, so a single rAF scheduled here
@@ -1573,13 +1705,6 @@ export function MobileBottomSheet({
         return target.isContentEditable;
     }
 
-    const dragging = isDragging || isSwipeDismissing;
-    const sheetOffset = dragging
-        ? `${dragOffset}px`
-        : isVisible
-          ? "0px"
-          : "100%";
-
     return createPortal(
         <RemoveScroll
             allowPinchZoom
@@ -1587,31 +1712,17 @@ export function MobileBottomSheet({
             removeScrollBar={false}
         >
             <button
+                ref={backdropRef}
                 aria-label="Close"
-                className={cn(
-                    "absolute inset-0 cursor-default bg-black/40 transition-opacity duration-[240ms]",
-                    isVisible ? "opacity-100" : "opacity-0",
-                )}
-                style={
-                    dragging
-                        ? { opacity: Math.max(0, 1 - dragOffset / 400) }
-                        : undefined
-                }
+                className="absolute inset-0 cursor-default bg-black/40 transition-opacity duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+                style={{ opacity: isVisible ? 1 : 0 }}
                 type="button"
                 onClick={requestClose}
             />
             <div
-                className="absolute inset-x-0 bottom-0 top-8 flex flex-col overflow-hidden rounded-t-2xl bg-white will-change-transform"
-                style={{
-                    transform: `translateY(${sheetOffset})`,
-                    transition: isDragging
-                        ? "none"
-                        : "transform 240ms cubic-bezier(0.22,1,0.36,1)",
-                }}
-                onTouchStart={onSwipeStart}
-                onTouchMove={onSwipeMove}
-                onTouchEnd={onSwipeEnd}
-                onTouchCancel={onSwipeCancel}
+                ref={sheetRef}
+                className="absolute inset-x-0 bottom-0 top-8 flex flex-col overflow-hidden rounded-t-2xl bg-white transition-transform duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+                style={{ transform: `translateY(${isVisible ? "0px" : "100%"})` }}
             >
                 <div className="flex h-6 shrink-0 items-center justify-center">
                     <span className="h-1 w-10 rounded-full bg-neutral-300" />
