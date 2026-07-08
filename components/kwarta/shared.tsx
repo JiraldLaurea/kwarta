@@ -1412,7 +1412,7 @@ export function MobileBottomSheet({
 
         function isInteractive(target: EventTarget | null) {
             return (
-                target instanceof HTMLElement &&
+                target instanceof Element &&
                 Boolean(
                     target.closest(
                         "button,input,select,textarea,[role='button'],[role='combobox'],[data-radix-select-trigger]",
@@ -1434,7 +1434,7 @@ export function MobileBottomSheet({
             // Only start a drag from the top of the content; if it's scrolled
             // down, let the scroll happen instead.
             const scroller =
-                event.target instanceof HTMLElement
+                event.target instanceof Element
                     ? event.target.closest<HTMLElement>(
                           "[data-bottom-sheet-scroll]",
                       )
@@ -1754,13 +1754,6 @@ export function MobileBottomSheet({
                         target.focus({ preventScroll: true });
                         window.requestAnimationFrame(() => window.scrollTo(0, 0));
                         window.setTimeout(() => window.scrollTo(0, 0), 80);
-                    }}
-                    onTouchMoveCapture={(event) => {
-                        if (allowContentScroll) {
-                            return;
-                        }
-
-                        event.preventDefault();
                     }}
                     onClickCapture={(event) => {
                         if (
