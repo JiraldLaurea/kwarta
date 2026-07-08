@@ -45,7 +45,7 @@ import type {
     Transaction,
     Transfer,
 } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import {
     budgetMatchesPeriod,
     createBudgetCyclePeriod,
@@ -79,6 +79,7 @@ import {
     PeriodSelector,
     SwipeBackArea,
     getAccountName,
+    useSwipeToClose,
 } from "@/components/kwarta/shared";
 import { BudgetsView } from "@/components/kwarta/budgets-view";
 import { AccountsView } from "@/components/kwarta/accounts-view";
@@ -113,6 +114,100 @@ function applyAppearanceWithoutTransition(update: () => void) {
             root.classList.remove("appearance-changing");
         });
     });
+}
+
+// Mobile-only bottom sheet for the home quick-add flow: slides up from the
+// bottom on mount, rounds its top corners, and can be dismissed by swiping
+// down or tapping the backdrop.
+function QuickAddSheet({
+    children,
+    contentRef,
+    onClose,
+}: {
+    children: React.ReactNode;
+    contentRef: React.RefObject<HTMLElement>;
+    onClose: () => void;
+}) {
+    const [isVisible, setIsVisible] = useState(false);
+    const closingRef = useRef(false);
+
+    const requestClose = useCallback(() => {
+        if (closingRef.current) {
+            return;
+        }
+
+        closingRef.current = true;
+        setIsVisible(false);
+        window.setTimeout(onClose, 240);
+    }, [onClose]);
+
+    const {
+        dragOffset,
+        isDragging,
+        isSwipeDismissing,
+        onTouchStart,
+        onTouchMove,
+        onTouchEnd,
+        onTouchCancel,
+    } = useSwipeToClose(requestClose, "bottom");
+
+    useEffect(() => {
+        const frame = window.requestAnimationFrame(() => setIsVisible(true));
+        return () => window.cancelAnimationFrame(frame);
+    }, []);
+
+    const dragging = isDragging || isSwipeDismissing;
+    const sheetOffset = dragging
+        ? `${dragOffset}px`
+        : isVisible
+          ? "0px"
+          : "100%";
+
+    return (
+        <RemoveScroll
+            allowPinchZoom
+            className="fixed inset-0 z-[60] overflow-hidden"
+            removeScrollBar={false}
+        >
+            <button
+                aria-label="Close"
+                className={cn(
+                    "absolute inset-0 cursor-default bg-black/40 transition-opacity duration-200",
+                    isVisible ? "opacity-100" : "opacity-0",
+                )}
+                style={
+                    dragging
+                        ? { opacity: Math.max(0, 1 - dragOffset / 400) }
+                        : undefined
+                }
+                type="button"
+                onClick={requestClose}
+            />
+            <div
+                className="absolute inset-x-0 bottom-0 top-8 flex flex-col overflow-hidden rounded-t-2xl bg-white will-change-transform"
+                style={{
+                    transform: `translateY(${sheetOffset})`,
+                    transition: isDragging
+                        ? "none"
+                        : "transform 240ms cubic-bezier(0.22,1,0.36,1)",
+                }}
+                onTouchCancel={onTouchCancel}
+                onTouchEnd={onTouchEnd}
+                onTouchMove={onTouchMove}
+                onTouchStart={onTouchStart}
+            >
+                <div className="flex h-6 shrink-0 items-center justify-center">
+                    <span className="h-1 w-10 rounded-full bg-neutral-300" />
+                </div>
+                <main
+                    ref={contentRef}
+                    className="flex-1 overflow-hidden"
+                >
+                    {children}
+                </main>
+            </div>
+        </RemoveScroll>
+    );
 }
 
 type StoredWorkspace = WorkspaceBackup;
@@ -1366,33 +1461,24 @@ export function KwartaApp() {
         return (
             <>
                 {quickAddFocusBridge}
-                <RemoveScroll
-                    allowPinchZoom
-                    className="fixed inset-0 overflow-hidden bg-white"
-                    removeScrollBar={false}
-                >
-                    <main
-                        ref={quickAddPageRef}
-                        className="h-full overflow-hidden bg-white"
-                    >
-                        <QuickTransactionModal
-                            accounts={accounts}
-                            budget={quickAddBudget}
-                            budgetsEnabled={budgetsEnabled}
-                            category={quickAddCategory}
-                            mobileFocusBridgeRef={quickAddFocusBridgeRef}
-                            month={selectedMonth}
-                            defaultDate={quickAddDefaultDate}
-                            periodLabel={selectedPeriodLabel}
-                            periodNoun={getPeriodNoun(selectedPeriod)}
-                            presentation="page"
-                            onClose={closeQuickAdd}
-                            onSetBudget={handleQuickAddBudget}
-                            onSetReusableBudget={handleQuickAddReusableBudget}
-                            onSubmit={handleQuickAddTransaction}
-                        />
-                    </main>
-                </RemoveScroll>
+                <QuickAddSheet contentRef={quickAddPageRef} onClose={closeQuickAdd}>
+                    <QuickTransactionModal
+                        accounts={accounts}
+                        budget={quickAddBudget}
+                        budgetsEnabled={budgetsEnabled}
+                        category={quickAddCategory}
+                        mobileFocusBridgeRef={quickAddFocusBridgeRef}
+                        month={selectedMonth}
+                        defaultDate={quickAddDefaultDate}
+                        periodLabel={selectedPeriodLabel}
+                        periodNoun={getPeriodNoun(selectedPeriod)}
+                        presentation="page"
+                        onClose={closeQuickAdd}
+                        onSetBudget={handleQuickAddBudget}
+                        onSetReusableBudget={handleQuickAddReusableBudget}
+                        onSubmit={handleQuickAddTransaction}
+                    />
+                </QuickAddSheet>
             </>
         );
     }

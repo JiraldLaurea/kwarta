@@ -21,7 +21,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  LuChevronLeft as ChevronLeft,
   LuChevronRight as ChevronRight,
   LuDelete as Delete,
   LuPenLine as Edit3,
@@ -1409,20 +1408,7 @@ export function QuickTransactionModal({
 
     window.scrollTo(0, 0);
   }, [initialPageFocusTarget, isPage, mobileFocusBridgeRef]);
-  const backButton = isPage ? (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="-ml-2 mb-3"
-      onClick={onClose}
-    >
-      <ChevronLeft className="h-5 w-5" aria-hidden />
-      <span className="sr-only">Back</span>
-    </Button>
-  ) : (
-    <ModalBackButton onClick={onClose} />
-  );
+  const backButton = isPage ? null : <ModalBackButton onClick={onClose} />;
 
   if (requiresBudget && !budget) {
     const budgetForm = (
