@@ -239,7 +239,10 @@ export function SettingsView({
                             label="Accent color"
                             description="Tap to apply instantly."
                         >
-                            <div className="flex flex-wrap gap-3">
+                            {/* Mobile: horizontal scroll, following the same bleed/restore
+                  pattern as Home layout above. Desktop (sm+): wraps into a
+                  flex row within the normal card padding. */}
+                            <div className="-mx-5 flex gap-3 overflow-x-auto overscroll-x-contain pb-1 pl-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
                                 {accentThemeOptions.map((option) => {
                                     const selected =
                                         accentTheme === option.value;
@@ -272,7 +275,7 @@ export function SettingsView({
                                                     option.value as AccentTheme,
                                                 )
                                             }
-                                            className="flex h-10 w-10 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
                                         >
                                             <span
                                                 className={cn(
@@ -299,6 +302,13 @@ export function SettingsView({
                                         </button>
                                     );
                                 })}
+                                {/* Trailing spacer: reserves the same 20px inset as pl-5 at
+                    the start (8px width + the existing gap-3 before it).
+                    Not part of the desktop flex row. */}
+                                <div
+                                    className="w-2 shrink-0 sm:hidden"
+                                    aria-hidden
+                                />
                             </div>
                         </GeneralBlock>
 
