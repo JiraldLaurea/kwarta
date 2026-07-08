@@ -114,20 +114,20 @@
 
 :root.dark {
   color-scheme: dark;
-  --background: 216 13% 6%;
+  --background: 216 12% 9%;
   --foreground: 0 0% 96%;
-  --card: 216 11% 9.7%;
+  --card: 216 10% 13%;
   --card-foreground: 0 0% 96%;
   --secondary: 0 0% 64%;
   --secondary-foreground: 0 0% 96%;
-  --muted: 216 9% 13%;
+  --muted: 216 8% 16%;
   --muted-foreground: 0 0% 64%;
-  --hover-surface: 218 8% 16.5%;
-  --pressed-surface: 218 8% 26%;
+  --hover-surface: 218 8% 19%;
+  --pressed-surface: 218 8% 28%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --border: 216 8% 15%;
-  --input: 216 8% 18%;
+  --border: 216 8% 18%;
+  --input: 216 8% 20%;
 }
 
 :root.dark[data-accent="black"] {
@@ -262,7 +262,7 @@ body {
 
 .dark .bg-neutral-50,
 .dark .bg-neutral-100 {
-  background-color: hsl(216 9% 12%);
+  background-color: hsl(216 8% 16%);
 }
 
 .dark .bg-neutral-300 {
