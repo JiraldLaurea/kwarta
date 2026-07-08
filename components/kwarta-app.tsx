@@ -43,7 +43,7 @@ import type {
     Transaction,
     Transfer,
 } from "@/lib/types";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
     budgetMatchesPeriod,
     createBudgetCyclePeriod,
@@ -72,7 +72,6 @@ import {
 } from "@/lib/kwarta/helpers";
 import {
     EditModal,
-    MetricCard,
     MobileBottomSheet,
     PageHeader,
     PeriodSelector,
@@ -1633,26 +1632,6 @@ export function KwartaApp() {
                                     description={`Income, expenses, and spending insights for ${selectedPeriodLabel}.`}
                                 />
                             </div>
-                            <section>
-                                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                                    <MetricCard
-                                        label="Income"
-                                        value={formatCurrency(totals.income)}
-                                        icon="plus"
-                                    />
-                                    <MetricCard
-                                        label="Expenses"
-                                        value={formatCurrency(totals.expenses)}
-                                        icon="minus"
-                                    />
-                                    <MetricCard
-                                        className="col-span-2 sm:col-span-1"
-                                        label="Balance"
-                                        value={formatCurrency(totals.balance)}
-                                        icon="wallet"
-                                    />
-                                </div>
-                            </section>
 
                             <DashboardView
                                 budgetVsActual={budgetVsActual}

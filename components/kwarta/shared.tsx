@@ -6,7 +6,6 @@ import {
     LuCalendar as Calendar,
     LuChevronLeft as ChevronLeft,
     LuChevronRight as ChevronRight,
-    LuCircleDollarSign as CircleDollarSign,
     LuDelete as Delete,
     LuMinus as Minus,
     LuPencil as Pencil,
@@ -2209,34 +2208,6 @@ export function ModalBackButton(_props: { onClick: () => void }) {
             <ChevronLeft className="h-5 w-5" aria-hidden />
             <span className="sr-only">Back</span>
         </Button>
-    );
-}
-
-export function MetricCard({
-    className,
-    icon,
-    label,
-    value,
-}: {
-    className?: string;
-    icon: "minus" | "plus" | "wallet";
-    label: string;
-    value: string;
-}) {
-    return (
-        <Card className={cn("p-3 md:p-4", className)}>
-            <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                {icon === "plus" && <Plus className="h-4 w-4" aria-hidden />}
-                {icon === "minus" && <Minus className="h-4 w-4" aria-hidden />}
-                {icon === "wallet" && (
-                    <CircleDollarSign className="h-4 w-4" aria-hidden />
-                )}
-            </div>
-            <p className="text-sm leading-5 text-muted-foreground">{label}</p>
-            <p className="mt-1 text-lg font-medium leading-6 md:text-xl md:leading-7">
-                {value}
-            </p>
-        </Card>
     );
 }
 
