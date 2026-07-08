@@ -1561,6 +1561,7 @@ export function QuickTransactionModal({
       )}
     >
       <form
+        className="select-none"
         onSubmit={(event) => {
           event.preventDefault();
 
