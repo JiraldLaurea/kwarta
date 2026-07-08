@@ -1333,16 +1333,34 @@ export function useIsMobileViewport() {
 // top corners, and can be dismissed by swiping down or tapping the backdrop.
 // The caller's content stays mounted behind it (not replaced), so the
 // backdrop dims real page content instead of a blank scrim.
+// Mobile-only bottom sheet: slides up from the bottom on mount, rounds its
+// top corners, and can be dismissed by swiping down or tapping the backdrop.
+// The caller's content stays mounted behind it, so the backdrop dims real
+// page content instead of a blank scrim.
+//
+// Also handles real native <input>/<textarea> fields safely: the on-screen
+// keyboard opening triggers browser auto-scroll-into-view and visualViewport
+// resize events that would otherwise fight this fixed, animated sheet (this
+// is the exact failure mode plain full-page mobile forms were built to
+// avoid) — the focus-aware scroll lock and pointer-capture handling below
+// port that proven logic onto the sheet.
 export function MobileBottomSheet({
+    allowContentScroll = false,
     children,
+    className,
+    onOpenComplete,
     onClose,
 }: {
+    allowContentScroll?: boolean;
     children: React.ReactNode;
+    className?: string;
+    onOpenComplete?: () => void;
     onClose: () => void;
 }) {
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const [mounted, setMounted] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const closingRef = useRef(false);
-    const contentRef = useRef<HTMLElement>(null);
 
     const requestClose = useCallback(() => {
         if (closingRef.current) {
@@ -1358,45 +1376,173 @@ export function MobileBottomSheet({
         dragOffset,
         isDragging,
         isSwipeDismissing,
-        onTouchStart,
-        onTouchMove,
-        onTouchEnd,
-        onTouchCancel,
+        onTouchStart: onSwipeStart,
+        onTouchMove: onSwipeMove,
+        onTouchEnd: onSwipeEnd,
+        onTouchCancel: onSwipeCancel,
     } = useSwipeToClose(requestClose, "bottom");
 
     useEffect(() => {
-        const frame = window.requestAnimationFrame(() => setIsVisible(true));
-        return () => window.cancelAnimationFrame(frame);
+        setMounted(true);
     }, []);
 
-    // Keeps the window pinned at (0, 0) so the on-screen keyboard opening for
-    // a real text input can't nudge the fixed-position sheet. RemoveScroll
-    // below already blocks background touch/wheel scrolling.
     useEffect(() => {
-        const target = contentRef.current;
+        const frame = window.requestAnimationFrame(() => {
+            setIsVisible(true);
+            onOpenComplete?.();
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, [onOpenComplete]);
+
+    useEffect(() => {
+        // Lock the underlying page scroll so the sheet's content is the only
+        // scroll container — otherwise the body scrolls behind the fixed
+        // sheet, producing a second scrollbar on short viewports.
+        const target = scrollRef.current;
 
         if (!target) {
             return;
         }
 
+        const previousHtmlOverflow = document.documentElement.style.overflow;
+        const previousBodyOverflow = document.body.style.overflow;
+        const previousBodyOverscrollBehavior =
+            document.body.style.overscrollBehavior;
         const lockViewport = () => {
             target.scrollTop = 0;
             window.scrollTo(0, 0);
         };
 
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+        document.body.style.overscrollBehavior = "none";
         lockViewport();
         window.addEventListener("scroll", lockViewport, { passive: true });
         window.addEventListener("resize", lockViewport);
+        if (!allowContentScroll) {
+            target.addEventListener("scroll", lockViewport, { passive: true });
+        }
         window.visualViewport?.addEventListener("resize", lockViewport);
         window.visualViewport?.addEventListener("scroll", lockViewport);
 
         return () => {
             window.removeEventListener("scroll", lockViewport);
             window.removeEventListener("resize", lockViewport);
+            if (!allowContentScroll) {
+                target.removeEventListener("scroll", lockViewport);
+            }
             window.visualViewport?.removeEventListener("resize", lockViewport);
             window.visualViewport?.removeEventListener("scroll", lockViewport);
+            document.documentElement.style.overflow = previousHtmlOverflow;
+            document.body.style.overflow = previousBodyOverflow;
+            document.body.style.overscrollBehavior =
+                previousBodyOverscrollBehavior;
         };
-    }, []);
+    }, [allowContentScroll]);
+
+    useEffect(() => {
+        // While an input is focused, the mobile browser scrolls it into view
+        // by scrolling our container, which shifts the whole sheet. Lock the
+        // scroll position for the duration of the focus so nothing moves.
+        const container = scrollRef.current;
+
+        if (!container) {
+            return;
+        }
+
+        let lockedScrollTop: number | null = null;
+
+        function isFormControl(node: EventTarget | null) {
+            return (
+                node instanceof HTMLInputElement ||
+                node instanceof HTMLTextAreaElement ||
+                node instanceof HTMLSelectElement
+            );
+        }
+
+        function handleFocusIn(event: FocusEvent) {
+            if (!isFormControl(event.target) || !container) {
+                return;
+            }
+
+            lockedScrollTop = container.scrollTop;
+        }
+
+        function handleFocusOut(event: FocusEvent) {
+            if (!isFormControl(event.target)) {
+                return;
+            }
+
+            lockedScrollTop = null;
+        }
+
+        function handleScroll() {
+            if (lockedScrollTop === null || !container) {
+                return;
+            }
+
+            // Reassert the locked position if the browser tried to scroll the
+            // focused field into view.
+            if (container.scrollTop !== lockedScrollTop) {
+                container.scrollTop = lockedScrollTop;
+            }
+        }
+
+        container.addEventListener("focusin", handleFocusIn);
+        container.addEventListener("focusout", handleFocusOut);
+        container.addEventListener("scroll", handleScroll, { passive: true });
+
+        return () => {
+            container.removeEventListener("focusin", handleFocusIn);
+            container.removeEventListener("focusout", handleFocusOut);
+            container.removeEventListener("scroll", handleScroll);
+        };
+    }, [mounted]);
+
+    useEffect(() => {
+        function handleKeyDown(event: KeyboardEvent) {
+            if (event.key === "Escape") {
+                requestClose();
+            }
+        }
+
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [requestClose]);
+
+    if (!mounted) {
+        return null;
+    }
+
+    function isTextInputTarget(target: EventTarget | Element | null) {
+        if (!(target instanceof HTMLElement)) {
+            return false;
+        }
+
+        if (target instanceof HTMLTextAreaElement) {
+            return true;
+        }
+
+        if (target instanceof HTMLInputElement) {
+            return ![
+                "button",
+                "checkbox",
+                "color",
+                "file",
+                "hidden",
+                "image",
+                "radio",
+                "range",
+                "reset",
+                "submit",
+            ].includes(target.type);
+        }
+
+        return target.isContentEditable;
+    }
 
     const dragging = isDragging || isSwipeDismissing;
     const sheetOffset = dragging
@@ -1405,7 +1551,7 @@ export function MobileBottomSheet({
           ? "0px"
           : "100%";
 
-    return (
+    return createPortal(
         <RemoveScroll
             allowPinchZoom
             className="fixed inset-0 z-[60] overflow-hidden"
@@ -1433,23 +1579,65 @@ export function MobileBottomSheet({
                         ? "none"
                         : "transform 240ms cubic-bezier(0.22,1,0.36,1)",
                 }}
-                onTouchCancel={onTouchCancel}
-                onTouchEnd={onTouchEnd}
-                onTouchMove={onTouchMove}
-                onTouchStart={onTouchStart}
+                onTouchStart={onSwipeStart}
+                onTouchMove={onSwipeMove}
+                onTouchEnd={onSwipeEnd}
+                onTouchCancel={onSwipeCancel}
             >
                 <div className="flex h-6 shrink-0 items-center justify-center">
                     <span className="h-1 w-10 rounded-full bg-neutral-300" />
                 </div>
-                <main
-                    ref={contentRef}
-                    className="flex-1 overflow-y-auto overscroll-contain"
+                <div
+                    ref={scrollRef}
                     data-bottom-sheet-scroll
+                    className={cn(
+                        "flex-1 overscroll-none [&>*]:!min-h-0 [&>*]:!border-0 [&>*]:!rounded-none [&>*]:!shadow-none",
+                        allowContentScroll
+                            ? "overflow-y-auto overscroll-contain"
+                            : "overflow-hidden",
+                        className,
+                    )}
+                    role="dialog"
+                    aria-modal="true"
+                    onPointerDownCapture={(event) => {
+                        const target = event.target;
+
+                        if (
+                            !isTextInputTarget(target) ||
+                            document.activeElement === target ||
+                            !(target instanceof HTMLElement)
+                        ) {
+                            return;
+                        }
+
+                        event.preventDefault();
+                        target.focus({ preventScroll: true });
+                        window.requestAnimationFrame(() => window.scrollTo(0, 0));
+                        window.setTimeout(() => window.scrollTo(0, 0), 80);
+                    }}
+                    onTouchMoveCapture={(event) => {
+                        if (allowContentScroll) {
+                            return;
+                        }
+
+                        event.preventDefault();
+                    }}
+                    onClickCapture={(event) => {
+                        if (
+                            event.target instanceof Element &&
+                            event.target.closest("[data-modal-close]")
+                        ) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            requestClose();
+                        }
+                    }}
                 >
                     {children}
-                </main>
+                </div>
             </div>
-        </RemoveScroll>
+        </RemoveScroll>,
+        document.body,
     );
 }
 
@@ -1644,12 +1832,9 @@ export function AmountKeypadGrid({
     );
 }
 
-/**
- * On mobile, forms render as a real in-flow full-page view (no overlay, no
- * backdrop, no body scroll-lock, no entrance animation) to avoid input and
- * keyboard glitches caused by a fixed/animated modal. On desktop (>=640px) it
- * stays a centered modal dialog.
- */
+// On mobile this renders as a MobileBottomSheet (slide-up, rounded top,
+// swipe/backdrop to dismiss); on desktop (>=640px) it stays a centered
+// modal dialog.
 export function EditModal(props: {
     animateMobileEnter?: boolean;
     allowContentScroll?: boolean;
@@ -1662,271 +1847,19 @@ export function EditModal(props: {
     const isMobile = useIsMobileViewport();
 
     if (isMobile) {
-        return <MobileFormPage {...props} />;
+        return (
+            <MobileBottomSheet
+                allowContentScroll={props.allowContentScroll}
+                className={props.className}
+                onOpenComplete={props.onOpenComplete}
+                onClose={props.onClose}
+            >
+                {props.children}
+            </MobileBottomSheet>
+        );
     }
 
     return <DesktopEditModal {...props} />;
-}
-
-function MobileFormPage({
-    allowContentScroll = false,
-    children,
-    className,
-    onOpenComplete,
-    onClose,
-}: {
-    allowContentScroll?: boolean;
-    children: React.ReactNode;
-    className?: string;
-    onOpenComplete?: () => void;
-    onClose: () => void;
-}) {
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const [mounted, setMounted] = useState(false);
-    const {
-        dragOffset,
-        isDragging,
-        isSwipeDismissing,
-        onTouchStart: onSwipeStart,
-        onTouchMove: onSwipeMove,
-        onTouchEnd: onSwipeEnd,
-        onTouchCancel: onSwipeCancel,
-    } = useSwipeToClose(onClose, "right");
-    const swipeTransform = isSwipeDismissing
-        ? "translateX(100%)"
-        : isDragging
-          ? `translateX(${dragOffset}px)`
-          : undefined;
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        onOpenComplete?.();
-        // Bring the new page to the top, matching a real navigation.
-        scrollRef.current?.scrollTo(0, 0);
-    }, [onOpenComplete]);
-
-    useEffect(() => {
-        // Lock the underlying page scroll so the form page is the only
-        // scroll container — otherwise the body scrolls behind the fixed
-        // page, producing a second scrollbar on short viewports.
-        const target = scrollRef.current;
-
-        if (!target) {
-            return;
-        }
-
-        const previousHtmlOverflow = document.documentElement.style.overflow;
-        const previousBodyOverflow = document.body.style.overflow;
-        const previousBodyOverscrollBehavior =
-            document.body.style.overscrollBehavior;
-        const lockViewport = () => {
-            target.scrollTop = 0;
-            window.scrollTo(0, 0);
-        };
-
-        document.documentElement.style.overflow = "hidden";
-        document.body.style.overflow = "hidden";
-        document.body.style.overscrollBehavior = "none";
-        lockViewport();
-        disableBodyScroll(target, {
-            allowTouchMove: () => false,
-            reserveScrollBarGap: false,
-        });
-        window.addEventListener("scroll", lockViewport, { passive: true });
-        window.addEventListener("resize", lockViewport);
-        if (!allowContentScroll) {
-            target.addEventListener("scroll", lockViewport, { passive: true });
-        }
-        window.visualViewport?.addEventListener("resize", lockViewport);
-        window.visualViewport?.addEventListener("scroll", lockViewport);
-
-        return () => {
-            window.removeEventListener("scroll", lockViewport);
-            window.removeEventListener("resize", lockViewport);
-            if (!allowContentScroll) {
-                target.removeEventListener("scroll", lockViewport);
-            }
-            window.visualViewport?.removeEventListener("resize", lockViewport);
-            window.visualViewport?.removeEventListener("scroll", lockViewport);
-            enableBodyScroll(target);
-            document.documentElement.style.overflow = previousHtmlOverflow;
-            document.body.style.overflow = previousBodyOverflow;
-            document.body.style.overscrollBehavior =
-                previousBodyOverscrollBehavior;
-        };
-    }, [allowContentScroll]);
-
-    useEffect(() => {
-        // While an input is focused, the mobile browser scrolls it into view
-        // by scrolling our container, which shifts the whole page up. Lock the
-        // scroll position for the duration of the focus so nothing moves.
-        const container = scrollRef.current;
-
-        if (!container) {
-            return;
-        }
-
-        let lockedScrollTop: number | null = null;
-
-        function isFormControl(node: EventTarget | null) {
-            return (
-                node instanceof HTMLInputElement ||
-                node instanceof HTMLTextAreaElement ||
-                node instanceof HTMLSelectElement
-            );
-        }
-
-        function handleFocusIn(event: FocusEvent) {
-            if (!isFormControl(event.target) || !container) {
-                return;
-            }
-
-            lockedScrollTop = container.scrollTop;
-        }
-
-        function handleFocusOut(event: FocusEvent) {
-            if (!isFormControl(event.target)) {
-                return;
-            }
-
-            lockedScrollTop = null;
-        }
-
-        function handleScroll() {
-            if (lockedScrollTop === null || !container) {
-                return;
-            }
-
-            // Reassert the locked position if the browser tried to scroll the
-            // focused field into view.
-            if (container.scrollTop !== lockedScrollTop) {
-                container.scrollTop = lockedScrollTop;
-            }
-        }
-
-        container.addEventListener("focusin", handleFocusIn);
-        container.addEventListener("focusout", handleFocusOut);
-        container.addEventListener("scroll", handleScroll, { passive: true });
-
-        return () => {
-            container.removeEventListener("focusin", handleFocusIn);
-            container.removeEventListener("focusout", handleFocusOut);
-            container.removeEventListener("scroll", handleScroll);
-        };
-    }, [mounted]);
-
-    useEffect(() => {
-        function handleKeyDown(event: KeyboardEvent) {
-            if (event.key === "Escape") {
-                onClose();
-            }
-        }
-
-        document.addEventListener("keydown", handleKeyDown);
-
-        return () => {
-            document.removeEventListener("keydown", handleKeyDown);
-        };
-    }, [onClose]);
-
-    if (!mounted) {
-        return null;
-    }
-
-    function isTextInputTarget(target: EventTarget | Element | null) {
-        if (!(target instanceof HTMLElement)) {
-            return false;
-        }
-
-        if (target instanceof HTMLTextAreaElement) {
-            return true;
-        }
-
-        if (target instanceof HTMLInputElement) {
-            return ![
-                "button",
-                "checkbox",
-                "color",
-                "file",
-                "hidden",
-                "image",
-                "radio",
-                "range",
-                "reset",
-                "submit",
-            ].includes(target.type);
-        }
-
-        return target.isContentEditable;
-    }
-
-    return createPortal(
-        <RemoveScroll
-            allowPinchZoom
-            className="fixed inset-0 z-[60] overflow-hidden"
-            removeScrollBar={false}
-        >
-            <div
-                ref={scrollRef}
-                className={cn(
-                    "h-full overflow-hidden overscroll-none bg-white [&>*]:!min-h-0 [&>*]:!border-0 [&>*]:!rounded-none [&>*]:!shadow-none",
-                    allowContentScroll && "overflow-y-auto overscroll-contain",
-                    className,
-                )}
-                style={{
-                    transform: swipeTransform,
-                    transition: isDragging
-                        ? "none"
-                        : "transform 220ms cubic-bezier(0.22,1,0.36,1)",
-                }}
-                role="dialog"
-                aria-modal="true"
-                onTouchStart={onSwipeStart}
-                onTouchMove={onSwipeMove}
-                onTouchEnd={onSwipeEnd}
-                onTouchCancel={onSwipeCancel}
-                onPointerDownCapture={(event) => {
-                    const target = event.target;
-
-                    if (
-                        !isTextInputTarget(target) ||
-                        document.activeElement === target ||
-                        !(target instanceof HTMLElement)
-                    ) {
-                        return;
-                    }
-
-                    event.preventDefault();
-                    target.focus({ preventScroll: true });
-                    window.requestAnimationFrame(() => window.scrollTo(0, 0));
-                    window.setTimeout(() => window.scrollTo(0, 0), 80);
-                }}
-                onTouchMoveCapture={(event) => {
-                    if (allowContentScroll) {
-                        return;
-                    }
-
-                    event.preventDefault();
-                }}
-                onClickCapture={(event) => {
-                    if (
-                        event.target instanceof Element &&
-                        event.target.closest("[data-modal-close]")
-                    ) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        onClose();
-                    }
-                }}
-            >
-                {children}
-            </div>
-        </RemoveScroll>,
-        document.body,
-    );
 }
 
 function DesktopEditModal({
