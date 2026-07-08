@@ -226,12 +226,6 @@ export function TransactionForm({
                   {isPage ? (
                     <>
                       <div>
-                        <Label className="text-muted-foreground">
-                          Amount
-                        </Label>
-                        <AmountDisplay className="mt-2" value={amountText} />
-                      </div>
-                      <div className="mt-4">
                         <Label className="text-muted-foreground">Type</Label>
                         <div className="mt-2 flex gap-2">
                           {(
@@ -406,6 +400,12 @@ export function TransactionForm({
                             }
                           />
                         </div>
+                      </div>
+                      <div className="mt-4">
+                        <Label className="text-muted-foreground">
+                          Amount
+                        </Label>
+                        <AmountDisplay className="mt-2" value={amountText} />
                       </div>
                       <AmountKeypadGrid
                         className="mt-5"

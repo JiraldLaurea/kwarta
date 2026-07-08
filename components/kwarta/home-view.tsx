@@ -1467,10 +1467,6 @@ export function QuickTransactionModal({
           {isPage ? (
             <>
               <div>
-                <Label className="text-muted-foreground">Amount</Label>
-                <AmountDisplay className="mt-2" value={amount} />
-              </div>
-              <div className="mt-4">
                 <Label className="text-muted-foreground">Subcategory</Label>
                 <div
                   className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -1533,6 +1529,10 @@ export function QuickTransactionModal({
                   </div>
                 </div>
               )}
+              <div className="mt-4">
+                <Label className="text-muted-foreground">Amount</Label>
+                <AmountDisplay className="mt-2" value={amount} />
+              </div>
               <AmountKeypadGrid
                 className="mt-5"
                 value={amount}
