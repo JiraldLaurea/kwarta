@@ -1290,7 +1290,7 @@ export function QuickTransactionModal({
         className={cn(
           "bg-white",
           isPage
-            ? "h-full overflow-hidden rounded-none border-0"
+            ? "rounded-none border-0"
             : "min-h-dvh rounded-none border-0 sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border",
         )}
       >
@@ -1416,7 +1416,7 @@ export function QuickTransactionModal({
       className={cn(
         "bg-white",
         isPage
-          ? "h-full overflow-hidden rounded-none border-0"
+          ? "rounded-none border-0"
           : "min-h-dvh rounded-none border-0 sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border",
       )}
     >

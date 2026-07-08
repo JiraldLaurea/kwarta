@@ -189,7 +189,7 @@ export function TransactionForm({
         <Card
             className={cn(
                 isPage
-                    ? "h-full overflow-hidden rounded-none border-0 bg-white"
+                    ? "rounded-none border-0 bg-white"
                     : isEditing &&
                           "min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border",
             )}
