@@ -1290,7 +1290,9 @@ export function QuickTransactionModal({
   }
 
   // Tracks which keypad key is currently pressed so it can darken (light
-  // theme) / lighten (dark theme) for tactile press feedback.
+  // theme) / lighten (dark theme) for tactile press feedback. It also gates
+  // whether release registers a keystroke: sliding off before lifting your
+  // finger clears this, canceling the press, like a real keyboard.
   const [pressedKeypadKey, setPressedKeypadKey] = useState<string | null>(
     null,
   );
@@ -1300,6 +1302,27 @@ export function QuickTransactionModal({
 
     if (key === "backspace") {
       startBackspaceHold();
+    }
+  }
+
+  function handleKeypadPointerUp(key: string) {
+    const wasPressed = pressedKeypadKey === key;
+    setPressedKeypadKey((current) => (current === key ? null : current));
+
+    if (key === "backspace") {
+      cancelBackspaceHold();
+    }
+
+    if (!wasPressed) {
+      return;
+    }
+
+    if (key === "backspace") {
+      if (backspaceLongPressTriggeredRef.current) {
+        backspaceLongPressTriggeredRef.current = false;
+      } else {
+        backspaceAmountDigit();
+      }
     } else if (key === ".") {
       appendAmountDecimalPoint();
     } else {
@@ -1307,7 +1330,7 @@ export function QuickTransactionModal({
     }
   }
 
-  function handleKeypadPointerUp(key: string) {
+  function handleKeypadPointerCancel(key: string) {
     setPressedKeypadKey((current) => (current === key ? null : current));
 
     if (key === "backspace") {
@@ -1611,7 +1634,7 @@ export function QuickTransactionModal({
                         type="button"
                         aria-pressed={selected}
                         className={cn(
-                          "flex h-10 shrink-0 items-center whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                          "flex h-10 shrink-0 items-center whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                           selected
                             ? "border-accent bg-accent text-accent-foreground"
                             : "border-border bg-muted text-foreground",
@@ -1640,7 +1663,7 @@ export function QuickTransactionModal({
                           type="button"
                           aria-pressed={selected}
                           className={cn(
-                            "flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border pl-2 pr-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                            "flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border pl-2 pr-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                             selected
                               ? "border-accent bg-accent text-accent-foreground"
                               : "border-border bg-muted text-foreground",
@@ -1672,29 +1695,14 @@ export function QuickTransactionModal({
                           : undefined
                     }
                     className={cn(
-                      "flex h-14 select-none items-center justify-center rounded-2xl border border-border text-xl font-semibold text-foreground transition-colors md:hover:bg-[hsl(var(--hover-surface))]",
+                      "flex h-14 select-none items-center justify-center rounded-2xl border border-border text-xl font-semibold text-foreground transition-none md:hover:bg-[hsl(var(--hover-surface))]",
                       pressedKeypadKey === key
                         ? "bg-[hsl(var(--pressed-surface))]"
                         : "bg-muted",
                     )}
-                    onClick={() => {
-                      // Digits and "." act on pointerdown (below) so rapid
-                      // taps register reliably; only backspace's
-                      // tap-vs-hold distinction still needs the click/release
-                      // signal.
-                      if (key !== "backspace") {
-                        return;
-                      }
-
-                      if (backspaceLongPressTriggeredRef.current) {
-                        backspaceLongPressTriggeredRef.current = false;
-                        return;
-                      }
-
-                      backspaceAmountDigit();
-                    }}
+                    onPointerCancel={() => handleKeypadPointerCancel(key)}
                     onPointerDown={() => handleKeypadPointerDown(key)}
-                    onPointerLeave={() => handleKeypadPointerUp(key)}
+                    onPointerLeave={() => handleKeypadPointerCancel(key)}
                     onPointerUp={() => handleKeypadPointerUp(key)}
                   >
                     {key === "backspace" ? (
