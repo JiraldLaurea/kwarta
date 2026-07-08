@@ -37,7 +37,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -1232,35 +1231,6 @@ export function QuickTransactionModal({
     budgetsEnabled && normalizeTransactionType(category.type) === "expense";
   const isPage = presentation === "page";
   const amountInputRef = useRef<HTMLInputElement>(null);
-  const limitInputRef = useRef<HTMLInputElement>(null);
-  const initialPageFocusTarget = requiresBudget && !budget ? "limit" : "amount";
-  const [pageFocusTarget, setPageFocusTarget] = useState<
-    "amount" | "limit" | null
-  >(isPage ? initialPageFocusTarget : null);
-  const getPageInputProps = (target: "amount" | "limit") =>
-    isPage
-      ? {
-          className:
-            pageFocusTarget === target
-              ? "border-ring ring-2 ring-ring/20"
-              : undefined,
-          onBlur: () => setPageFocusTarget(null),
-          onFocus: () => {
-            setPageFocusTarget(target);
-            window.scrollTo(0, 0);
-          },
-          onPointerDown: (event: ReactPointerEvent<HTMLInputElement>) => {
-            if (document.activeElement !== event.currentTarget) {
-              event.preventDefault();
-              event.currentTarget.focus({ preventScroll: true });
-            }
-
-            setPageFocusTarget(target);
-            window.requestAnimationFrame(() => window.scrollTo(0, 0));
-            window.setTimeout(() => window.scrollTo(0, 0), 80);
-          },
-        }
-      : {};
 
   useLayoutEffect(() => {
     if (!isPage) {
@@ -1271,20 +1241,43 @@ export function QuickTransactionModal({
       return;
     }
 
-    // The budget-limit step still uses a native input, so hand focus off to
-    // it. The transaction-amount step uses the on-screen keypad instead, so
-    // just dismiss the decoy's OS keyboard rather than opening a real one.
-    if (initialPageFocusTarget === "limit") {
-      limitInputRef.current?.focus({ preventScroll: true });
-    } else {
-      mobileFocusBridgeRef?.current?.blur();
-    }
-
+    // Both the amount and budget-limit steps use the on-screen keypad
+    // instead of a native input, so just dismiss the decoy's OS keyboard.
+    mobileFocusBridgeRef?.current?.blur();
     window.scrollTo(0, 0);
-  }, [initialPageFocusTarget, isPage, mobileFocusBridgeRef]);
+  }, [isPage, mobileFocusBridgeRef]);
   const backButton = isPage ? null : <ModalBackButton onClick={onClose} />;
 
   if (requiresBudget && !budget) {
+    const reuseBudgetToggle = (
+      <div className="mt-4">
+        <Label htmlFor="quick-reuse-budget">Reuse budget</Label>
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            aria-checked={reuseBudget}
+            className={cn(
+              "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+              reuseBudget ? "bg-accent" : "bg-neutral-300",
+            )}
+            id="quick-reuse-budget"
+            role="switch"
+            type="button"
+            onClick={() => setReuseBudget((value) => !value)}
+          >
+            <span
+              className={cn(
+                "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-transform duration-150 ease-[cubic-bezier(0,0,0.2,1)] [will-change:transform]",
+                reuseBudget && "translate-x-4",
+              )}
+              style={{ backgroundColor: "#fff" }}
+            />
+          </button>
+          <p className="text-sm leading-5 text-muted-foreground">
+            Reuse this same budget for succeeding {periodNoun}s.
+          </p>
+        </div>
+      </div>
+    );
     const budgetForm = (
       <Card
         className={cn(
@@ -1327,55 +1320,55 @@ export function QuickTransactionModal({
             </p>
           </CardHeader>
           <CardContent className="px-6 pb-6 pt-0">
-            <FieldError>
-              <Label htmlFor="quick-budget-limit">Limit</Label>
-              <Input
-                id="quick-budget-limit"
-                autoFocus={!isPage}
-                inputMode="decimal"
-                onInput={handleDecimalInput}
-                pattern="[0-9]*[.]?[0-9]*"
-                {...getPageInputProps("limit")}
-                ref={limitInputRef}
-                type="text"
-                value={limit}
-                onChange={(event) => setLimit(event.currentTarget.value)}
-              />
-            </FieldError>
-            <div className="mt-4">
-              <Label htmlFor="quick-reuse-budget">Reuse budget</Label>
-              <div className="mt-2 flex items-center gap-3">
-                <button
-                  aria-checked={reuseBudget}
+            {isPage ? (
+              <>
+                <div>
+                  <Label className="text-muted-foreground">Limit</Label>
+                  <AmountDisplay className="mt-2" value={limit} />
+                </div>
+                {reuseBudgetToggle}
+                <AmountKeypadGrid
+                  className="mt-5"
+                  value={limit}
+                  onChange={setLimit}
+                />
+                <Button
                   className={cn(
-                    "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-                    reuseBudget ? "bg-accent" : "bg-neutral-300",
+                    "mt-5 h-14 w-full select-none rounded-2xl text-base font-bold disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100",
+                    canSetBudget &&
+                      "bg-accent text-accent-foreground md:hover:bg-accent",
                   )}
-                  id="quick-reuse-budget"
-                  role="switch"
-                  type="button"
-                  onClick={() => setReuseBudget((value) => !value)}
+                  type="submit"
+                  disabled={!canSetBudget}
                 >
-                  <span
-                    className={cn(
-                      "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-transform duration-150 ease-[cubic-bezier(0,0,0.2,1)] [will-change:transform]",
-                      reuseBudget && "translate-x-4",
-                    )}
-                    style={{ backgroundColor: "#fff" }}
+                  Set budget
+                </Button>
+              </>
+            ) : (
+              <>
+                <FieldError>
+                  <Label htmlFor="quick-budget-limit">Limit</Label>
+                  <Input
+                    id="quick-budget-limit"
+                    autoFocus
+                    inputMode="decimal"
+                    onInput={handleDecimalInput}
+                    pattern="[0-9]*[.]?[0-9]*"
+                    type="text"
+                    value={limit}
+                    onChange={(event) => setLimit(event.currentTarget.value)}
                   />
-                </button>
-                <p className="text-sm leading-5 text-muted-foreground">
-                  Reuse this same budget for succeeding {periodNoun}s.
-                </p>
-              </div>
-            </div>
-            <Button
-              className={cn("mt-6 w-full", !isPage && "sm:hidden")}
-              type="submit"
-              disabled={!canSetBudget}
-            >
-              Set budget
-            </Button>
+                </FieldError>
+                {reuseBudgetToggle}
+                <Button
+                  className="mt-6 w-full sm:hidden"
+                  type="submit"
+                  disabled={!canSetBudget}
+                >
+                  Set budget
+                </Button>
+              </>
+            )}
           </CardContent>
           {!isPage && (
             <div className="hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex">
