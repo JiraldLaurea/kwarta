@@ -1823,19 +1823,21 @@ export function AmountDisplay({
     return (
         <div
             className={cn(
-                "flex h-16 items-center gap-1 rounded-2xl border border-border bg-muted px-4 tabular-nums",
+                "flex h-16 items-center rounded-2xl border border-border bg-muted px-4 tabular-nums",
                 className,
             )}
         >
-            <span className="text-lg text-muted-foreground">₱</span>
-            <span
-                className={cn(
-                    "text-3xl font-semibold",
-                    !value && "text-muted-foreground",
-                )}
-            >
-                {formatAmountDisplay(value)}
-            </span>
+            <div className="flex items-end gap-1">
+                <span className="text-lg text-muted-foreground">₱</span>
+                <span
+                    className={cn(
+                        "text-3xl font-semibold",
+                        !value && "text-muted-foreground",
+                    )}
+                >
+                    {formatAmountDisplay(value)}
+                </span>
+            </div>
         </div>
     );
 }
