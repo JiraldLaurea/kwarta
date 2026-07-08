@@ -51,7 +51,6 @@ import {
   EditModal,
   EmptyState,
   FieldError,
-  ModalBackButton,
   categoryIconChoices,
   colorChoices,
 } from "@/components/kwarta/shared";
@@ -164,7 +163,6 @@ export function CategoryForm({
         })}
       >
         <CardHeader className={cn(isModal && "px-6 pb-2 pt-5")}>
-          {isModal && <ModalBackButton onClick={onCancel} />}
           <CardTitle
             className={cn(isModal && "text-2xl font-medium leading-8")}
           >
@@ -494,7 +492,6 @@ export function SubcategoryForm({
         })}
       >
         <CardHeader className={cn(isModal && "px-6 pb-2 pt-5")}>
-          {isModal && <ModalBackButton onClick={onCancel} />}
           <CardTitle
             className={cn(isModal && "text-2xl font-medium leading-8")}
           >

@@ -41,7 +41,6 @@ import {
     EmptyState,
     FieldError,
     IconBadge,
-    ModalBackButton,
     PageHeader,
     colorChoices,
 } from "@/components/kwarta/shared";
@@ -575,7 +574,6 @@ function TransferForm({
                 })}
             >
                 <CardHeader className={cn(isModal && "px-6 pb-2 pt-5")}>
-                    {isModal && <ModalBackButton onClick={onCancel} />}
                     <CardTitle
                         className={cn(
                             isModal && "text-2xl font-medium leading-8",
@@ -910,7 +908,6 @@ function AccountForm({
                 })}
             >
                 <CardHeader className={cn(isModal && "px-6 pb-2 pt-5")}>
-                    {isModal && <ModalBackButton onClick={onCancel} />}
                     <CardTitle
                         className={cn(
                             isModal && "text-2xl font-medium leading-8",

@@ -29,7 +29,6 @@ import {
     EditModal,
     EmptyState,
     FieldError,
-    ModalBackButton,
     MonthPickerInput,
     PageHeader,
     WeekPickerInput,
@@ -378,7 +377,6 @@ function BudgetForm({
                 })}
             >
                 <CardHeader className={cn(isModal && "px-6 pb-2 pt-6")}>
-                    {isModal && <ModalBackButton onClick={onCancel} />}
                     {isModal && (
                         <div className="!mb-4 !mt-0 flex">
                             <CategoryIconBadge

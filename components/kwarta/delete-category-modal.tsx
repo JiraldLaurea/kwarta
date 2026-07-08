@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
-import { EditModal, ModalBackButton } from "@/components/kwarta/shared";
+import { EditModal } from "@/components/kwarta/shared";
 import type { Category } from "@/lib/types";
 
 export function DeleteCategoryConfirmationModal({
@@ -16,7 +16,6 @@ export function DeleteCategoryConfirmationModal({
     <EditModal onClose={onCancel}>
       <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
         <div className="px-6 pb-6 pt-5">
-          <ModalBackButton onClick={onCancel} />
           <CardTitle className="text-2xl font-medium leading-8">
             Delete {category.name}?
           </CardTitle>

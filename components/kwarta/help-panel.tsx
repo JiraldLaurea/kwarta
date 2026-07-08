@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 import { Card, CardTitle } from "@/components/ui/card";
 import {
   EditModal,
-  ModalBackButton,
   useIsMobileViewport,
 } from "@/components/kwarta/shared";
 import type { View } from "@/components/kwarta/app-types";
@@ -191,21 +190,12 @@ export function HelpPanel({
       : "dashboard";
   const [selectedView, setSelectedView] = useState<View | null>(initialView);
 
-  // Back returns to the list when we came from it, otherwise it closes.
   const canReturnToList = showIndex && selectedView !== null;
-  const handleBack = () => {
-    if (canReturnToList) {
-      setSelectedView(null);
-    } else {
-      onClose();
-    }
-  };
 
   return (
     <EditModal allowContentScroll onClose={onClose}>
       <Card className="min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-hidden sm:rounded-2xl sm:border">
         <div className="flex flex-col px-5 pb-5 pt-5 sm:px-6">
-          <ModalBackButton onClick={handleBack} />
           {selectedView ? (
             <HelpTopicView
               topicKey={selectedView}
@@ -340,7 +330,7 @@ function HelpTopicView({
               aria-label="Back to all tips"
               type="button"
               onClick={onReturnToList}
-              className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
             >
               <ArrowLeft className="h-5 w-5" aria-hidden />
             </button>
