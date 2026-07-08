@@ -1,6 +1,5 @@
 "use client";
 
-import { disableBodyScroll, enableBodyScroll } from "body-scroll-lock";
 import { LuChevronRight as ChevronRight } from "react-icons/lu";
 import { FaRegLightbulb } from "react-icons/fa6";
 import type { User } from "@supabase/supabase-js";
@@ -155,6 +154,35 @@ function QuickAddSheet({
         const frame = window.requestAnimationFrame(() => setIsVisible(true));
         return () => window.cancelAnimationFrame(frame);
     }, []);
+
+    // Keeps the window pinned at (0, 0) so the on-screen keyboard opening for
+    // the budget-limit step's input can't nudge the fixed-position sheet.
+    // RemoveScroll above already blocks background touch/wheel scrolling.
+    useEffect(() => {
+        const target = contentRef.current;
+
+        if (!target) {
+            return;
+        }
+
+        const lockViewport = () => {
+            target.scrollTop = 0;
+            window.scrollTo(0, 0);
+        };
+
+        lockViewport();
+        window.addEventListener("scroll", lockViewport, { passive: true });
+        window.addEventListener("resize", lockViewport);
+        window.visualViewport?.addEventListener("resize", lockViewport);
+        window.visualViewport?.addEventListener("scroll", lockViewport);
+
+        return () => {
+            window.removeEventListener("scroll", lockViewport);
+            window.removeEventListener("resize", lockViewport);
+            window.visualViewport?.removeEventListener("resize", lockViewport);
+            window.visualViewport?.removeEventListener("scroll", lockViewport);
+        };
+    }, [contentRef]);
 
     const dragging = isDragging || isSwipeDismissing;
     const sheetOffset = dragging
@@ -498,38 +526,6 @@ export function KwartaApp() {
             // ignore
         }
     }, [selectedPeriod]);
-
-    useEffect(() => {
-        if (!quickAddCategory || isDesktopLayout || !quickAddPageRef.current) {
-            return;
-        }
-
-        const target = quickAddPageRef.current;
-        const lockViewport = () => {
-            target.scrollTop = 0;
-            window.scrollTo(0, 0);
-        };
-
-        lockViewport();
-        disableBodyScroll(target, {
-            allowTouchMove: (el) =>
-                el instanceof HTMLElement &&
-                el.closest("[data-quick-add-scroll]") !== null,
-            reserveScrollBarGap: false,
-        });
-        window.addEventListener("scroll", lockViewport, { passive: true });
-        window.addEventListener("resize", lockViewport);
-        window.visualViewport?.addEventListener("resize", lockViewport);
-        window.visualViewport?.addEventListener("scroll", lockViewport);
-
-        return () => {
-            window.removeEventListener("scroll", lockViewport);
-            window.removeEventListener("resize", lockViewport);
-            window.visualViewport?.removeEventListener("resize", lockViewport);
-            window.visualViewport?.removeEventListener("scroll", lockViewport);
-            enableBodyScroll(target);
-        };
-    }, [isDesktopLayout, quickAddCategory]);
 
     useEffect(() => {
         const storedColorMode =
