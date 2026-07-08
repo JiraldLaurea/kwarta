@@ -1782,7 +1782,10 @@ export function KwartaApp() {
                     />
                 )}
                 {quickAddCategory && !isDesktopLayout && (
-                    <MobileBottomSheet onClose={closeQuickAdd}>
+                    <MobileBottomSheet
+                        allowContentScroll
+                        onClose={closeQuickAdd}
+                    >
                         <QuickTransactionModal
                             accounts={accounts}
                             budget={quickAddBudget}
