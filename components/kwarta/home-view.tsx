@@ -1300,6 +1300,10 @@ export function QuickTransactionModal({
 
     if (key === "backspace") {
       startBackspaceHold();
+    } else if (key === ".") {
+      appendAmountDecimalPoint();
+    } else {
+      appendAmountDigit(key);
     }
   }
 
@@ -1674,17 +1678,20 @@ export function QuickTransactionModal({
                         : "bg-muted",
                     )}
                     onClick={() => {
-                      if (key === "backspace") {
-                        if (backspaceLongPressTriggeredRef.current) {
-                          backspaceLongPressTriggeredRef.current = false;
-                          return;
-                        }
-                        backspaceAmountDigit();
-                      } else if (key === ".") {
-                        appendAmountDecimalPoint();
-                      } else {
-                        appendAmountDigit(key);
+                      // Digits and "." act on pointerdown (below) so rapid
+                      // taps register reliably; only backspace's
+                      // tap-vs-hold distinction still needs the click/release
+                      // signal.
+                      if (key !== "backspace") {
+                        return;
                       }
+
+                      if (backspaceLongPressTriggeredRef.current) {
+                        backspaceLongPressTriggeredRef.current = false;
+                        return;
+                      }
+
+                      backspaceAmountDigit();
                     }}
                     onPointerDown={() => handleKeypadPointerDown(key)}
                     onPointerLeave={() => handleKeypadPointerUp(key)}
