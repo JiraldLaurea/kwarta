@@ -7,6 +7,7 @@ import {
     LuChevronLeft as ChevronLeft,
     LuChevronRight as ChevronRight,
     LuCircleDollarSign as CircleDollarSign,
+    LuDelete as Delete,
     LuMinus as Minus,
     LuPencil as Pencil,
     LuPlus as Plus,
@@ -1327,6 +1328,321 @@ export function useIsMobileViewport() {
     }, []);
 
     return isMobile;
+}
+
+// Mobile-only bottom sheet: slides up from the bottom on mount, rounds its
+// top corners, and can be dismissed by swiping down or tapping the backdrop.
+// The caller's content stays mounted behind it (not replaced), so the
+// backdrop dims real page content instead of a blank scrim.
+export function MobileBottomSheet({
+    children,
+    onClose,
+}: {
+    children: React.ReactNode;
+    onClose: () => void;
+}) {
+    const [isVisible, setIsVisible] = useState(false);
+    const closingRef = useRef(false);
+    const contentRef = useRef<HTMLElement>(null);
+
+    const requestClose = useCallback(() => {
+        if (closingRef.current) {
+            return;
+        }
+
+        closingRef.current = true;
+        setIsVisible(false);
+        window.setTimeout(onClose, 240);
+    }, [onClose]);
+
+    const {
+        dragOffset,
+        isDragging,
+        isSwipeDismissing,
+        onTouchStart,
+        onTouchMove,
+        onTouchEnd,
+        onTouchCancel,
+    } = useSwipeToClose(requestClose, "bottom");
+
+    useEffect(() => {
+        const frame = window.requestAnimationFrame(() => setIsVisible(true));
+        return () => window.cancelAnimationFrame(frame);
+    }, []);
+
+    // Keeps the window pinned at (0, 0) so the on-screen keyboard opening for
+    // a real text input can't nudge the fixed-position sheet. RemoveScroll
+    // below already blocks background touch/wheel scrolling.
+    useEffect(() => {
+        const target = contentRef.current;
+
+        if (!target) {
+            return;
+        }
+
+        const lockViewport = () => {
+            target.scrollTop = 0;
+            window.scrollTo(0, 0);
+        };
+
+        lockViewport();
+        window.addEventListener("scroll", lockViewport, { passive: true });
+        window.addEventListener("resize", lockViewport);
+        window.visualViewport?.addEventListener("resize", lockViewport);
+        window.visualViewport?.addEventListener("scroll", lockViewport);
+
+        return () => {
+            window.removeEventListener("scroll", lockViewport);
+            window.removeEventListener("resize", lockViewport);
+            window.visualViewport?.removeEventListener("resize", lockViewport);
+            window.visualViewport?.removeEventListener("scroll", lockViewport);
+        };
+    }, []);
+
+    const dragging = isDragging || isSwipeDismissing;
+    const sheetOffset = dragging
+        ? `${dragOffset}px`
+        : isVisible
+          ? "0px"
+          : "100%";
+
+    return (
+        <RemoveScroll
+            allowPinchZoom
+            className="fixed inset-0 z-[60] overflow-hidden"
+            removeScrollBar={false}
+        >
+            <button
+                aria-label="Close"
+                className={cn(
+                    "absolute inset-0 cursor-default bg-black/40 transition-opacity duration-200",
+                    isVisible ? "opacity-100" : "opacity-0",
+                )}
+                style={
+                    dragging
+                        ? { opacity: Math.max(0, 1 - dragOffset / 400) }
+                        : undefined
+                }
+                type="button"
+                onClick={requestClose}
+            />
+            <div
+                className="absolute inset-x-0 bottom-0 top-8 flex flex-col overflow-hidden rounded-t-2xl bg-white will-change-transform"
+                style={{
+                    transform: `translateY(${sheetOffset})`,
+                    transition: isDragging
+                        ? "none"
+                        : "transform 240ms cubic-bezier(0.22,1,0.36,1)",
+                }}
+                onTouchCancel={onTouchCancel}
+                onTouchEnd={onTouchEnd}
+                onTouchMove={onTouchMove}
+                onTouchStart={onTouchStart}
+            >
+                <div className="flex h-6 shrink-0 items-center justify-center">
+                    <span className="h-1 w-10 rounded-full bg-neutral-300" />
+                </div>
+                <main
+                    ref={contentRef}
+                    className="flex-1 overflow-y-auto overscroll-contain"
+                    data-bottom-sheet-scroll
+                >
+                    {children}
+                </main>
+            </div>
+        </RemoveScroll>
+    );
+}
+
+// Keys for the on-screen amount keypad, laid out 3 per row.
+const AMOUNT_KEYPAD_KEYS = [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    ".",
+    "0",
+    "backspace",
+] as const;
+
+export function formatAmountDisplay(value: string) {
+    if (!value) {
+        return "0.00";
+    }
+
+    const [whole, ...rest] = value.split(".");
+    const formattedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",") || "0";
+
+    return rest.length > 0
+        ? `${formattedWhole}.${rest.join("")}`
+        : formattedWhole;
+}
+
+// Currency amount readout for the on-screen keypad below. Split out from the
+// keypad itself since callers (e.g. the quick-add form) place other fields
+// between the two.
+export function AmountDisplay({
+    value,
+    className,
+}: {
+    value: string;
+    className?: string;
+}) {
+    return (
+        <div
+            className={cn(
+                "flex h-16 items-center gap-1 rounded-2xl border border-border bg-muted px-4 tabular-nums",
+                className,
+            )}
+        >
+            <span className="text-lg text-muted-foreground">₱</span>
+            <span
+                className={cn(
+                    "text-3xl font-semibold",
+                    !value && "text-muted-foreground",
+                )}
+            >
+                {formatAmountDisplay(value)}
+            </span>
+        </div>
+    );
+}
+
+// On-screen numeric keypad, used by mobile forms that enter currency amounts
+// without a native keyboard. `value` is the raw typed string (whole digits
+// first; "." switches to a 2-digit fraction), matching what
+// `parseDecimalInput` expects. Pair with `AmountDisplay` for the readout.
+export function AmountKeypadGrid({
+    value,
+    onChange,
+    className,
+}: {
+    value: string;
+    onChange: (value: string) => void;
+    className?: string;
+}) {
+    const [pressedKey, setPressedKey] = useState<string | null>(null);
+    const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const longPressTriggeredRef = useRef(false);
+
+    function appendDigit(digit: string) {
+        const dotIndex = value.indexOf(".");
+
+        if (dotIndex === -1) {
+            const whole = `${value}${digit}`.replace(/^0+(?=\d)/, "");
+            onChange(whole.length > 9 ? value : whole);
+            return;
+        }
+
+        const fraction = value.slice(dotIndex + 1);
+        onChange(fraction.length >= 2 ? value : `${value}${digit}`);
+    }
+
+    function appendDecimalPoint() {
+        onChange(value.includes(".") ? value : `${value || "0"}.`);
+    }
+
+    function backspace() {
+        onChange(value.slice(0, -1));
+    }
+
+    // Long-pressing backspace clears the amount outright; the release
+    // handler checks longPressTriggeredRef to skip the single-digit delete
+    // that would otherwise also fire once the press is released.
+    function startHold() {
+        longPressTriggeredRef.current = false;
+        holdTimerRef.current = setTimeout(() => {
+            longPressTriggeredRef.current = true;
+            onChange("");
+        }, 500);
+    }
+
+    function cancelHold() {
+        if (holdTimerRef.current) {
+            clearTimeout(holdTimerRef.current);
+            holdTimerRef.current = null;
+        }
+    }
+
+    function handlePointerDown(key: string) {
+        setPressedKey(key);
+
+        if (key === "backspace") {
+            startHold();
+        }
+    }
+
+    function handlePointerUp(key: string) {
+        const wasPressed = pressedKey === key;
+        setPressedKey((current) => (current === key ? null : current));
+
+        if (key === "backspace") {
+            cancelHold();
+        }
+
+        if (!wasPressed) {
+            return;
+        }
+
+        if (key === "backspace") {
+            if (longPressTriggeredRef.current) {
+                longPressTriggeredRef.current = false;
+            } else {
+                backspace();
+            }
+        } else if (key === ".") {
+            appendDecimalPoint();
+        } else {
+            appendDigit(key);
+        }
+    }
+
+    function handlePointerCancel(key: string) {
+        setPressedKey((current) => (current === key ? null : current));
+
+        if (key === "backspace") {
+            cancelHold();
+        }
+    }
+
+    return (
+        <div className={cn("grid grid-cols-3 gap-2", className)}>
+            {AMOUNT_KEYPAD_KEYS.map((key) => (
+                <button
+                    key={key}
+                    type="button"
+                    aria-label={
+                        key === "backspace"
+                            ? "Delete last digit"
+                            : key === "."
+                              ? "Add decimal point"
+                              : undefined
+                    }
+                    className={cn(
+                        "flex h-14 select-none items-center justify-center rounded-2xl border border-border text-xl font-semibold text-foreground transition-none md:hover:bg-[hsl(var(--hover-surface))]",
+                        pressedKey === key
+                            ? "bg-[hsl(var(--pressed-surface))]"
+                            : "bg-muted",
+                    )}
+                    onPointerCancel={() => handlePointerCancel(key)}
+                    onPointerDown={() => handlePointerDown(key)}
+                    onPointerLeave={() => handlePointerCancel(key)}
+                    onPointerUp={() => handlePointerUp(key)}
+                >
+                    {key === "backspace" ? (
+                        <Delete className="h-7 w-7" aria-hidden />
+                    ) : (
+                        key
+                    )}
+                </button>
+            ))}
+        </div>
+    );
 }
 
 /**

@@ -4,7 +4,6 @@ import { LuChevronRight as ChevronRight } from "react-icons/lu";
 import { FaRegLightbulb } from "react-icons/fa6";
 import type { User } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { RemoveScroll } from "react-remove-scroll";
 import { DashboardView } from "@/components/kwarta/dashboard-view";
 import {
     type HomeItemStyle,
@@ -74,11 +73,11 @@ import {
 import {
     EditModal,
     MetricCard,
+    MobileBottomSheet,
     PageHeader,
     PeriodSelector,
     SwipeBackArea,
     getAccountName,
-    useSwipeToClose,
 } from "@/components/kwarta/shared";
 import { BudgetsView } from "@/components/kwarta/budgets-view";
 import { AccountsView } from "@/components/kwarta/accounts-view";
@@ -113,129 +112,6 @@ function applyAppearanceWithoutTransition(update: () => void) {
             root.classList.remove("appearance-changing");
         });
     });
-}
-
-// Mobile-only bottom sheet for the home quick-add flow: slides up from the
-// bottom on mount, rounds its top corners, and can be dismissed by swiping
-// down or tapping the backdrop.
-function QuickAddSheet({
-    children,
-    contentRef,
-    onClose,
-}: {
-    children: React.ReactNode;
-    contentRef: React.RefObject<HTMLElement>;
-    onClose: () => void;
-}) {
-    const [isVisible, setIsVisible] = useState(false);
-    const closingRef = useRef(false);
-
-    const requestClose = useCallback(() => {
-        if (closingRef.current) {
-            return;
-        }
-
-        closingRef.current = true;
-        setIsVisible(false);
-        window.setTimeout(onClose, 240);
-    }, [onClose]);
-
-    const {
-        dragOffset,
-        isDragging,
-        isSwipeDismissing,
-        onTouchStart,
-        onTouchMove,
-        onTouchEnd,
-        onTouchCancel,
-    } = useSwipeToClose(requestClose, "bottom");
-
-    useEffect(() => {
-        const frame = window.requestAnimationFrame(() => setIsVisible(true));
-        return () => window.cancelAnimationFrame(frame);
-    }, []);
-
-    // Keeps the window pinned at (0, 0) so the on-screen keyboard opening for
-    // the budget-limit step's input can't nudge the fixed-position sheet.
-    // RemoveScroll above already blocks background touch/wheel scrolling.
-    useEffect(() => {
-        const target = contentRef.current;
-
-        if (!target) {
-            return;
-        }
-
-        const lockViewport = () => {
-            target.scrollTop = 0;
-            window.scrollTo(0, 0);
-        };
-
-        lockViewport();
-        window.addEventListener("scroll", lockViewport, { passive: true });
-        window.addEventListener("resize", lockViewport);
-        window.visualViewport?.addEventListener("resize", lockViewport);
-        window.visualViewport?.addEventListener("scroll", lockViewport);
-
-        return () => {
-            window.removeEventListener("scroll", lockViewport);
-            window.removeEventListener("resize", lockViewport);
-            window.visualViewport?.removeEventListener("resize", lockViewport);
-            window.visualViewport?.removeEventListener("scroll", lockViewport);
-        };
-    }, [contentRef]);
-
-    const dragging = isDragging || isSwipeDismissing;
-    const sheetOffset = dragging
-        ? `${dragOffset}px`
-        : isVisible
-          ? "0px"
-          : "100%";
-
-    return (
-        <RemoveScroll
-            allowPinchZoom
-            className="fixed inset-0 z-[60] overflow-hidden"
-            removeScrollBar={false}
-        >
-            <button
-                aria-label="Close"
-                className={cn(
-                    "absolute inset-0 cursor-default bg-black/40 transition-opacity duration-200",
-                    isVisible ? "opacity-100" : "opacity-0",
-                )}
-                style={
-                    dragging
-                        ? { opacity: Math.max(0, 1 - dragOffset / 400) }
-                        : undefined
-                }
-                type="button"
-                onClick={requestClose}
-            />
-            <div
-                className="absolute inset-x-0 bottom-0 top-8 flex flex-col overflow-hidden rounded-t-2xl bg-white will-change-transform"
-                style={{
-                    transform: `translateY(${sheetOffset})`,
-                    transition: isDragging
-                        ? "none"
-                        : "transform 240ms cubic-bezier(0.22,1,0.36,1)",
-                }}
-                onTouchCancel={onTouchCancel}
-                onTouchEnd={onTouchEnd}
-                onTouchMove={onTouchMove}
-                onTouchStart={onTouchStart}
-            >
-                <div className="flex h-6 shrink-0 items-center justify-center">
-                    <span className="h-1 w-10 rounded-full bg-neutral-300" />
-                </div>
-                <main
-                    ref={contentRef}
-                    className="flex-1 overflow-hidden"
-                >
-                    {children}
-                </main>
-            </div>
-        </RemoveScroll>
-    );
 }
 
 type StoredWorkspace = WorkspaceBackup;
@@ -470,7 +346,6 @@ export function KwartaApp() {
     const [categoryPendingDelete, setCategoryPendingDelete] =
         useState<Category | null>(null);
     const backupImportInputRef = useRef<HTMLInputElement>(null);
-    const quickAddPageRef = useRef<HTMLElement>(null);
     const quickAddFocusBridgeRef = useRef<HTMLInputElement>(null);
     const workspaceSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
     const [backupImportError, setBackupImportError] = useState<string | null>(
@@ -1928,10 +1803,7 @@ export function KwartaApp() {
                     />
                 )}
                 {quickAddCategory && !isDesktopLayout && (
-                    <QuickAddSheet
-                        contentRef={quickAddPageRef}
-                        onClose={closeQuickAdd}
-                    >
+                    <MobileBottomSheet onClose={closeQuickAdd}>
                         <QuickTransactionModal
                             accounts={accounts}
                             budget={quickAddBudget}
@@ -1948,7 +1820,7 @@ export function KwartaApp() {
                             onSetReusableBudget={handleQuickAddReusableBudget}
                             onSubmit={handleQuickAddTransaction}
                         />
-                    </QuickAddSheet>
+                    </MobileBottomSheet>
                 )}
                 {homeCategoryFormOpen && (
                     <EditModal onClose={() => setHomeCategoryFormOpen(false)}>

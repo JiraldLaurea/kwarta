@@ -6,7 +6,7 @@ import {
   LuPlus as Plus,
   LuTrash2 as Trash2,
 } from "react-icons/lu";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { transactionSchema, type TransactionFormValues } from "@/lib/schema";
 import type {
@@ -37,11 +37,15 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
     AccountLogo,
+    AmountDisplay,
+    AmountKeypadGrid,
+    CategoryIconBadge,
     DatePickerInput,
     EmptyState,
     FieldError,
     ModalBackButton,
     TransactionIcon,
+    useIsMobileViewport,
 } from "@/components/kwarta/shared";
 export function TransactionForm({
     accounts,
@@ -125,8 +129,21 @@ export function TransactionForm({
         [selectedCategory],
     );
 
+    const isMobile = useIsMobileViewport();
+    const [amountText, setAmountText] = useState(() =>
+        formDefaults.amount ? String(formDefaults.amount) : "",
+    );
+
+    function handleAmountTextChange(next: string) {
+        setAmountText(next);
+        form.setValue("amount", parseDecimalInput(next), {
+            shouldValidate: true,
+        });
+    }
+
     useEffect(() => {
         form.reset(formDefaults);
+        setAmountText(formDefaults.amount ? String(formDefaults.amount) : "");
     }, [form, formDefaults]);
 
     useEffect(() => {
@@ -160,12 +177,21 @@ export function TransactionForm({
     }, [form, subcategories]);
 
     const isEditing = Boolean(editing);
+    // Mobile editing renders as a bottom sheet with pills and an on-screen
+    // keypad, matching the home quick-add form. Desktop keeps the dropdown
+    // fields inside the centered modal.
+    const isPage = isEditing && isMobile;
+    const backButton = isPage ? null : (
+        isEditing && <ModalBackButton onClick={onCancel} />
+    );
 
     return (
         <Card
             className={cn(
-                isEditing &&
-                    "min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border",
+                isPage
+                    ? "h-full overflow-hidden rounded-none border-0 bg-white"
+                    : isEditing &&
+                          "min-h-dvh rounded-none border-0 bg-white sm:min-h-0 sm:overflow-visible sm:rounded-2xl sm:border",
             )}
         >
             <form
@@ -175,7 +201,7 @@ export function TransactionForm({
                 })}
             >
                 <CardHeader className={cn(isEditing && "px-6 pb-2 pt-5")}>
-                    {isEditing && <ModalBackButton onClick={onCancel} />}
+                    {backButton}
                     <CardTitle
                         className={cn(
                             isEditing && "text-2xl font-medium leading-8",
@@ -197,6 +223,216 @@ export function TransactionForm({
                 <CardContent
                     className={cn("space-y-4", isEditing && "px-6 pb-6 pt-0")}
                 >
+                  {isPage ? (
+                    <>
+                      <div>
+                        <Label className="text-muted-foreground">
+                          Amount
+                        </Label>
+                        <AmountDisplay className="mt-2" value={amountText} />
+                      </div>
+                      <div className="mt-4">
+                        <Label className="text-muted-foreground">Type</Label>
+                        <div className="mt-2 flex gap-2">
+                          {(
+                            [
+                              { label: "Expense", value: "expense" },
+                              { label: "Income", value: "income" },
+                            ] as const
+                          ).map((option) => {
+                            const selected = type === option.value;
+
+                            return (
+                              <button
+                                key={option.value}
+                                type="button"
+                                aria-pressed={selected}
+                                className={cn(
+                                  "flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                  selected
+                                    ? "border-accent bg-accent text-accent-foreground"
+                                    : "border-border bg-muted text-foreground",
+                                )}
+                                onClick={() => {
+                                  const nextCategory = getFirstCategoryId(
+                                    categories,
+                                    option.value,
+                                  );
+
+                                  form.setValue("type", option.value, {
+                                    shouldValidate: true,
+                                  });
+                                  form.setValue(
+                                    "categoryId",
+                                    nextCategory,
+                                    { shouldValidate: true },
+                                  );
+                                }}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <Label className="text-muted-foreground">
+                          Category
+                        </Label>
+                        <div
+                          className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                          data-quick-add-scroll
+                        >
+                          {availableCategories.map((category) => {
+                            const selected =
+                              category.id === selectedCategoryId;
+
+                            return (
+                              <button
+                                key={category.id}
+                                type="button"
+                                aria-pressed={selected}
+                                className={cn(
+                                  "flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border pl-2 pr-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                  selected
+                                    ? "border-accent bg-accent text-accent-foreground"
+                                    : "border-border bg-muted text-foreground",
+                                )}
+                                onClick={() =>
+                                  form.setValue("categoryId", category.id, {
+                                    shouldValidate: true,
+                                  })
+                                }
+                              >
+                                <CategoryIconBadge
+                                  category={category}
+                                  className="h-6 w-6"
+                                  iconClassName="h-3.5 w-3.5"
+                                />
+                                {category.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {subcategories.length > 0 && (
+                        <div className="mt-4">
+                          <Label className="text-muted-foreground">
+                            Subcategory
+                          </Label>
+                          <div
+                            className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                            data-quick-add-scroll
+                          >
+                            {subcategories.map((subcategory) => {
+                              const selected =
+                                subcategory === selectedSubcategory;
+
+                              return (
+                                <button
+                                  key={subcategory}
+                                  type="button"
+                                  aria-pressed={selected}
+                                  className={cn(
+                                    "flex h-10 shrink-0 items-center whitespace-nowrap rounded-xl border px-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                    selected
+                                      ? "border-accent bg-accent text-accent-foreground"
+                                      : "border-border bg-muted text-foreground",
+                                  )}
+                                  onClick={() =>
+                                    form.setValue("subcategory", subcategory, {
+                                      shouldValidate: true,
+                                    })
+                                  }
+                                >
+                                  {subcategory}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      {accounts.length > 0 && (
+                        <div className="mt-4">
+                          <Label className="text-muted-foreground">
+                            Account
+                          </Label>
+                          <div
+                            className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                            data-quick-add-scroll
+                          >
+                            {accounts.map((account) => {
+                              const selected =
+                                account.id === form.watch("accountId");
+
+                              return (
+                                <button
+                                  key={account.id}
+                                  type="button"
+                                  aria-pressed={selected}
+                                  className={cn(
+                                    "flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl border pl-2 pr-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                    selected
+                                      ? "border-accent bg-accent text-accent-foreground"
+                                      : "border-border bg-muted text-foreground",
+                                  )}
+                                  onClick={() =>
+                                    form.setValue("accountId", account.id, {
+                                      shouldValidate: true,
+                                    })
+                                  }
+                                >
+                                  <AccountLogo
+                                    account={account}
+                                    className="h-6 w-6"
+                                    iconClassName="h-3.5 w-3.5"
+                                  />
+                                  {getAccountLabel(account)}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      <div className="mt-4">
+                        <Label className="text-muted-foreground">Date</Label>
+                        <div className="mt-2">
+                          <DatePickerInput
+                            value={form.watch("date")}
+                            onChange={(value) =>
+                              form.setValue("date", value, {
+                                shouldValidate: true,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <AmountKeypadGrid
+                        className="mt-5"
+                        value={amountText}
+                        onChange={handleAmountTextChange}
+                      />
+                      <div className="mt-5 flex items-center gap-2">
+                        {onDelete && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="h-14 flex-1 select-none rounded-2xl border-destructive/70 bg-white text-base font-bold text-destructive md:hover:bg-destructive/10"
+                            onClick={onDelete}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                        <Button
+                          className="h-14 flex-1 select-none rounded-2xl text-base font-bold"
+                          type="submit"
+                        >
+                          Save changes
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
                     <div className="grid grid-cols-2 gap-3">
                         <FieldError
                             message={form.formState.errors.type?.message}
@@ -340,48 +576,52 @@ export function TransactionForm({
                             </Button>
                         </div>
                     )}
+                    </>
+                  )}
                 </CardContent>
-                <div
-                    className={cn(
-                        "flex justify-end gap-2 px-4 pb-4",
-                        isEditing &&
-                            "hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex",
-                    )}
-                >
-                    {editing && (
-                        <Button
-                            data-modal-close
-                            type="button"
-                            variant="secondary"
-                            onClick={onCancel}
-                        >
-                            Cancel
-                        </Button>
-                    )}
+                {!isPage && (
                     <div
                         className={cn(
-                            "flex items-center gap-2",
-                            editing && "ml-auto",
+                            "flex justify-end gap-2 px-4 pb-4",
+                            isEditing &&
+                                "hidden items-center justify-between rounded-b-2xl border-t border-border bg-neutral-50 px-5 py-4 sm:flex",
                         )}
                     >
-                        {editing && onDelete && (
+                        {editing && (
                             <Button
+                                data-modal-close
                                 type="button"
                                 variant="secondary"
-                                className="border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
-                                onClick={onDelete}
+                                onClick={onCancel}
                             >
-                                Delete
+                                Cancel
                             </Button>
                         )}
-                        <Button type="submit">
-                            {!editing && (
-                                <Plus className="h-4 w-4" aria-hidden />
+                        <div
+                            className={cn(
+                                "flex items-center gap-2",
+                                editing && "ml-auto",
                             )}
-                            {editing ? "Save changes" : "Add transaction"}
-                        </Button>
+                        >
+                            {editing && onDelete && (
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    className="border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
+                                    onClick={onDelete}
+                                >
+                                    Delete
+                                </Button>
+                            )}
+                            <Button type="submit">
+                                {!editing && (
+                                    <Plus className="h-4 w-4" aria-hidden />
+                                )}
+                                {editing ? "Save changes" : "Add transaction"}
+                            </Button>
+                        </div>
                     </div>
-                </div>
+                )}
             </form>
         </Card>
     );

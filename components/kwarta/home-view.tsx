@@ -22,7 +22,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   LuChevronRight as ChevronRight,
-  LuDelete as Delete,
   LuPenLine as Edit3,
   LuEllipsis as Ellipsis,
   LuGripVertical as GripVertical,
@@ -67,6 +66,8 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
   AccountLogo,
+  AmountDisplay,
+  AmountKeypadGrid,
   CategoryIconBadge,
   DatePickerInput,
   EditModal,
@@ -74,22 +75,6 @@ import {
   FieldError,
   ModalBackButton,
 } from "@/components/kwarta/shared";
-
-// Keys for the mobile quick-add amount keypad, laid out 3 per row.
-const AMOUNT_KEYPAD_KEYS = [
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  ".",
-  "0",
-  "backspace",
-] as const;
 
 // Layouts that stack full-width rows inside a single divided card; the rest are
 // grids. Kept as a list so new list-style layouts only need adding here.
@@ -1239,117 +1224,6 @@ export function QuickTransactionModal({
   const parsedAmount = parseDecimalInput(amount);
   const canSubmit = Number.isFinite(parsedAmount) && parsedAmount > 0;
 
-  // Mobile quick-add types the whole number first; a "." digit switches to
-  // fraction entry, capped at 2 digits, matching a normal calculator.
-  function appendAmountDigit(digit: string) {
-    setAmount((previous) => {
-      const dotIndex = previous.indexOf(".");
-
-      if (dotIndex === -1) {
-        const whole = `${previous}${digit}`.replace(/^0+(?=\d)/, "");
-        return whole.length > 9 ? previous : whole;
-      }
-
-      const fraction = previous.slice(dotIndex + 1);
-      return fraction.length >= 2 ? previous : `${previous}${digit}`;
-    });
-  }
-
-  function appendAmountDecimalPoint() {
-    setAmount((previous) =>
-      previous.includes(".") ? previous : `${previous || "0"}.`,
-    );
-  }
-
-  function backspaceAmountDigit() {
-    setAmount((previous) => previous.slice(0, -1));
-  }
-
-  // Long-pressing backspace clears the amount outright; the click handler
-  // checks backspaceLongPressTriggeredRef to skip the single-digit delete
-  // that would otherwise also fire once the press is released.
-  const backspaceHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
-  const backspaceLongPressTriggeredRef = useRef(false);
-
-  function startBackspaceHold() {
-    backspaceLongPressTriggeredRef.current = false;
-    backspaceHoldTimerRef.current = setTimeout(() => {
-      backspaceLongPressTriggeredRef.current = true;
-      setAmount("");
-    }, 500);
-  }
-
-  function cancelBackspaceHold() {
-    if (backspaceHoldTimerRef.current) {
-      clearTimeout(backspaceHoldTimerRef.current);
-      backspaceHoldTimerRef.current = null;
-    }
-  }
-
-  // Tracks which keypad key is currently pressed so it can darken (light
-  // theme) / lighten (dark theme) for tactile press feedback. It also gates
-  // whether release registers a keystroke: sliding off before lifting your
-  // finger clears this, canceling the press, like a real keyboard.
-  const [pressedKeypadKey, setPressedKeypadKey] = useState<string | null>(
-    null,
-  );
-
-  function handleKeypadPointerDown(key: string) {
-    setPressedKeypadKey(key);
-
-    if (key === "backspace") {
-      startBackspaceHold();
-    }
-  }
-
-  function handleKeypadPointerUp(key: string) {
-    const wasPressed = pressedKeypadKey === key;
-    setPressedKeypadKey((current) => (current === key ? null : current));
-
-    if (key === "backspace") {
-      cancelBackspaceHold();
-    }
-
-    if (!wasPressed) {
-      return;
-    }
-
-    if (key === "backspace") {
-      if (backspaceLongPressTriggeredRef.current) {
-        backspaceLongPressTriggeredRef.current = false;
-      } else {
-        backspaceAmountDigit();
-      }
-    } else if (key === ".") {
-      appendAmountDecimalPoint();
-    } else {
-      appendAmountDigit(key);
-    }
-  }
-
-  function handleKeypadPointerCancel(key: string) {
-    setPressedKeypadKey((current) => (current === key ? null : current));
-
-    if (key === "backspace") {
-      cancelBackspaceHold();
-    }
-  }
-
-  function formatAmountDisplay(value: string) {
-    if (!value) {
-      return "0.00";
-    }
-
-    const [whole, ...rest] = value.split(".");
-    const formattedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",") || "0";
-
-    return rest.length > 0
-      ? `${formattedWhole}.${rest.join("")}`
-      : formattedWhole;
-  }
-
   const [limit, setLimit] = useState("");
   const [reuseBudget, setReuseBudget] = useState(true);
   const parsedLimit = parseDecimalInput(limit);
@@ -1594,17 +1468,7 @@ export function QuickTransactionModal({
             <>
               <div>
                 <Label className="text-muted-foreground">Amount</Label>
-                <div className="mt-2 flex h-16 items-center gap-1 rounded-2xl border border-border bg-muted px-4 tabular-nums">
-                  <span className="text-lg text-muted-foreground">₱</span>
-                  <span
-                    className={cn(
-                      "text-3xl font-semibold",
-                      !amount && "text-muted-foreground",
-                    )}
-                  >
-                    {formatAmountDisplay(amount)}
-                  </span>
-                </div>
+                <AmountDisplay className="mt-2" value={amount} />
               </div>
               <div className="mt-4">
                 <Label className="text-muted-foreground">Subcategory</Label>
@@ -1669,37 +1533,11 @@ export function QuickTransactionModal({
                   </div>
                 </div>
               )}
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                {AMOUNT_KEYPAD_KEYS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    aria-label={
-                      key === "backspace"
-                        ? "Delete last digit"
-                        : key === "."
-                          ? "Add decimal point"
-                          : undefined
-                    }
-                    className={cn(
-                      "flex h-14 select-none items-center justify-center rounded-2xl border border-border text-xl font-semibold text-foreground transition-none md:hover:bg-[hsl(var(--hover-surface))]",
-                      pressedKeypadKey === key
-                        ? "bg-[hsl(var(--pressed-surface))]"
-                        : "bg-muted",
-                    )}
-                    onPointerCancel={() => handleKeypadPointerCancel(key)}
-                    onPointerDown={() => handleKeypadPointerDown(key)}
-                    onPointerLeave={() => handleKeypadPointerCancel(key)}
-                    onPointerUp={() => handleKeypadPointerUp(key)}
-                  >
-                    {key === "backspace" ? (
-                      <Delete className="h-7 w-7" aria-hidden />
-                    ) : (
-                      key
-                    )}
-                  </button>
-                ))}
-              </div>
+              <AmountKeypadGrid
+                className="mt-5"
+                value={amount}
+                onChange={setAmount}
+              />
             </>
           ) : (
             <>

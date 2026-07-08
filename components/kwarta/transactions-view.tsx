@@ -2,7 +2,12 @@
 
 import type { TransactionFormValues } from "@/lib/schema";
 import type { Account, Category, Transaction } from "@/lib/types";
-import { EditModal, PageHeader } from "@/components/kwarta/shared";
+import {
+    EditModal,
+    MobileBottomSheet,
+    PageHeader,
+    useIsMobileViewport,
+} from "@/components/kwarta/shared";
 import {
     TransactionForm,
     TransactionTable,
@@ -31,6 +36,22 @@ export function TransactionsView({
     const editing = transactions.find(
         (transaction) => transaction.id === editingId,
     );
+    const isMobile = useIsMobileViewport();
+
+    const editForm = editing && (
+        <TransactionForm
+            accounts={accounts}
+            categories={categories}
+            editing={editing}
+            month={month}
+            onCancel={onCancelEdit}
+            onDelete={() => {
+                onDelete(editing.id);
+                onCancelEdit();
+            }}
+            onSubmit={onSubmit}
+        />
+    );
 
     return (
         <>
@@ -45,22 +66,14 @@ export function TransactionsView({
                     transactions={transactions}
                 />
             </div>
-            {editing && (
-                <EditModal onClose={onCancelEdit}>
-                    <TransactionForm
-                        accounts={accounts}
-                        categories={categories}
-                        editing={editing}
-                        month={month}
-                        onCancel={onCancelEdit}
-                        onDelete={() => {
-                            onDelete(editing.id);
-                            onCancelEdit();
-                        }}
-                        onSubmit={onSubmit}
-                    />
-                </EditModal>
-            )}
+            {editing &&
+                (isMobile ? (
+                    <MobileBottomSheet onClose={onCancelEdit}>
+                        {editForm}
+                    </MobileBottomSheet>
+                ) : (
+                    <EditModal onClose={onCancelEdit}>{editForm}</EditModal>
+                ))}
         </>
     );
 }
