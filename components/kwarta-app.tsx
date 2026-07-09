@@ -398,6 +398,10 @@ export function KwartaApp() {
     }, [userId]);
 
     useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [view]);
+
+    useEffect(() => {
         try {
             localStorage.setItem(
                 "kwarta:selectedPeriod",
