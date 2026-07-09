@@ -2585,14 +2585,16 @@ export function GoogleLogo({ className }: { className?: string }) {
 
 export function LogoMark({ size }: { size: number }) {
     return (
-        <Image
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
             alt=""
             aria-hidden
             className="shrink-0 rounded-md"
+            decoding="sync"
+            fetchPriority="high"
             height={size}
-            priority
+            loading="eager"
             src="/icons/icon-192.png"
-            unoptimized
             width={size}
         />
     );
