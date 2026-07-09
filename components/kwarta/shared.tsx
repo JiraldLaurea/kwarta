@@ -1566,8 +1566,12 @@ export function MobileBottomSheet({
 
     useEffect(() => {
         // Lock the underlying page scroll so the sheet's content is the only
-        // scroll container — otherwise the body scrolls behind the fixed
-        // sheet, producing a second scrollbar on short viewports.
+        // scroll container. <RemoveScroll> below already prevents new scroll
+        // input from reaching the background; this just guards against
+        // programmatic scrolls (e.g. focus-into-view). Deliberately does NOT
+        // touch documentElement/body overflow — doing so breaks position:
+        // sticky on descendants (like the page header), which then falls
+        // back to its normal-flow offset and renders off-screen.
         const target = scrollRef.current;
 
         if (!target) {
@@ -1575,8 +1579,6 @@ export function MobileBottomSheet({
         }
 
         lockedScrollPositionRef.current = { x: window.scrollX, y: window.scrollY };
-        const previousHtmlOverflow = document.documentElement.style.overflow;
-        const previousBodyOverflow = document.body.style.overflow;
         const previousBodyOverscrollBehavior =
             document.body.style.overscrollBehavior;
         const lockViewport = () => {
@@ -1587,8 +1589,6 @@ export function MobileBottomSheet({
             );
         };
 
-        document.documentElement.style.overflow = "hidden";
-        document.body.style.overflow = "hidden";
         document.body.style.overscrollBehavior = "none";
         lockViewport();
         window.addEventListener("scroll", lockViewport, { passive: true });
@@ -1607,8 +1607,6 @@ export function MobileBottomSheet({
             }
             window.visualViewport?.removeEventListener("resize", lockViewport);
             window.visualViewport?.removeEventListener("scroll", lockViewport);
-            document.documentElement.style.overflow = previousHtmlOverflow;
-            document.body.style.overflow = previousBodyOverflow;
             document.body.style.overscrollBehavior =
                 previousBodyOverscrollBehavior;
         };
@@ -1734,7 +1732,7 @@ export function MobileBottomSheet({
             />
             <div
                 ref={sheetRef}
-                className="absolute inset-x-0 bottom-0 top-8 flex flex-col overflow-hidden rounded-t-2xl bg-white transition-transform duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+                className="absolute inset-x-0 bottom-0 top-20 flex flex-col overflow-hidden rounded-t-2xl bg-white transition-transform duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
                 style={{ transform: `translateY(${isVisible ? "0px" : "100%"})` }}
             >
                 <div className="flex h-6 shrink-0 items-center justify-center">

@@ -1243,8 +1243,10 @@ export function QuickTransactionModal({
 
     // Both the amount and budget-limit steps use the on-screen keypad
     // instead of a native input, so just dismiss the decoy's OS keyboard.
+    // No need to force-scroll: no native keyboard means nothing pushes the
+    // viewport, and doing so here would race the sheet's own scroll lock,
+    // which hasn't captured the real position yet at this point.
     mobileFocusBridgeRef?.current?.blur();
-    window.scrollTo(0, 0);
   }, [isPage, mobileFocusBridgeRef]);
   const backButton = isPage ? null : <ModalBackButton onClick={onClose} />;
 
