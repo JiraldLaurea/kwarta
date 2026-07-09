@@ -1363,6 +1363,9 @@ export function MobileBottomSheet({
     const [mounted, setMounted] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const closingRef = useRef(false);
+    // Where the page was scrolled to when the sheet opened, so locking the
+    // background scroll holds it there instead of snapping to the top.
+    const lockedScrollPositionRef = useRef({ x: 0, y: 0 });
 
     const requestClose = useCallback(() => {
         if (closingRef.current) {
@@ -1410,12 +1413,18 @@ export function MobileBottomSheet({
         let tracking = false;
         let dragging = false;
 
+        // Text-entry controls always need their own gesture handling. Plain
+        // buttons (nav rows, pills, keypad keys) are deliberately not
+        // excluded here: the 6px vertical dead zone below already tells a tap
+        // apart from a real downward swipe, so a swipe starting on a button
+        // still dismisses the sheet instead of only working from the gaps
+        // between content.
         function isInteractive(target: EventTarget | null) {
             return (
                 target instanceof Element &&
                 Boolean(
                     target.closest(
-                        "button,input,select,textarea,[role='button'],[role='combobox'],[data-radix-select-trigger]",
+                        "input,select,textarea,[role='combobox'],[data-radix-select-trigger]",
                     ),
                 )
             );
@@ -1565,13 +1574,17 @@ export function MobileBottomSheet({
             return;
         }
 
+        lockedScrollPositionRef.current = { x: window.scrollX, y: window.scrollY };
         const previousHtmlOverflow = document.documentElement.style.overflow;
         const previousBodyOverflow = document.body.style.overflow;
         const previousBodyOverscrollBehavior =
             document.body.style.overscrollBehavior;
         const lockViewport = () => {
             target.scrollTop = 0;
-            window.scrollTo(0, 0);
+            window.scrollTo(
+                lockedScrollPositionRef.current.x,
+                lockedScrollPositionRef.current.y,
+            );
         };
 
         document.documentElement.style.overflow = "hidden";
@@ -1752,8 +1765,13 @@ export function MobileBottomSheet({
 
                         event.preventDefault();
                         target.focus({ preventScroll: true });
-                        window.requestAnimationFrame(() => window.scrollTo(0, 0));
-                        window.setTimeout(() => window.scrollTo(0, 0), 80);
+                        const restoreScroll = () =>
+                            window.scrollTo(
+                                lockedScrollPositionRef.current.x,
+                                lockedScrollPositionRef.current.y,
+                            );
+                        window.requestAnimationFrame(restoreScroll);
+                        window.setTimeout(restoreScroll, 80);
                     }}
                     onClickCapture={(event) => {
                         if (
