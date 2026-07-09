@@ -1400,7 +1400,7 @@ export function KwartaApp() {
             {quickAddFocusBridge}
             <DesktopSidebar activeView={view} onSelect={setView} />
             <main className="min-h-screen bg-background md:pl-60">
-                <header className="sticky top-0 z-30 border-b bg-white [backface-visibility:hidden] [transform:translateZ(0)]">
+                <header className="sticky top-0 z-30 border-b bg-white/95 backdrop-blur-md [backface-visibility:hidden] [transform:translateZ(0)] md:bg-white md:backdrop-blur-none">
                     <div className="flex w-full items-center gap-3 px-4 py-3 md:px-5 md:py-4">
                         <div className="w-full max-w-[36rem] md:w-auto md:max-w-none">
                             <PeriodSelector
