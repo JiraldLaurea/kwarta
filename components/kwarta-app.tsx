@@ -675,8 +675,16 @@ export function KwartaApp() {
 
         const today = toDateInputValue(new Date());
         const storedToday = readAutomaticBackup(userId);
+        // Compare local calendar days on both sides. createdAt is a UTC ISO
+        // string, so slicing it directly would give the UTC date — in
+        // timezones ahead of UTC that disagrees with the local `today` during
+        // early-morning hours, making the rotation fire on every change and
+        // leaving "previous" only minutes behind "latest".
+        const storedTodayLocalDate = storedToday
+            ? toDateInputValue(new Date(storedToday.createdAt))
+            : null;
 
-        if (storedToday?.createdAt.slice(0, 10) === today) {
+        if (storedTodayLocalDate === today) {
             // Today's backup already exists — sync state without overwriting.
             setAutomaticBackup(storedToday);
         } else {
