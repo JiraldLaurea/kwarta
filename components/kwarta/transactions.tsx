@@ -200,7 +200,7 @@ export function TransactionForm({
                     form.reset(transactionDefaults);
                 })}
             >
-                <CardHeader className={cn(isEditing && "px-6 pb-2 pt-5")}>
+                <CardHeader className={cn(isEditing && "px-6 pb-2 pt-4")}>
                     {backButton}
                     <CardTitle
                         className={cn(
@@ -221,7 +221,10 @@ export function TransactionForm({
                     </p>
                 </CardHeader>
                 <CardContent
-                    className={cn("space-y-4", isEditing && "px-6 pb-6 pt-0")}
+                    className={cn(
+                        "space-y-4",
+                        isEditing && "px-6 pb-5 pt-0",
+                    )}
                 >
                   {isPage ? (
                     <>
@@ -269,7 +272,7 @@ export function TransactionForm({
                           })}
                         </div>
                       </div>
-                      <div className="mt-4">
+                      <div className="mt-3">
                         <Label className="text-muted-foreground">
                           Category
                         </Label>
@@ -310,7 +313,7 @@ export function TransactionForm({
                         </div>
                       </div>
                       {subcategories.length > 0 && (
-                        <div className="mt-4">
+                        <div className="mt-3">
                           <Label className="text-muted-foreground">
                             Subcategory
                           </Label>
@@ -347,7 +350,7 @@ export function TransactionForm({
                         </div>
                       )}
                       {accounts.length > 0 && (
-                        <div className="mt-4">
+                        <div className="mt-3">
                           <Label className="text-muted-foreground">
                             Account
                           </Label>
@@ -388,7 +391,7 @@ export function TransactionForm({
                           </div>
                         </div>
                       )}
-                      <div className="mt-4">
+                      <div className="mt-3">
                         <Label className="text-muted-foreground">Date</Label>
                         <div className="mt-2">
                           <DatePickerInput
@@ -401,18 +404,18 @@ export function TransactionForm({
                           />
                         </div>
                       </div>
-                      <div className="mt-4">
+                      <div className="mt-3">
                         <Label className="text-muted-foreground">
                           Amount
                         </Label>
                         <AmountDisplay className="mt-2" value={amountText} />
                       </div>
                       <AmountKeypadGrid
-                        className="mt-5"
+                        className="mt-4"
                         value={amountText}
                         onChange={handleAmountTextChange}
                       />
-                      <div className="mt-5 flex items-center gap-2">
+                      <div className="mt-4 flex items-center gap-2">
                         {onDelete && (
                           <Button
                             type="button"

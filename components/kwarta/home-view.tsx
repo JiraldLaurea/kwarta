@@ -1305,9 +1305,13 @@ export function QuickTransactionModal({
             onSetBudget(parsedLimit);
           }}
         >
-          <CardHeader className="px-6 pb-2 pt-6">
+          <CardHeader
+            className={cn("px-6 pb-2 pt-6", isPage && "pt-4")}
+          >
             {backButton}
-            <div className="flex !m-0 !mb-4">
+            <div
+              className={cn("flex !m-0 !mb-4", isPage && "!mb-3")}
+            >
               <CategoryIconBadge
                 category={category}
                 className="h-10 w-10"
@@ -1321,7 +1325,7 @@ export function QuickTransactionModal({
               Set a limit for {category.name} before adding transactions.
             </p>
           </CardHeader>
-          <CardContent className="px-6 pb-6 pt-0">
+          <CardContent className={cn("px-6 pb-6 pt-0", isPage && "pb-5")}>
             {isPage ? (
               <>
                 <div>
@@ -1330,13 +1334,13 @@ export function QuickTransactionModal({
                 </div>
                 {reuseBudgetToggle}
                 <AmountKeypadGrid
-                  className="mt-5"
+                  className="mt-4"
                   value={limit}
                   onChange={setLimit}
                 />
                 <Button
                   className={cn(
-                    "mt-5 h-14 w-full select-none rounded-2xl text-base font-bold disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100",
+                    "mt-4 h-14 w-full select-none rounded-2xl text-base font-bold disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100",
                     canSetBudget &&
                       "bg-accent text-accent-foreground md:hover:bg-accent",
                   )}
@@ -1432,9 +1436,16 @@ export function QuickTransactionModal({
           });
         }}
       >
-        <CardHeader className="px-6 pb-2 pt-6">
+        <CardHeader
+          className={cn("px-6 pb-2 pt-6", isPage && "pt-4")}
+        >
           {backButton}
-          <div className="!m-0 !mb-4 flex items-start justify-between">
+          <div
+            className={cn(
+              "!m-0 !mb-4 flex items-start justify-between",
+              isPage && "!mb-3",
+            )}
+          >
             <CategoryIconBadge
               category={category}
               className="h-10 w-10"
@@ -1458,7 +1469,7 @@ export function QuickTransactionModal({
             {periodLabel ?? formatMonthLabel(month)}.
           </p>
         </CardHeader>
-        <CardContent className="px-6 pb-6 pt-0">
+        <CardContent className={cn("px-6 pb-6 pt-0", isPage && "pb-5")}>
           {isPage ? (
             <>
               <div>
@@ -1490,7 +1501,7 @@ export function QuickTransactionModal({
                 </div>
               </div>
               {accounts.length > 0 && (
-                <div className="mt-4">
+                <div className="mt-3">
                   <Label className="text-muted-foreground">Account</Label>
                   <div
                     className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -1524,12 +1535,12 @@ export function QuickTransactionModal({
                   </div>
                 </div>
               )}
-              <div className="mt-4">
+              <div className="mt-3">
                 <Label className="text-muted-foreground">Amount</Label>
                 <AmountDisplay className="mt-2" value={amount} />
               </div>
               <AmountKeypadGrid
-                className="mt-5"
+                className="mt-4"
                 value={amount}
                 onChange={setAmount}
               />
@@ -1594,6 +1605,7 @@ export function QuickTransactionModal({
           <Button
             className={cn(
               "mt-6 w-full",
+              isPage && "mt-4",
               !isPage && "sm:hidden",
               isPage &&
                 "h-14 select-none rounded-2xl text-base font-bold disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100",

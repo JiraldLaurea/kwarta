@@ -1732,10 +1732,10 @@ export function MobileBottomSheet({
             />
             <div
                 ref={sheetRef}
-                className="absolute inset-x-0 bottom-0 top-20 flex flex-col overflow-hidden rounded-t-2xl bg-white transition-transform duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
+                className="absolute inset-x-0 bottom-0 top-14 flex flex-col overflow-hidden rounded-t-2xl bg-white transition-transform duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform"
                 style={{ transform: `translateY(${isVisible ? "0px" : "100%"})` }}
             >
-                <div className="flex h-6 shrink-0 items-center justify-center">
+                <div className="flex h-4 shrink-0 items-center justify-center">
                     <span className="h-1 w-10 rounded-full bg-neutral-300" />
                 </div>
                 <div
