@@ -27,7 +27,6 @@ import { RiLayoutFill } from "react-icons/ri";
 import { IoPricetagsOutline, IoStatsChart } from "react-icons/io5";
 import type { User } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogoMark, PageHeader, ProfileImage } from "@/components/kwarta/shared";
 import { BackupActions } from "@/components/kwarta/backup-controls";
@@ -125,31 +124,22 @@ export function SettingsView({
             <PageHeader
                 title="Settings"
                 description="Manage app preferences, budget behavior, and account access."
-                actions={
-                    <div className="flex w-full gap-2 sm:w-auto">
-                        <Button
-                            className="min-w-0 flex-1 sm:flex-none"
-                            type="button"
-                            variant="secondary"
-                            onClick={onViewReports}
-                        >
-                            <IoStatsChart className="h-4 w-4" aria-hidden />
-                            Reports
-                        </Button>
-                        <Button
-                            className="min-w-0 flex-1 sm:flex-none"
-                            type="button"
-                            onClick={onManageCategories}
-                        >
-                            <IoPricetagsOutline
-                                className="h-4 w-4"
-                                aria-hidden
-                            />
-                            Manage categories
-                        </Button>
-                    </div>
-                }
             />
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <SettingsNavCard
+                    icon={IoStatsChart}
+                    title="Reports"
+                    description="Spending trends & insights"
+                    onClick={onViewReports}
+                />
+                <SettingsNavCard
+                    icon={IoPricetagsOutline}
+                    title="Manage categories"
+                    description="Add, edit & reorder categories"
+                    onClick={onManageCategories}
+                />
+            </div>
 
             <div className="grid min-w-0 grid-cols-1 gap-4 md:gap-5 xl:grid-cols-2">
                 <Card className="min-w-0 overflow-visible rounded-2xl">
@@ -594,6 +584,41 @@ function SettingIconBadge({ icon: Icon }: { icon: IconType }) {
         >
             <Icon className="h-[18px] w-[18px]" />
         </span>
+    );
+}
+
+// Full-width navigation card for Reports / Manage categories: an accent icon
+// badge, title and subtitle, and a trailing chevron. Stacks on mobile and sits
+// two-up on desktop.
+function SettingsNavCard({
+    icon,
+    title,
+    description,
+    onClick,
+}: {
+    icon: IconType;
+    title: string;
+    description: string;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className="flex items-center gap-3.5 rounded-2xl border border-border bg-muted p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
+        >
+            <SettingIconBadge icon={icon} />
+            <div className="min-w-0 flex-1">
+                <p className="text-base font-bold leading-5">{title}</p>
+                <p className="mt-1 text-xs leading-4 text-muted-foreground">
+                    {description}
+                </p>
+            </div>
+            <ChevronRight
+                className="h-5 w-5 shrink-0 text-muted-foreground"
+                aria-hidden
+            />
+        </button>
     );
 }
 
