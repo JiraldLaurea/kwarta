@@ -347,6 +347,13 @@ export function KwartaApp() {
     const backupImportInputRef = useRef<HTMLInputElement>(null);
     const quickAddFocusBridgeRef = useRef<HTMLInputElement>(null);
     const workspaceSaveQueueRef = useRef<Promise<void>>(Promise.resolve());
+    // Latest workspace snapshot and whether it has changes the server hasn't
+    // confirmed yet. Kept in refs so the visibility/pagehide flush (below) can
+    // read them synchronously when the app is being backgrounded or closed,
+    // without waiting on the async save effect that would otherwise be dropped
+    // if the app is terminated first.
+    const latestWorkspaceRef = useRef<StoredWorkspace | null>(null);
+    const workspaceUnsyncedRef = useRef(false);
     const [backupImportError, setBackupImportError] = useState<string | null>(
         null,
     );
@@ -581,6 +588,17 @@ export function KwartaApp() {
             setWorkspaceReady(false);
             const cachedWorkspace = readCachedWorkspace(activeUserId);
 
+            // Local-first: if there are changes that never reached the server
+            // (e.g. edited offline, then closed the app before it could sync),
+            // the local cache is newer than the server copy. Trust it and let
+            // the pending-sync effect push it up, instead of overwriting the
+            // unsynced edits with stale server data.
+            if (hasPendingWorkspaceSync(activeUserId) && cachedWorkspace) {
+                applyWorkspace(cachedWorkspace);
+                setWorkspaceReady(true);
+                return;
+            }
+
             try {
                 const response = await fetch(
                     `/api/workspace?userId=${encodeURIComponent(activeUserId)}`,
@@ -646,6 +664,10 @@ export function KwartaApp() {
         // Mirror the live workspace locally on every change so it survives a
         // reload while offline and can be re-synced once back online.
         writeCachedWorkspace(userId, workspace);
+        // Expose the latest snapshot to the visibility/pagehide flush, and mark
+        // it unsynced until the debounced server save below confirms.
+        latestWorkspaceRef.current = workspace;
+        workspaceUnsyncedRef.current = true;
 
         const today = toDateInputValue(new Date());
         const storedToday = readAutomaticBackup(userId);
@@ -672,6 +694,7 @@ export function KwartaApp() {
             enqueueWorkspaceSave(() =>
                 persistWorkspace(workspace, userId).then(() => {
                     markWorkspacePendingSync(userId, false);
+                    workspaceUnsyncedRef.current = false;
                 }),
             ).catch(() => {
                 // Offline or the server rejected the save. Keep the local cache
@@ -732,6 +755,51 @@ export function KwartaApp() {
             window.removeEventListener("online", flushPendingSync);
         };
     }, [userId, enqueueWorkspaceSave]);
+
+    useEffect(() => {
+        if (!userId) {
+            return;
+        }
+
+        const activeUserId = userId;
+
+        // When the app is backgrounded or closed, the async save effect above
+        // may never run (the browser can freeze/terminate a PWA before its
+        // pending work fires), which would drop a just-made change. Flush the
+        // latest snapshot to the local cache synchronously here so it always
+        // survives a close, and flag it pending if the server hasn't confirmed
+        // it yet so the next launch trusts the local copy and re-syncs.
+        function flushToCache() {
+            const workspace = latestWorkspaceRef.current;
+
+            if (!workspace) {
+                return;
+            }
+
+            writeCachedWorkspace(activeUserId, workspace);
+
+            if (workspaceUnsyncedRef.current) {
+                markWorkspacePendingSync(activeUserId, true);
+            }
+        }
+
+        function handleVisibilityChange() {
+            if (document.visibilityState === "hidden") {
+                flushToCache();
+            }
+        }
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        window.addEventListener("pagehide", flushToCache);
+
+        return () => {
+            document.removeEventListener(
+                "visibilitychange",
+                handleVisibilityChange,
+            );
+            window.removeEventListener("pagehide", flushToCache);
+        };
+    }, [userId]);
 
     const selectedMonth = getPeriodMonth(selectedPeriod);
     const periodTransactions = useMemo(
