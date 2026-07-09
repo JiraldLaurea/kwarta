@@ -252,14 +252,12 @@ export function SettingsView({
                                         option.value,
                                         isDarkEffective,
                                     );
-                                    // Dark check on the light pastel swatches (and the white
-                                    // swatch in dark mode); white check only on the black swatch
-                                    // in light mode.
-                                    const checkColor =
-                                        option.value === "black" &&
-                                        !isDarkEffective
-                                            ? "#FFFFFF"
-                                            : "#0A0A0A";
+                                    // Light mode swatches use the deeper, saturated accent
+                                    // colors, which read best with a white check; dark mode
+                                    // keeps the light pastel swatches with a dark check.
+                                    const checkColor = !isDarkEffective
+                                        ? "#FFFFFF"
+                                        : "#0A0A0A";
                                     const optionLabel = isWhiteSwatch
                                         ? "White"
                                         : option.label;
