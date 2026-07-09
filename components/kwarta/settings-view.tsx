@@ -34,6 +34,7 @@ import { BackupActions } from "@/components/kwarta/backup-controls";
 import type { HomeItemStyle } from "@/components/kwarta/home-view";
 import {
     accentThemeOptions,
+    getAccentSwatchHex,
     type AccentTheme,
     type AutomaticBackupRecord,
     type ColorMode,
@@ -112,14 +113,12 @@ export function SettingsView({
     onOpenHelp: () => void;
     onSignOut: () => void;
 }) {
-    const currentAccentColor = accentThemeOptions.find(
-        (o) => o.value === accentTheme,
-    )?.color;
     const isDarkEffective =
         colorMode === "dark" ||
         (colorMode === "system" &&
             typeof window !== "undefined" &&
             window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const currentAccentColor = getAccentSwatchHex(accentTheme, isDarkEffective);
 
     return (
         <div className="w-full space-y-5">
@@ -249,9 +248,10 @@ export function SettingsView({
                                     const isWhiteSwatch =
                                         isDarkEffective &&
                                         option.value === "black";
-                                    const swatchColor = isWhiteSwatch
-                                        ? "#F5F5F5"
-                                        : option.color;
+                                    const swatchColor = getAccentSwatchHex(
+                                        option.value,
+                                        isDarkEffective,
+                                    );
                                     // Dark check on the light pastel swatches (and the white
                                     // swatch in dark mode); white check only on the black swatch
                                     // in light mode.
