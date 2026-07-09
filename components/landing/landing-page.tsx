@@ -144,7 +144,7 @@ export function LandingPage() {
         {/* Hero */}
         <section className="relative overflow-hidden">
           <div className="pointer-events-none absolute inset-x-0 -top-24 flex justify-center">
-            <div className="h-72 w-[46rem] max-w-full rounded-full bg-accent/10 blur-3xl" />
+            <div className="h-72 w-[46rem] max-w-full rounded-full bg-accent/25 blur-3xl" />
           </div>
           <div className="mx-auto w-full max-w-6xl px-5 pb-8 pt-16 text-center sm:pt-24">
             <Reveal>
