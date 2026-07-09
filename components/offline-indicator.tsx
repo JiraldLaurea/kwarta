@@ -37,7 +37,7 @@ export function OfflineIndicator() {
             role="status"
             className="pointer-events-none fixed inset-x-0 bottom-[calc(73px+env(safe-area-inset-bottom))] z-40 md:bottom-auto md:top-[73px] md:flex md:justify-center md:px-4 md:pt-2"
         >
-            <div className="pointer-events-auto flex w-full items-center gap-2 border-t border-border bg-card px-4 py-2.5 text-xs font-medium leading-4 text-muted-foreground md:w-auto md:rounded-full md:border md:px-3 md:py-1.5 md:shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+            <div className="pointer-events-auto flex w-full items-center justify-center gap-2 border-t border-border bg-white/95 px-4 py-2.5 text-xs font-medium leading-4 text-muted-foreground backdrop-blur-md md:w-auto md:justify-start md:rounded-full md:border md:bg-card md:px-3 md:py-1.5 md:shadow-[0_8px_24px_rgba(0,0,0,0.12)] md:backdrop-blur-none">
                 <span className="h-2 w-2 shrink-0 rounded-full bg-amber-500" />
                 Offline — changes save locally and sync later
             </div>
