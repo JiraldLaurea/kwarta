@@ -605,7 +605,7 @@ function SettingsNavCard({
         <button
             type="button"
             onClick={onClick}
-            className="flex items-center gap-3.5 rounded-2xl border border-border bg-muted p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
+            className="flex items-center gap-3.5 rounded-2xl border border-border bg-card p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
         >
             <SettingIconBadge icon={icon} />
             <div className="min-w-0 flex-1">
