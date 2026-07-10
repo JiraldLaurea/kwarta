@@ -36,13 +36,17 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
     AccountLogo,
+    AmountDisplay,
+    AmountKeypadGrid,
     DatePickerInput,
     EditModal,
     EmptyState,
     FieldError,
     IconBadge,
     PageHeader,
+    PillCheckBadge,
     colorChoices,
+    useIsMobileViewport,
 } from "@/components/kwarta/shared";
 import {
     getAccountLabel,
@@ -551,8 +555,76 @@ function TransferForm({
 
     const isEditing = Boolean(editing);
     const isModal = isEditing || modal;
+    const isMobile = useIsMobileViewport();
+    // On mobile the sheet uses pills for the accounts and the on-screen keypad
+    // for the amounts, matching the other bottom-sheet forms. Two amounts share
+    // one keypad: tapping a display focuses it as the keypad's target.
+    const isPage = isModal && isMobile;
     const fromAccountId = form.watch("fromAccountId");
     const toAccountId = form.watch("toAccountId");
+    const [amountText, setAmountText] = useState(() =>
+        editing?.amount ? String(editing.amount) : "",
+    );
+    const [feeText, setFeeText] = useState(() =>
+        editing?.fee ? String(editing.fee) : "",
+    );
+    const [focusedAmount, setFocusedAmount] = useState<"amount" | "fee">(
+        "amount",
+    );
+
+    function handleTransferKeypadChange(next: string) {
+        if (focusedAmount === "fee") {
+            setFeeText(next);
+            form.setValue("fee", parseDecimalInput(next), {
+                shouldValidate: true,
+            });
+        } else {
+            setAmountText(next);
+            form.setValue("amount", parseDecimalInput(next), {
+                shouldValidate: true,
+            });
+        }
+    }
+
+    const renderAccountPills = (
+        value: string,
+        excludeId: string,
+        onSelect: (id: string) => void,
+    ) => (
+        <div
+            className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            data-quick-add-scroll
+        >
+            {accounts
+                .filter((account) => account.id !== excludeId)
+                .map((account) => {
+                    const selected = account.id === value;
+
+                    return (
+                        <button
+                            key={account.id}
+                            type="button"
+                            aria-pressed={selected}
+                            className={cn(
+                                "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                selected
+                                    ? "border-accent ring-1 ring-accent"
+                                    : "border-border",
+                            )}
+                            onClick={() => onSelect(account.id)}
+                        >
+                            <AccountLogo
+                                account={account}
+                                className="h-6 w-6"
+                                iconClassName="h-3.5 w-3.5"
+                            />
+                            {accountLabel(account)}
+                            {selected && <PillCheckBadge />}
+                        </button>
+                    );
+                })}
+        </div>
+    );
 
     return (
         <Card
@@ -593,6 +665,124 @@ function TransferForm({
                 <CardContent
                     className={cn("space-y-4", isModal && "px-6 pb-6 pt-0")}
                 >
+                  {isPage ? (
+                    <>
+                        <div>
+                            <Label className="text-muted-foreground">
+                                From
+                            </Label>
+                            {renderAccountPills(
+                                fromAccountId,
+                                toAccountId,
+                                (id) =>
+                                    form.setValue("fromAccountId", id, {
+                                        shouldValidate: true,
+                                    }),
+                            )}
+                            {form.formState.errors.fromAccountId && (
+                                <p className="mt-1 text-sm leading-5 text-destructive">
+                                    {
+                                        form.formState.errors.fromAccountId
+                                            .message
+                                    }
+                                </p>
+                            )}
+                        </div>
+                        <div>
+                            <Label className="text-muted-foreground">To</Label>
+                            {renderAccountPills(
+                                toAccountId,
+                                fromAccountId,
+                                (id) =>
+                                    form.setValue("toAccountId", id, {
+                                        shouldValidate: true,
+                                    }),
+                            )}
+                            {form.formState.errors.toAccountId && (
+                                <p className="mt-1 text-sm leading-5 text-destructive">
+                                    {form.formState.errors.toAccountId.message}
+                                </p>
+                            )}
+                        </div>
+                        <div>
+                            <Label className="text-muted-foreground">
+                                Date
+                            </Label>
+                            <div className="mt-2">
+                                <DatePickerInput
+                                    value={form.watch("date")}
+                                    onChange={(value) =>
+                                        form.setValue("date", value, {
+                                            shouldValidate: true,
+                                        })
+                                    }
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <Label className="text-muted-foreground">
+                                Amount
+                            </Label>
+                            <button
+                                type="button"
+                                className="mt-2 block w-full"
+                                onClick={() => setFocusedAmount("amount")}
+                            >
+                                <AmountDisplay
+                                    className={cn(
+                                        focusedAmount === "amount" &&
+                                            "border-accent ring-1 ring-accent",
+                                    )}
+                                    value={amountText}
+                                />
+                            </button>
+                        </div>
+                        <div>
+                            <Label className="text-muted-foreground">
+                                Fee (optional)
+                            </Label>
+                            <button
+                                type="button"
+                                className="mt-2 block w-full"
+                                onClick={() => setFocusedAmount("fee")}
+                            >
+                                <AmountDisplay
+                                    className={cn(
+                                        focusedAmount === "fee" &&
+                                            "border-accent ring-1 ring-accent",
+                                    )}
+                                    value={feeText}
+                                />
+                            </button>
+                        </div>
+                        <AmountKeypadGrid
+                            className="mt-4"
+                            value={
+                                focusedAmount === "fee" ? feeText : amountText
+                            }
+                            onChange={handleTransferKeypadChange}
+                        />
+                        <div className="mt-4 flex items-center gap-2">
+                            {editing && onDelete && (
+                                <Button
+                                    className="h-14 flex-1 select-none rounded-2xl border-destructive/70 bg-white text-base font-bold text-destructive md:hover:bg-destructive/10"
+                                    type="button"
+                                    variant="secondary"
+                                    onClick={onDelete}
+                                >
+                                    Delete
+                                </Button>
+                            )}
+                            <Button
+                                className="h-14 flex-1 select-none rounded-2xl text-base font-bold"
+                                type="submit"
+                            >
+                                {editing ? "Save transfer" : "Transfer"}
+                            </Button>
+                        </div>
+                    </>
+                  ) : (
+                    <>
                     <FieldError
                         message={form.formState.errors.fromAccountId?.message}
                     >
@@ -695,23 +885,8 @@ function TransferForm({
                             }
                         />
                     </FieldError>
-                    {isModal && (
-                        <div className="flex items-center gap-2 pt-2 sm:hidden">
-                            {editing && onDelete && (
-                                <Button
-                                    className="flex-1 border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={onDelete}
-                                >
-                                    Delete
-                                </Button>
-                            )}
-                            <Button className="flex-1" type="submit">
-                                {editing ? "Save transfer" : "Transfer"}
-                            </Button>
-                        </div>
-                    )}
+                    </>
+                  )}
                 </CardContent>
                 <div
                     className={cn(
@@ -822,6 +997,21 @@ function AccountForm({
 
     const isEditing = Boolean(editing);
     const isModal = isEditing || modal;
+    const isMobile = useIsMobileViewport();
+    // On mobile the sheet uses pills for the account type and the on-screen
+    // keypad for the balance, matching the other bottom-sheet forms.
+    const isPage = isModal && isMobile;
+    const [balanceText, setBalanceText] = useState(() =>
+        editing?.openingBalance ? String(editing.openingBalance) : "",
+    );
+
+    function handleBalanceTextChange(next: string) {
+        setBalanceText(next);
+        form.setValue("openingBalance", parseDecimalInput(next), {
+            shouldValidate: true,
+        });
+    }
+
     const providerChoices = getProvidersForType(selectedType);
     const supportsBrands = providerChoices.length > 0;
     const defaultProviderForSelectedType =
@@ -887,6 +1077,25 @@ function AccountForm({
         });
     }, [form, selectedIcon, selectedProvider, selectedType]);
 
+    const accountTypeOptions = [
+        { label: "Bank", value: "bank" as const },
+        { label: "E-Wallet", value: "ewallet" as const },
+        { label: "Cash", value: "cash" as const },
+    ];
+
+    function applyAccountTypeChange(nextType: AccountType) {
+        form.reset(
+            {
+                ...form.getValues(),
+                type: nextType,
+                icon: getDefaultAccountIcon(nextType),
+                provider: getDefaultProviderForType(nextType),
+            },
+            { keepErrors: true },
+        );
+        form.trigger(["type", "provider"]);
+    }
+
     return (
         <Card
             className={cn(
@@ -929,61 +1138,78 @@ function AccountForm({
                 <CardContent
                     className={cn("space-y-4", isModal && "px-6 pb-6 pt-0")}
                 >
-                    <div className="grid grid-cols-2 gap-3">
-                        <FieldError
-                            message={form.formState.errors.type?.message}
-                        >
-                            <Label htmlFor="account-type">Type</Label>
-                            <Select
-                                id="account-type"
-                                onValueChange={(value) => {
-                                    const nextType = value as AccountType;
-                                    form.reset(
-                                        {
-                                            ...form.getValues(),
-                                            type: nextType,
-                                            icon: getDefaultAccountIcon(
-                                                nextType,
-                                            ),
-                                            provider:
-                                                getDefaultProviderForType(
-                                                    nextType,
-                                                ),
-                                        },
-                                        {
-                                            keepErrors: true,
-                                        },
-                                    );
-                                    form.trigger(["type", "provider"]);
-                                }}
-                                options={[
-                                    { label: "Bank", value: "bank" },
-                                    { label: "E-Wallet", value: "ewallet" },
-                                    { label: "Cash", value: "cash" },
-                                ]}
-                                value={selectedType}
-                            />
-                        </FieldError>
-                        <FieldError
-                            message={
-                                form.formState.errors.openingBalance?.message
-                            }
-                        >
-                            <Label htmlFor="account-balance">
-                                Current balance
+                    {isPage ? (
+                        <div>
+                            <Label className="text-muted-foreground">
+                                Type
                             </Label>
-                            <Input
-                                id="account-balance"
-                                inputMode="decimal"
-                                onInput={handleDecimalInput}
-                                pattern="[0-9]*[.]?[0-9]*"
-                                type="text"
-                                {...form.register("openingBalance", {
-                                    setValueAs: parseDecimalInput,
+                            <div className="mt-2 flex gap-2">
+                                {accountTypeOptions.map((option) => {
+                                    const selected =
+                                        selectedType === option.value;
+
+                                    return (
+                                        <button
+                                            key={option.value}
+                                            type="button"
+                                            aria-pressed={selected}
+                                            className={cn(
+                                                "relative flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-full border bg-muted px-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                                selected
+                                                    ? "border-accent ring-1 ring-accent"
+                                                    : "border-border",
+                                            )}
+                                            onClick={() =>
+                                                applyAccountTypeChange(
+                                                    option.value,
+                                                )
+                                            }
+                                        >
+                                            {option.label}
+                                            {selected && <PillCheckBadge />}
+                                        </button>
+                                    );
                                 })}
-                            />
-                        </FieldError>
-                    </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                            <FieldError
+                                message={form.formState.errors.type?.message}
+                            >
+                                <Label htmlFor="account-type">Type</Label>
+                                <Select
+                                    id="account-type"
+                                    onValueChange={(value) =>
+                                        applyAccountTypeChange(
+                                            value as AccountType,
+                                        )
+                                    }
+                                    options={accountTypeOptions}
+                                    value={selectedType}
+                                />
+                            </FieldError>
+                            <FieldError
+                                message={
+                                    form.formState.errors.openingBalance?.message
+                                }
+                            >
+                                <Label htmlFor="account-balance">
+                                    Current balance
+                                </Label>
+                                <Input
+                                    id="account-balance"
+                                    inputMode="decimal"
+                                    onInput={handleDecimalInput}
+                                    pattern="[0-9]*[.]?[0-9]*"
+                                    type="text"
+                                    {...form.register("openingBalance", {
+                                        setValueAs: parseDecimalInput,
+                                    })}
+                                />
+                            </FieldError>
+                        </div>
+                    )}
                     {supportsBrands && (
                         <FieldError>
                             <Label htmlFor="account-brand">{brandLabel}</Label>
@@ -1079,23 +1305,42 @@ function AccountForm({
                             </div>
                         </div>
                     )}
-                    {isModal && (
-                        <div className="flex items-center gap-2 pt-2 sm:hidden">
-                            {editing && onDelete && (
+                    {isPage && (
+                        <>
+                            <div>
+                                <Label className="text-muted-foreground">
+                                    Current balance
+                                </Label>
+                                <AmountDisplay
+                                    className="mt-2"
+                                    value={balanceText}
+                                />
+                            </div>
+                            <AmountKeypadGrid
+                                className="mt-4"
+                                value={balanceText}
+                                onChange={handleBalanceTextChange}
+                            />
+                            <div className="mt-4 flex items-center gap-2">
+                                {editing && onDelete && (
+                                    <Button
+                                        className="h-14 flex-1 select-none rounded-2xl border-destructive/70 bg-white text-base font-bold text-destructive md:hover:bg-destructive/10"
+                                        disabled={!canDelete}
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={onDelete}
+                                    >
+                                        Delete
+                                    </Button>
+                                )}
                                 <Button
-                                    className="flex-1 border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
-                                    disabled={!canDelete}
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={onDelete}
+                                    className="h-14 flex-1 select-none rounded-2xl text-base font-bold"
+                                    type="submit"
                                 >
-                                    Delete
+                                    {editing ? "Save account" : "Add account"}
                                 </Button>
-                            )}
-                            <Button className="flex-1" type="submit">
-                                {editing ? "Save account" : "Add account"}
-                            </Button>
-                        </div>
+                            </div>
+                        </>
                     )}
                 </CardContent>
                 <div

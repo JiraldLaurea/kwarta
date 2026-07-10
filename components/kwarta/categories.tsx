@@ -51,6 +51,7 @@ import {
   EditModal,
   EmptyState,
   FieldError,
+  PillCheckBadge,
   categoryIconChoices,
   colorChoices,
 } from "@/components/kwarta/shared";
@@ -187,19 +188,57 @@ export function CategoryForm({
             </FieldError>
             <FieldError message={form.formState.errors.type?.message}>
               <Label htmlFor="category-type">Type</Label>
-              <Select
-                id="category-type"
-                onValueChange={(value) =>
-                  form.setValue("type", value as TransactionType, {
-                    shouldValidate: true,
-                  })
-                }
-                options={[
-                  { label: "Expense", value: "expense" },
-                  { label: "Income", value: "income" },
-                ]}
-                value={form.watch("type")}
-              />
+              {/* Mobile: pills, matching the transaction/quick-add forms.
+                  Desktop: the dropdown. */}
+              <div>
+                <div className="flex gap-2 sm:hidden">
+                  {(
+                    [
+                      { label: "Expense", value: "expense" },
+                      { label: "Income", value: "income" },
+                    ] as const
+                  ).map((option) => {
+                    const selected = form.watch("type") === option.value;
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={selected}
+                        className={cn(
+                          "relative flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-full border bg-muted px-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                          selected
+                            ? "border-accent ring-1 ring-accent"
+                            : "border-border",
+                        )}
+                        onClick={() =>
+                          form.setValue("type", option.value, {
+                            shouldValidate: true,
+                          })
+                        }
+                      >
+                        {option.label}
+                        {selected && <PillCheckBadge />}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="hidden sm:block">
+                  <Select
+                    id="category-type"
+                    onValueChange={(value) =>
+                      form.setValue("type", value as TransactionType, {
+                        shouldValidate: true,
+                      })
+                    }
+                    options={[
+                      { label: "Expense", value: "expense" },
+                      { label: "Income", value: "income" },
+                    ]}
+                    value={form.watch("type")}
+                  />
+                </div>
+              </div>
             </FieldError>
           </div>
           <div>

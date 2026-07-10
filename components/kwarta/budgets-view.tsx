@@ -24,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BudgetProgressList } from "@/components/kwarta/budget-progress-list";
 import {
+    AmountDisplay,
+    AmountKeypadGrid,
     CategoryIconBadge,
     BudgetCyclePickerInput,
     EditModal,
@@ -32,6 +34,7 @@ import {
     MonthPickerInput,
     PageHeader,
     WeekPickerInput,
+    useIsMobileViewport,
 } from "@/components/kwarta/shared";
 
 export function BudgetsView({
@@ -353,15 +356,65 @@ function BudgetForm({
         defaultValues: formDefaults,
     });
 
+    const isMobile = useIsMobileViewport();
+    const [limitText, setLimitText] = useState(() =>
+        formDefaults.limit ? String(formDefaults.limit) : "",
+    );
+
+    function handleLimitTextChange(next: string) {
+        setLimitText(next);
+        form.setValue("limit", parseDecimalInput(next), {
+            shouldValidate: true,
+        });
+    }
+
     useEffect(() => {
         form.reset(formDefaults);
+        setLimitText(formDefaults.limit ? String(formDefaults.limit) : "");
     }, [form, formDefaults]);
 
     const isEditing = Boolean(editing);
     const isModal = modal || isEditing;
+    // On mobile the sheet uses the on-screen keypad for the limit amount,
+    // matching the home quick-add and transaction forms.
+    const isPage = isModal && isMobile;
     const reuseBudget = form.watch("reuseBudget");
     const submitLabel = editing ? "Save budget" : "Set budget";
     const periodNoun = getPeriodNoun(period);
+
+    const reuseBudgetToggle = (
+        <div>
+            <Label htmlFor="reuse-budget">Reuse budget</Label>
+            <div className="mt-2 flex items-center gap-3">
+                <button
+                    aria-checked={reuseBudget}
+                    className={cn(
+                        "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                        reuseBudget ? "bg-accent" : "bg-neutral-300",
+                    )}
+                    id="reuse-budget"
+                    role="switch"
+                    type="button"
+                    onClick={() =>
+                        form.setValue("reuseBudget", !reuseBudget, {
+                            shouldDirty: true,
+                        })
+                    }
+                >
+                    <span
+                        className={cn(
+                            "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-transform duration-150 ease-[cubic-bezier(0,0,0.2,1)] [will-change:transform]",
+                            reuseBudget && "translate-x-4",
+                        )}
+                        style={{ backgroundColor: "#fff" }}
+                    />
+                </button>
+                <p className="text-sm leading-5 text-muted-foreground">
+                    Reuse this same budget for succeeding periods.
+                </p>
+            </div>
+        </div>
+    );
 
     return (
         <Card
@@ -407,76 +460,71 @@ function BudgetForm({
                 <CardContent
                     className={cn("space-y-4", isModal && "px-6 pb-6 pt-0")}
                 >
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
-                        <FieldError
-                            message={form.formState.errors.limit?.message}
-                        >
-                            <Label htmlFor="limit">Limit</Label>
-                            <Input
-                                id="limit"
-                                inputMode="decimal"
-                                onInput={handleDecimalInput}
-                                pattern="[0-9]*[.]?[0-9]*"
-                                type="text"
-                                {...form.register("limit", {
-                                    setValueAs: parseDecimalInput,
-                                })}
+                    {isPage ? (
+                        <>
+                            <BudgetPeriodInput
+                                cycleSettings={cycleSettings}
+                                form={form}
                             />
-                        </FieldError>
-                        <BudgetPeriodInput
-                            cycleSettings={cycleSettings}
-                            form={form}
-                        />
-                    </div>
-                    <div>
-                        <Label htmlFor="reuse-budget">Reuse budget</Label>
-                        <div className="mt-2 flex items-center gap-3">
-                            <button
-                                aria-checked={reuseBudget}
-                                className={cn(
-                                    "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-                                    reuseBudget
-                                        ? "bg-accent"
-                                        : "bg-neutral-300",
-                                )}
-                                id="reuse-budget"
-                                role="switch"
-                                type="button"
-                                onClick={() =>
-                                    form.setValue("reuseBudget", !reuseBudget, {
-                                        shouldDirty: true,
-                                    })
-                                }
-                            >
-                                <span
-                                    className={cn(
-                                        "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-transform duration-150 ease-[cubic-bezier(0,0,0.2,1)] [will-change:transform]",
-                                        reuseBudget && "translate-x-4",
-                                    )}
-                                    style={{ backgroundColor: "#fff" }}
+                            {reuseBudgetToggle}
+                            <div>
+                                <Label className="text-muted-foreground">
+                                    Limit
+                                </Label>
+                                <AmountDisplay
+                                    className="mt-2"
+                                    value={limitText}
                                 />
-                            </button>
-                            <p className="text-sm leading-5 text-muted-foreground">
-                                Reuse this same budget for succeeding periods.
-                            </p>
-                        </div>
-                    </div>
-                    {isModal && (
-                        <div className="flex items-center gap-2 pt-2 sm:hidden">
-                            {editing && onDelete && (
+                            </div>
+                            <AmountKeypadGrid
+                                className="mt-4"
+                                value={limitText}
+                                onChange={handleLimitTextChange}
+                            />
+                            <div className="mt-4 flex items-center gap-2">
+                                {editing && onDelete && (
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        className="h-14 flex-1 select-none rounded-2xl border-destructive/70 bg-white text-base font-bold text-destructive md:hover:bg-destructive/10"
+                                        onClick={onDelete}
+                                    >
+                                        Delete
+                                    </Button>
+                                )}
                                 <Button
-                                    className="flex-1 border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
-                                    type="button"
-                                    variant="secondary"
-                                    onClick={onDelete}
+                                    className="h-14 flex-1 select-none rounded-2xl text-base font-bold"
+                                    type="submit"
                                 >
-                                    Delete
+                                    {submitLabel}
                                 </Button>
-                            )}
-                            <Button className="flex-1" type="submit">
-                                {submitLabel}
-                            </Button>
-                        </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3">
+                                <FieldError
+                                    message={form.formState.errors.limit?.message}
+                                >
+                                    <Label htmlFor="limit">Limit</Label>
+                                    <Input
+                                        id="limit"
+                                        inputMode="decimal"
+                                        onInput={handleDecimalInput}
+                                        pattern="[0-9]*[.]?[0-9]*"
+                                        type="text"
+                                        {...form.register("limit", {
+                                            setValueAs: parseDecimalInput,
+                                        })}
+                                    />
+                                </FieldError>
+                                <BudgetPeriodInput
+                                    cycleSettings={cycleSettings}
+                                    form={form}
+                                />
+                            </div>
+                            {reuseBudgetToggle}
+                        </>
                     )}
                 </CardContent>
                 <div
