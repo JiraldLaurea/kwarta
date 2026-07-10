@@ -73,6 +73,7 @@ import {
   EmptyState,
   FieldError,
   ModalBackButton,
+  PillCheckBadge,
 } from "@/components/kwarta/shared";
 
 // Layouts that stack full-width rows inside a single divided card; the rest are
@@ -1487,14 +1488,15 @@ export function QuickTransactionModal({
                         type="button"
                         aria-pressed={selected}
                         className={cn(
-                          "flex h-10 shrink-0 items-center whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                          "relative flex h-10 shrink-0 items-center whitespace-nowrap rounded-full border bg-muted px-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                           selected
-                            ? "border-accent bg-accent text-accent-foreground"
-                            : "border-border bg-muted text-foreground",
+                            ? "border-accent ring-2 ring-accent"
+                            : "border-border",
                         )}
                         onClick={() => setSelectedSubcategory(subcategory)}
                       >
                         {subcategory}
+                        {selected && <PillCheckBadge />}
                       </button>
                     );
                   })}
@@ -1516,10 +1518,10 @@ export function QuickTransactionModal({
                           type="button"
                           aria-pressed={selected}
                           className={cn(
-                            "flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border pl-2 pr-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                            "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                             selected
-                              ? "border-accent bg-accent text-accent-foreground"
-                              : "border-border bg-muted text-foreground",
+                              ? "border-accent ring-2 ring-accent"
+                              : "border-border",
                           )}
                           onClick={() => setSelectedAccountId(account.id)}
                         >
@@ -1529,6 +1531,7 @@ export function QuickTransactionModal({
                             iconClassName="h-3.5 w-3.5"
                           />
                           {getAccountLabel(account)}
+                          {selected && <PillCheckBadge />}
                         </button>
                       );
                     })}

@@ -44,6 +44,7 @@ import {
     EmptyState,
     FieldError,
     ModalBackButton,
+    PillCheckBadge,
     TransactionIcon,
     useIsMobileViewport,
 } from "@/components/kwarta/shared";
@@ -245,10 +246,10 @@ export function TransactionForm({
                                 type="button"
                                 aria-pressed={selected}
                                 className={cn(
-                                  "flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                  "relative flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-full border bg-muted px-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                   selected
-                                    ? "border-accent bg-accent text-accent-foreground"
-                                    : "border-border bg-muted text-foreground",
+                                    ? "border-accent ring-2 ring-accent"
+                                    : "border-border",
                                 )}
                                 onClick={() => {
                                   const nextCategory = getFirstCategoryId(
@@ -267,6 +268,7 @@ export function TransactionForm({
                                 }}
                               >
                                 {option.label}
+                                {selected && <PillCheckBadge />}
                               </button>
                             );
                           })}
@@ -290,10 +292,10 @@ export function TransactionForm({
                                 type="button"
                                 aria-pressed={selected}
                                 className={cn(
-                                  "flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border pl-2 pr-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                  "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                   selected
-                                    ? "border-accent bg-accent text-accent-foreground"
-                                    : "border-border bg-muted text-foreground",
+                                    ? "border-accent ring-2 ring-accent"
+                                    : "border-border",
                                 )}
                                 onClick={() =>
                                   form.setValue("categoryId", category.id, {
@@ -307,6 +309,7 @@ export function TransactionForm({
                                   iconClassName="h-3.5 w-3.5"
                                 />
                                 {category.name}
+                                {selected && <PillCheckBadge />}
                               </button>
                             );
                           })}
@@ -331,10 +334,10 @@ export function TransactionForm({
                                   type="button"
                                   aria-pressed={selected}
                                   className={cn(
-                                    "flex h-10 shrink-0 items-center whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                    "relative flex h-10 shrink-0 items-center whitespace-nowrap rounded-full border bg-muted px-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                     selected
-                                      ? "border-accent bg-accent text-accent-foreground"
-                                      : "border-border bg-muted text-foreground",
+                                      ? "border-accent ring-2 ring-accent"
+                                      : "border-border",
                                   )}
                                   onClick={() =>
                                     form.setValue("subcategory", subcategory, {
@@ -343,6 +346,7 @@ export function TransactionForm({
                                   }
                                 >
                                   {subcategory}
+                                  {selected && <PillCheckBadge />}
                                 </button>
                               );
                             })}
@@ -368,10 +372,10 @@ export function TransactionForm({
                                   type="button"
                                   aria-pressed={selected}
                                   className={cn(
-                                    "flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border pl-2 pr-4 text-sm font-semibold transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                    "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                     selected
-                                      ? "border-accent bg-accent text-accent-foreground"
-                                      : "border-border bg-muted text-foreground",
+                                      ? "border-accent ring-2 ring-accent"
+                                      : "border-border",
                                   )}
                                   onClick={() =>
                                     form.setValue("accountId", account.id, {
@@ -385,6 +389,7 @@ export function TransactionForm({
                                     iconClassName="h-3.5 w-3.5"
                                   />
                                   {getAccountLabel(account)}
+                                  {selected && <PillCheckBadge />}
                                 </button>
                               );
                             })}

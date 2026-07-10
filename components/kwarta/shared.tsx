@@ -4,6 +4,7 @@ import { type User } from "@supabase/supabase-js";
 import { disableBodyScroll, enableBodyScroll } from "body-scroll-lock";
 import {
     LuCalendar as Calendar,
+    LuCheck as Check,
     LuChevronLeft as ChevronLeft,
     LuChevronRight as ChevronRight,
     LuDelete as Delete,
@@ -2361,6 +2362,21 @@ export function IconBadge({
             style={{ color: "#FFFFFF", backgroundColor: color }}
         >
             <Icon className={cn("h-4 w-4", iconClassName)} aria-hidden />
+        </span>
+    );
+}
+
+// Small accent-colored checkmark badge that overlaps a selected pill's
+// top-right corner, matching the accent-color-swatch selection pattern in
+// Settings. The ring color matches the pill's own surrounding card
+// background so the badge reads as "cut out" of the pill's border.
+export function PillCheckBadge() {
+    return (
+        <span
+            aria-hidden
+            className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-accent-foreground ring-2 ring-card"
+        >
+            <Check className="h-2.5 w-2.5" strokeWidth={3} />
         </span>
     );
 }
