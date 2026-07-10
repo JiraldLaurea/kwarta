@@ -248,7 +248,7 @@ export function TransactionForm({
                                 className={cn(
                                   "relative flex h-10 flex-1 items-center justify-center whitespace-nowrap rounded-full border bg-muted px-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                   selected
-                                    ? "border-accent ring-2 ring-accent"
+                                    ? "border-accent ring-1 ring-accent"
                                     : "border-border",
                                 )}
                                 onClick={() => {
@@ -279,7 +279,7 @@ export function TransactionForm({
                           Category
                         </Label>
                         <div
-                          className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                          className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                           data-quick-add-scroll
                         >
                           {availableCategories.map((category) => {
@@ -294,7 +294,7 @@ export function TransactionForm({
                                 className={cn(
                                   "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                   selected
-                                    ? "border-accent ring-2 ring-accent"
+                                    ? "border-accent ring-1 ring-accent"
                                     : "border-border",
                                 )}
                                 onClick={() =>
@@ -321,7 +321,7 @@ export function TransactionForm({
                             Subcategory
                           </Label>
                           <div
-                            className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                            className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             data-quick-add-scroll
                           >
                             {subcategories.map((subcategory) => {
@@ -336,7 +336,7 @@ export function TransactionForm({
                                   className={cn(
                                     "relative flex h-10 shrink-0 items-center whitespace-nowrap rounded-full border bg-muted px-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                     selected
-                                      ? "border-accent ring-2 ring-accent"
+                                      ? "border-accent ring-1 ring-accent"
                                       : "border-border",
                                   )}
                                   onClick={() =>
@@ -359,7 +359,7 @@ export function TransactionForm({
                             Account
                           </Label>
                           <div
-                            className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                            className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                             data-quick-add-scroll
                           >
                             {accounts.map((account) => {
@@ -374,7 +374,7 @@ export function TransactionForm({
                                   className={cn(
                                     "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                                     selected
-                                      ? "border-accent ring-2 ring-accent"
+                                      ? "border-accent ring-1 ring-accent"
                                       : "border-border",
                                   )}
                                   onClick={() =>
