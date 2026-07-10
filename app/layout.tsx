@@ -55,13 +55,6 @@ export default function RootLayout({
               '(function(){try{var mode=localStorage.getItem("kwarta:color-mode");var isDark=mode==="dark"||(mode==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(isDark){document.documentElement.classList.add("dark");}var valid=["black","green","teal","blue","indigo","purple","rose","amber","pink"];var theme=localStorage.getItem("kwarta:accent-theme");document.documentElement.dataset.accent=valid.indexOf(theme)>-1?theme:"black";}catch(error){}})();'
           }}
         />
-        <link
-          as="image"
-          fetchPriority="high"
-          href="/icons/icon-192.png"
-          rel="preload"
-          type="image/png"
-        />
         {accountLogoPreloads.map((logo) => (
           <link
             as="image"

@@ -62,6 +62,7 @@ import {
     type PeriodFrequency,
     type SelectedPeriod,
 } from "@/lib/kwarta/helpers";
+import { LOGO_MARK_DATA_URI } from "@/lib/kwarta/logo-mark";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -2601,6 +2602,9 @@ export function GoogleLogo({ className }: { className?: string }) {
 
 export function LogoMark({ size }: { size: number }) {
     return (
+        // Inlined data URI (not a file src) so it renders on the first paint —
+        // the loading screen showed the "Kwarta" text instantly while the
+        // raster logo lagged behind its network fetch.
         // eslint-disable-next-line @next/next/no-img-element
         <img
             alt=""
@@ -2610,7 +2614,7 @@ export function LogoMark({ size }: { size: number }) {
             fetchPriority="high"
             height={size}
             loading="eager"
-            src="/icons/icon-192.png"
+            src={LOGO_MARK_DATA_URI}
             width={size}
         />
     );
