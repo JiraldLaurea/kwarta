@@ -616,7 +616,9 @@ function TransferForm({
                             disabled &&
                                 "cursor-not-allowed opacity-40",
                         )}
-                        onClick={() => onSelect(account.id)}
+                        // Tapping the selected account again clears it, so a
+                        // From/To choice can be undone without a "none" option.
+                        onClick={() => onSelect(selected ? "" : account.id)}
                     >
                         <AccountLogo
                             account={account}

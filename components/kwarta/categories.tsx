@@ -265,7 +265,7 @@ export function CategoryForm({
             {/* Mobile: a single horizontally-scrollable row of larger icons.
                 Desktop: the full wrapping grid. */}
             <div
-              className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:hidden"
+              className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:hidden"
               data-quick-add-scroll
             >
               {categoryIconChoices.map((choice) => {
@@ -691,9 +691,9 @@ export function SubcategoryForm({
             </p>
           </FieldError>
           {isModal && (
-            <div className="grid gap-2 pt-2 sm:hidden">
+            <div className="flex items-center gap-2 pt-2 sm:hidden">
               <Button
-                className="h-14 w-full select-none rounded-2xl text-base font-bold"
+                className="h-14 flex-1 select-none rounded-2xl text-base font-bold"
                 disabled={hasEmptySubcategory || hasMaximumSubcategories}
                 type="button"
                 variant="secondary"
@@ -703,7 +703,7 @@ export function SubcategoryForm({
                 Add
               </Button>
               <Button
-                className="h-14 w-full select-none rounded-2xl text-base font-bold"
+                className="h-14 flex-1 select-none rounded-2xl text-base font-bold"
                 disabled={hasEmptySubcategory}
                 type="submit"
               >
