@@ -595,41 +595,39 @@ function TransferForm({
             className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             data-quick-add-scroll
         >
-            {accounts.map((account) => {
-                const selected = account.id === value;
-                // The account chosen in the other field is shown but
-                // disabled, so the two rows stay stable instead of items
-                // disappearing as you pick.
-                const disabled = account.id === excludeId;
+            {accounts
+                .filter((account) => account.id !== excludeId)
+                .map((account) => {
+                    const selected = account.id === value;
 
-                return (
-                    <button
-                        key={account.id}
-                        type="button"
-                        aria-pressed={selected}
-                        disabled={disabled}
-                        className={cn(
-                            "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-                            selected
-                                ? "border-accent ring-1 ring-accent"
-                                : "border-border",
-                            disabled &&
-                                "cursor-not-allowed opacity-40",
-                        )}
-                        // Tapping the selected account again clears it, so a
-                        // From/To choice can be undone without a "none" option.
-                        onClick={() => onSelect(selected ? "" : account.id)}
-                    >
-                        <AccountLogo
-                            account={account}
-                            className="h-6 w-6"
-                            iconClassName="h-3.5 w-3.5"
-                        />
-                        {accountLabel(account)}
-                        {selected && <PillCheckBadge />}
-                    </button>
-                );
-            })}
+                    return (
+                        <button
+                            key={account.id}
+                            type="button"
+                            aria-pressed={selected}
+                            className={cn(
+                                "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                selected
+                                    ? "border-accent ring-1 ring-accent"
+                                    : "border-border",
+                            )}
+                            // Tapping the selected account again clears it, so a
+                            // From/To choice can be undone without a "none"
+                            // option.
+                            onClick={() =>
+                                onSelect(selected ? "" : account.id)
+                            }
+                        >
+                            <AccountLogo
+                                account={account}
+                                className="h-6 w-6"
+                                iconClassName="h-3.5 w-3.5"
+                            />
+                            {accountLabel(account)}
+                            {selected && <PillCheckBadge />}
+                        </button>
+                    );
+                })}
         </div>
     );
 
@@ -686,14 +684,6 @@ function TransferForm({
                                         shouldValidate: true,
                                     }),
                             )}
-                            {form.formState.errors.fromAccountId && (
-                                <p className="mt-1 text-sm leading-5 text-destructive">
-                                    {
-                                        form.formState.errors.fromAccountId
-                                            .message
-                                    }
-                                </p>
-                            )}
                         </div>
                         <div>
                             <Label className="text-muted-foreground">To</Label>
@@ -704,11 +694,6 @@ function TransferForm({
                                     form.setValue("toAccountId", id, {
                                         shouldValidate: true,
                                     }),
-                            )}
-                            {form.formState.errors.toAccountId && (
-                                <p className="mt-1 text-sm leading-5 text-destructive">
-                                    {form.formState.errors.toAccountId.message}
-                                </p>
                             )}
                         </div>
                         <div>
