@@ -262,7 +262,38 @@ export function CategoryForm({
           </div>
           <FieldError message={form.formState.errors.icon?.message}>
             <Label>Icon</Label>
-            <div className="mt-2 grid w-full grid-cols-9 sm:grid-cols-10 gap-2">
+            {/* Mobile: a single horizontally-scrollable row of larger icons.
+                Desktop: the full wrapping grid. */}
+            <div
+              className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:hidden"
+              data-quick-add-scroll
+            >
+              {categoryIconChoices.map((choice) => {
+                const Icon = choice.icon;
+                const isSelected = selectedIcon === choice.value;
+
+                return (
+                  <button
+                    key={choice.value}
+                    aria-label={`Use ${choice.label} icon`}
+                    className={cn(
+                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      isSelected &&
+                        "border-accent text-foreground ring-1 ring-accent",
+                    )}
+                    type="button"
+                    onClick={() =>
+                      form.setValue("icon", choice.value, {
+                        shouldValidate: true,
+                      })
+                    }
+                  >
+                    <Icon className="h-6 w-6" aria-hidden />
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 hidden w-full grid-cols-10 gap-2 sm:grid">
               {categoryIconChoices.map((choice) => {
                 const Icon = choice.icon;
                 const isSelected = selectedIcon === choice.value;
@@ -293,7 +324,7 @@ export function CategoryForm({
             <div className="flex items-center gap-2 pt-2 sm:hidden">
               {editing && onDelete && (
                 <Button
-                  className="flex-1 border-destructive/70 bg-white text-destructive md:hover:bg-destructive/10"
+                  className="h-14 flex-1 select-none rounded-2xl border-destructive/70 bg-white text-base font-bold text-destructive md:hover:bg-destructive/10"
                   type="button"
                   variant="secondary"
                   onClick={onDelete}
@@ -301,7 +332,10 @@ export function CategoryForm({
                   Delete
                 </Button>
               )}
-              <Button className="flex-1" type="submit">
+              <Button
+                className="h-14 flex-1 select-none rounded-2xl text-base font-bold"
+                type="submit"
+              >
                 {editing ? "Save category" : "Add category"}
               </Button>
             </div>
@@ -549,26 +583,66 @@ export function SubcategoryForm({
         <CardContent className={cn("space-y-4", isModal && "px-6 pb-6 pt-0")}>
           <FieldError message={form.formState.errors.categoryId?.message}>
             <Label htmlFor="subcategory-category">Category</Label>
-            <Select
-              id="subcategory-category"
-              onValueChange={(value) =>
-                form.setValue("categoryId", value, {
-                  shouldValidate: true,
-                })
-              }
-              options={categories.map((category) => ({
-                icon: (
-                  <CategoryIconBadge
-                    category={category}
-                    className="h-6 w-6"
-                    iconClassName="h-3.5 w-3.5"
-                  />
-                ),
-                label: category.name,
-                value: category.id,
-              }))}
-              value={selectedCategoryId}
-            />
+            {/* Mobile: horizontally-scrollable pills. Desktop: dropdown. */}
+            <div>
+              <div
+                className="-mx-6 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:hidden"
+                data-quick-add-scroll
+              >
+                {categories.map((category) => {
+                  const selected = category.id === selectedCategoryId;
+
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      aria-pressed={selected}
+                      className={cn(
+                        "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                        selected
+                          ? "border-accent ring-1 ring-accent"
+                          : "border-border",
+                      )}
+                      onClick={() =>
+                        form.setValue("categoryId", category.id, {
+                          shouldValidate: true,
+                        })
+                      }
+                    >
+                      <CategoryIconBadge
+                        category={category}
+                        className="h-6 w-6"
+                        iconClassName="h-3.5 w-3.5"
+                      />
+                      {category.name}
+                      {selected && <PillCheckBadge />}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="hidden sm:block">
+                <Select
+                  id="subcategory-category"
+                  onValueChange={(value) =>
+                    form.setValue("categoryId", value, {
+                      shouldValidate: true,
+                    })
+                  }
+                  options={categories.map((category) => ({
+                    icon: (
+                      <CategoryIconBadge
+                        category={category}
+                        className="h-6 w-6"
+                        iconClassName="h-3.5 w-3.5"
+                      />
+                    ),
+                    label: category.name,
+                    value: category.id,
+                  }))}
+                  value={selectedCategoryId}
+                />
+              </div>
+            </div>
           </FieldError>
           <FieldError message={form.formState.errors.subcategories?.message}>
             <div className="flex items-center justify-between gap-3">
@@ -619,7 +693,7 @@ export function SubcategoryForm({
           {isModal && (
             <div className="grid gap-2 pt-2 sm:hidden">
               <Button
-                className="w-full"
+                className="h-14 w-full select-none rounded-2xl text-base font-bold"
                 disabled={hasEmptySubcategory || hasMaximumSubcategories}
                 type="button"
                 variant="secondary"
@@ -629,7 +703,7 @@ export function SubcategoryForm({
                 Add
               </Button>
               <Button
-                className="w-full"
+                className="h-14 w-full select-none rounded-2xl text-base font-bold"
                 disabled={hasEmptySubcategory}
                 type="submit"
               >

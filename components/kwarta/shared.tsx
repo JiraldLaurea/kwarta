@@ -2009,7 +2009,10 @@ export function EditModal(props: {
     if (isMobile) {
         return (
             <MobileBottomSheet
-                allowContentScroll={props.allowContentScroll}
+                // Bottom sheets should scroll when their form is taller than
+                // the sheet (e.g. the keypad forms) instead of clipping the
+                // content. Callers can still opt out by passing false.
+                allowContentScroll={props.allowContentScroll ?? true}
                 className={props.className}
                 onOpenComplete={props.onOpenComplete}
                 onClose={props.onClose}

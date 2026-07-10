@@ -595,34 +595,39 @@ function TransferForm({
             className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             data-quick-add-scroll
         >
-            {accounts
-                .filter((account) => account.id !== excludeId)
-                .map((account) => {
-                    const selected = account.id === value;
+            {accounts.map((account) => {
+                const selected = account.id === value;
+                // The account chosen in the other field is shown but
+                // disabled, so the two rows stay stable instead of items
+                // disappearing as you pick.
+                const disabled = account.id === excludeId;
 
-                    return (
-                        <button
-                            key={account.id}
-                            type="button"
-                            aria-pressed={selected}
-                            className={cn(
-                                "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-                                selected
-                                    ? "border-accent ring-1 ring-accent"
-                                    : "border-border",
-                            )}
-                            onClick={() => onSelect(account.id)}
-                        >
-                            <AccountLogo
-                                account={account}
-                                className="h-6 w-6"
-                                iconClassName="h-3.5 w-3.5"
-                            />
-                            {accountLabel(account)}
-                            {selected && <PillCheckBadge />}
-                        </button>
-                    );
-                })}
+                return (
+                    <button
+                        key={account.id}
+                        type="button"
+                        aria-pressed={selected}
+                        disabled={disabled}
+                        className={cn(
+                            "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                            selected
+                                ? "border-accent ring-1 ring-accent"
+                                : "border-border",
+                            disabled &&
+                                "cursor-not-allowed opacity-40",
+                        )}
+                        onClick={() => onSelect(account.id)}
+                    >
+                        <AccountLogo
+                            account={account}
+                            className="h-6 w-6"
+                            iconClassName="h-3.5 w-3.5"
+                        />
+                        {accountLabel(account)}
+                        {selected && <PillCheckBadge />}
+                    </button>
+                );
+            })}
         </div>
     );
 
@@ -1096,6 +1101,21 @@ function AccountForm({
         form.trigger(["type", "provider"]);
     }
 
+    function applyBrandChange(value: string) {
+        const nextProvider =
+            value === OTHER_PROVIDER_VALUE ? undefined : value;
+
+        form.setValue("provider", nextProvider);
+
+        if (!nextProvider) {
+            form.setValue("icon", getDefaultAccountIcon(selectedType), {
+                shouldValidate: true,
+            });
+        }
+    }
+
+    const brandValue = brandSelectValue ?? OTHER_PROVIDER_VALUE;
+
     return (
         <Card
             className={cn(
@@ -1210,62 +1230,120 @@ function AccountForm({
                             </FieldError>
                         </div>
                     )}
-                    {supportsBrands && (
-                        <FieldError>
-                            <Label htmlFor="account-brand">{brandLabel}</Label>
-                            <Select
-                                id="account-brand"
-                                onValueChange={(value) => {
-                                    const nextProvider =
-                                        value === OTHER_PROVIDER_VALUE
-                                            ? undefined
-                                            : value;
+                    {supportsBrands &&
+                        (isPage ? (
+                            <div>
+                                <Label className="text-muted-foreground">
+                                    {brandLabel}
+                                </Label>
+                                <div
+                                    className="-mx-6 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-6 pb-1 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                                    data-quick-add-scroll
+                                >
+                                    {providerChoices.map((provider) => {
+                                        const selected =
+                                            brandValue === provider.key;
 
-                                    form.setValue("provider", nextProvider);
-
-                                    if (!nextProvider) {
-                                        form.setValue(
-                                            "icon",
-                                            getDefaultAccountIcon(selectedType),
-                                            {
-                                                shouldValidate: true,
-                                            },
+                                        return (
+                                            <button
+                                                key={provider.key}
+                                                type="button"
+                                                aria-pressed={selected}
+                                                className={cn(
+                                                    "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                                    selected
+                                                        ? "border-accent ring-1 ring-accent"
+                                                        : "border-border",
+                                                )}
+                                                onClick={() =>
+                                                    applyBrandChange(
+                                                        provider.key,
+                                                    )
+                                                }
+                                            >
+                                                <AccountLogo
+                                                    account={{
+                                                        color: provider.color,
+                                                        icon: selectedIcon,
+                                                        provider: provider.key,
+                                                    }}
+                                                    className="h-6 w-6"
+                                                    iconClassName="h-3.5 w-3.5"
+                                                />
+                                                {provider.label}
+                                                {selected && <PillCheckBadge />}
+                                            </button>
                                         );
-                                    }
-                                }}
-                                options={[
-                                    ...providerChoices.map((provider) => ({
-                                        icon: (
-                                            <AccountLogo
-                                                account={{
-                                                    color: provider.color,
-                                                    icon: selectedIcon,
-                                                    provider: provider.key,
-                                                }}
-                                                className="h-6 w-6"
-                                                iconClassName="h-3.5 w-3.5"
-                                            />
-                                        ),
-                                        label: provider.label,
-                                        value: provider.key,
-                                    })),
-                                    {
-                                        icon: (
-                                            <IconBadge
-                                                color="#737373"
-                                                icon="wallet"
-                                                className="h-6 w-6"
-                                                iconClassName="h-3.5 w-3.5"
-                                            />
-                                        ),
-                                        label: `Other ${brandLabel.toLowerCase()}`,
-                                        value: OTHER_PROVIDER_VALUE,
-                                    },
-                                ]}
-                                value={brandSelectValue ?? OTHER_PROVIDER_VALUE}
-                            />
-                        </FieldError>
-                    )}
+                                    })}
+                                    <button
+                                        type="button"
+                                        aria-pressed={
+                                            brandValue === OTHER_PROVIDER_VALUE
+                                        }
+                                        className={cn(
+                                            "relative flex h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-full border bg-muted pl-2 pr-4 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                            brandValue === OTHER_PROVIDER_VALUE
+                                                ? "border-accent ring-1 ring-accent"
+                                                : "border-border",
+                                        )}
+                                        onClick={() =>
+                                            applyBrandChange(OTHER_PROVIDER_VALUE)
+                                        }
+                                    >
+                                        <IconBadge
+                                            color="#737373"
+                                            icon="wallet"
+                                            className="h-6 w-6"
+                                            iconClassName="h-3.5 w-3.5"
+                                        />
+                                        Other {brandLabel.toLowerCase()}
+                                        {brandValue === OTHER_PROVIDER_VALUE && (
+                                            <PillCheckBadge />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <FieldError>
+                                <Label htmlFor="account-brand">
+                                    {brandLabel}
+                                </Label>
+                                <Select
+                                    id="account-brand"
+                                    onValueChange={applyBrandChange}
+                                    options={[
+                                        ...providerChoices.map((provider) => ({
+                                            icon: (
+                                                <AccountLogo
+                                                    account={{
+                                                        color: provider.color,
+                                                        icon: selectedIcon,
+                                                        provider: provider.key,
+                                                    }}
+                                                    className="h-6 w-6"
+                                                    iconClassName="h-3.5 w-3.5"
+                                                />
+                                            ),
+                                            label: provider.label,
+                                            value: provider.key,
+                                        })),
+                                        {
+                                            icon: (
+                                                <IconBadge
+                                                    color="#737373"
+                                                    icon="wallet"
+                                                    className="h-6 w-6"
+                                                    iconClassName="h-3.5 w-3.5"
+                                                />
+                                            ),
+                                            label: `Other ${brandLabel.toLowerCase()}`,
+                                            value: OTHER_PROVIDER_VALUE,
+                                        },
+                                    ]}
+                                    value={brandValue}
+                                />
+                            </FieldError>
+                        ))}
                     <FieldError message={form.formState.errors.name?.message}>
                         <Label htmlFor="account-name">
                             {selectedProvider ? "Label (optional)" : "Name"}
