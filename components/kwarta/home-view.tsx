@@ -1254,12 +1254,17 @@ export function QuickTransactionModal({
   if (requiresBudget && !budget) {
     const reuseBudgetToggle = (
       <div className="mt-4">
-        <Label htmlFor="quick-reuse-budget">Reuse budget</Label>
+        <Label
+          htmlFor="quick-reuse-budget"
+          className={cn(isPage && "text-muted-foreground")}
+        >
+          Reuse budget
+        </Label>
         <div className="mt-2 flex items-center gap-3">
           <button
             aria-checked={reuseBudget}
             className={cn(
-              "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+              "relative inline-block h-6 w-11 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
               reuseBudget ? "bg-accent" : "bg-neutral-300",
             )}
             id="quick-reuse-budget"
@@ -1269,8 +1274,8 @@ export function QuickTransactionModal({
           >
             <span
               className={cn(
-                "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-transform duration-150 ease-[cubic-bezier(0,0,0.2,1)] [will-change:transform]",
-                reuseBudget && "translate-x-4",
+                "pointer-events-none absolute left-[2px] top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
+                reuseBudget && "left-[22px]",
               )}
               style={{ backgroundColor: "#fff" }}
             />

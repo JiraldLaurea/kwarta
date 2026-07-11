@@ -1332,7 +1332,10 @@ function AccountForm({
                             </FieldError>
                         ))}
                     <FieldError message={form.formState.errors.name?.message}>
-                        <Label htmlFor="account-name">
+                        <Label
+                            htmlFor="account-name"
+                            className={cn(isPage && "text-muted-foreground")}
+                        >
                             {selectedProvider ? "Label (optional)" : "Name"}
                         </Label>
                         <Input
@@ -1349,7 +1352,11 @@ function AccountForm({
                     </FieldError>
                     {usesCustomLook && (
                         <div>
-                            <Label>Color</Label>
+                            <Label
+                                className={cn(isPage && "text-muted-foreground")}
+                            >
+                                Color
+                            </Label>
                             <div className="mt-2 flex flex-wrap gap-2">
                                 {colorChoices.map((color) => (
                                     <button

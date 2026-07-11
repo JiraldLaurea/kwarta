@@ -183,11 +183,21 @@ export function CategoryForm({
         <CardContent className={cn("space-y-4", isModal && "px-6 pb-6 pt-0")}>
           <div className="grid gap-4 sm:grid-cols-2">
             <FieldError message={form.formState.errors.name?.message}>
-              <Label htmlFor="category-name">Name</Label>
+              <Label
+                htmlFor="category-name"
+                className="text-muted-foreground sm:text-foreground"
+              >
+                Name
+              </Label>
               <Input id="category-name" {...form.register("name")} />
             </FieldError>
             <FieldError message={form.formState.errors.type?.message}>
-              <Label htmlFor="category-type">Type</Label>
+              <Label
+                htmlFor="category-type"
+                className="text-muted-foreground sm:text-foreground"
+              >
+                Type
+              </Label>
               {/* Mobile: pills, matching the transaction/quick-add forms.
                   Desktop: the dropdown. */}
               <div>
@@ -242,7 +252,9 @@ export function CategoryForm({
             </FieldError>
           </div>
           <div>
-            <Label>Color</Label>
+            <Label className="text-muted-foreground sm:text-foreground">
+              Color
+            </Label>
             <div className="mt-2 flex flex-wrap gap-2">
               {colorChoices.map((color) => (
                 <button
@@ -261,7 +273,9 @@ export function CategoryForm({
             </div>
           </div>
           <FieldError message={form.formState.errors.icon?.message}>
-            <Label>Icon</Label>
+            <Label className="text-muted-foreground sm:text-foreground">
+              Icon
+            </Label>
             {/* Mobile: a single horizontally-scrollable row of larger icons.
                 Desktop: the full wrapping grid. */}
             <div
@@ -582,7 +596,12 @@ export function SubcategoryForm({
         </CardHeader>
         <CardContent className={cn("space-y-4", isModal && "px-6 pb-6 pt-0")}>
           <FieldError message={form.formState.errors.categoryId?.message}>
-            <Label htmlFor="subcategory-category">Category</Label>
+            <Label
+              htmlFor="subcategory-category"
+              className="text-muted-foreground sm:text-foreground"
+            >
+              Category
+            </Label>
             {/* Mobile: horizontally-scrollable pills. Desktop: dropdown. */}
             <div>
               <div
@@ -646,7 +665,9 @@ export function SubcategoryForm({
           </FieldError>
           <FieldError message={form.formState.errors.subcategories?.message}>
             <div className="flex items-center justify-between gap-3">
-              <Label>Subcategories</Label>
+              <Label className="text-muted-foreground sm:text-foreground">
+                Subcategories
+              </Label>
             </div>
             <DndContext
               sensors={sensors}

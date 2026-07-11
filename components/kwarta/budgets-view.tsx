@@ -384,12 +384,17 @@ function BudgetForm({
 
     const reuseBudgetToggle = (
         <div>
-            <Label htmlFor="reuse-budget">Reuse budget</Label>
+            <Label
+                htmlFor="reuse-budget"
+                className={cn(isPage && "text-muted-foreground")}
+            >
+                Reuse budget
+            </Label>
             <div className="mt-2 flex items-center gap-3">
                 <button
                     aria-checked={reuseBudget}
                     className={cn(
-                        "relative inline-block h-6 w-10 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                        "relative inline-block h-6 w-11 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                         reuseBudget ? "bg-accent" : "bg-neutral-300",
                     )}
                     id="reuse-budget"
@@ -403,8 +408,8 @@ function BudgetForm({
                 >
                     <span
                         className={cn(
-                            "pointer-events-none absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.22)] transition-transform duration-150 ease-[cubic-bezier(0,0,0.2,1)] [will-change:transform]",
-                            reuseBudget && "translate-x-4",
+                            "pointer-events-none absolute left-[2px] top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
+                            reuseBudget && "left-[22px]",
                         )}
                         style={{ backgroundColor: "#fff" }}
                     />
@@ -465,6 +470,7 @@ function BudgetForm({
                             <BudgetPeriodInput
                                 cycleSettings={cycleSettings}
                                 form={form}
+                                muted
                             />
                             {reuseBudgetToggle}
                             <div>
@@ -566,11 +572,14 @@ function BudgetForm({
 function BudgetPeriodInput({
     cycleSettings,
     form,
+    muted = false,
 }: {
     cycleSettings: BudgetCycleSettings;
     form: ReturnType<typeof useForm<BudgetFormValues>>;
+    muted?: boolean;
 }) {
     const frequency = form.watch("frequency");
+    const labelClassName = muted ? "text-muted-foreground" : undefined;
 
     function setBudgetPeriod(nextPeriod: SelectedPeriod) {
         form.setValue("frequency", nextPeriod.frequency, {
@@ -590,7 +599,9 @@ function BudgetPeriodInput({
     if (frequency === "weekly") {
         return (
             <FieldError message={form.formState.errors.periodStart?.message}>
-                <Label htmlFor="budget-week">Week</Label>
+                <Label htmlFor="budget-week" className={labelClassName}>
+                    Week
+                </Label>
                 <WeekPickerInput
                     value={form.watch("periodStart")}
                     onChange={(date) => setBudgetPeriod(createWeeklyPeriod(date))}
@@ -602,7 +613,9 @@ function BudgetPeriodInput({
     if (frequency === "cycle") {
         return (
             <FieldError message={form.formState.errors.periodStart?.message}>
-                <Label htmlFor="budget-cycle">Cycle</Label>
+                <Label htmlFor="budget-cycle" className={labelClassName}>
+                    Cycle
+                </Label>
                 <BudgetCyclePickerInput
                     settings={cycleSettings}
                     value={form.watch("periodStart")}
@@ -618,7 +631,9 @@ function BudgetPeriodInput({
 
     return (
         <FieldError message={form.formState.errors.month?.message}>
-            <Label htmlFor="month">Month</Label>
+            <Label htmlFor="month" className={labelClassName}>
+                Month
+            </Label>
             <MonthPickerInput
                 id="month"
                 value={form.watch("month")}
