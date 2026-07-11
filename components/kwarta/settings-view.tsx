@@ -24,7 +24,7 @@ import {
     FaSun,
 } from "react-icons/fa";
 import { RiLayoutFill } from "react-icons/ri";
-import { IoPricetagsOutline, IoStatsChart } from "react-icons/io5";
+import { IoPricetags, IoStatsChart } from "react-icons/io5";
 import type { User } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -134,7 +134,7 @@ export function SettingsView({
                     onClick={onViewReports}
                 />
                 <SettingsNavCard
-                    icon={IoPricetagsOutline}
+                    icon={IoPricetags}
                     title="Manage categories"
                     description="Add, edit & reorder categories"
                     onClick={onManageCategories}

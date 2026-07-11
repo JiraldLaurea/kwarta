@@ -62,7 +62,10 @@ import {
     type PeriodFrequency,
     type SelectedPeriod,
 } from "@/lib/kwarta/helpers";
-import { LOGO_MARK_DATA_URI } from "@/lib/kwarta/logo-mark";
+import {
+    LOGO_MARK_DATA_URI,
+    LOGO_MARK_DATA_URI_DARK,
+} from "@/lib/kwarta/logo-mark";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
@@ -2604,22 +2607,38 @@ export function GoogleLogo({ className }: { className?: string }) {
 }
 
 export function LogoMark({ size }: { size: number }) {
+    // Both variants are inlined data URIs (not file srcs) so the mark renders
+    // on the first paint — the loading screen showed the "Kwarta" text
+    // instantly while a raster logo lagged behind its network fetch. The
+    // dark-mode variant (white square, black glyph) is swapped in via a `dark:`
+    // CSS variant so no theme check is needed before paint.
     return (
-        // Inlined data URI (not a file src) so it renders on the first paint —
-        // the loading screen showed the "Kwarta" text instantly while the
-        // raster logo lagged behind its network fetch.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-            alt=""
-            aria-hidden
-            className="shrink-0 rounded-md"
-            decoding="sync"
-            fetchPriority="high"
-            height={size}
-            loading="eager"
-            src={LOGO_MARK_DATA_URI}
-            width={size}
-        />
+        <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+                alt=""
+                aria-hidden
+                className="shrink-0 rounded-md dark:hidden"
+                decoding="sync"
+                fetchPriority="high"
+                height={size}
+                loading="eager"
+                src={LOGO_MARK_DATA_URI}
+                width={size}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+                alt=""
+                aria-hidden
+                className="hidden shrink-0 rounded-md dark:block"
+                decoding="sync"
+                fetchPriority="high"
+                height={size}
+                loading="eager"
+                src={LOGO_MARK_DATA_URI_DARK}
+                width={size}
+            />
+        </>
     );
 }
 
