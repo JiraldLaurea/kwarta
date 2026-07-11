@@ -10,10 +10,10 @@ import {
 import {
   IoHomeOutline,
   IoPieChartOutline,
-  IoPricetags,
+  IoPricetagsOutline,
   IoReceiptOutline,
   IoSettingsOutline,
-  IoStatsChart,
+  IoStatsChartOutline,
   IoWalletOutline,
 } from "react-icons/io5";
 import { cn } from "@/lib/utils";
@@ -136,7 +136,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   reports: {
     title: "Reports",
-    icon: IoStatsChart,
+    icon: IoStatsChartOutline,
     steps: [
       {
         caption: "Your money at a glance",
@@ -156,7 +156,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   "manage-categories": {
     title: "Manage categories",
-    icon: IoPricetags,
+    icon: IoPricetagsOutline,
     steps: [
       {
         caption: "Add a category",
