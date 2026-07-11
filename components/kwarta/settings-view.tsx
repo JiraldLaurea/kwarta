@@ -579,7 +579,7 @@ function GeneralBlock({
 function SettingIconBadge({ icon: Icon }: { icon: IconType }) {
     return (
         <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-muted text-accent-muted-foreground"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"
             aria-hidden
         >
             <Icon className="h-[18px] w-[18px]" />
