@@ -2,18 +2,20 @@ import { useEffect, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import {
   LuArrowLeft as ArrowLeft,
-  LuChartColumn as BarChart3,
   LuChevronLeft as ChevronLeft,
   LuChevronRight as ChevronRight,
   LuImageOff as ImageOff,
-  LuChartPie as PieChart,
-  LuReceipt as Receipt,
-  LuSettings as Settings,
-  LuTags as Tags,
-  LuWallet as Wallet,
   LuX as X,
 } from "react-icons/lu";
-import { RiLayoutFill } from "react-icons/ri";
+import {
+  IoHomeOutline,
+  IoPieChartOutline,
+  IoPricetags,
+  IoReceiptOutline,
+  IoSettingsOutline,
+  IoStatsChart,
+  IoWalletOutline,
+} from "react-icons/io5";
 import { cn } from "@/lib/utils";
 import { Card, CardTitle } from "@/components/ui/card";
 import {
@@ -51,7 +53,7 @@ const topicOrder: View[] = [
 const helpTopics: Partial<Record<View, HelpTopic>> = {
   dashboard: {
     title: "Home",
-    icon: RiLayoutFill,
+    icon: IoHomeOutline,
     steps: [
       {
         caption: "Log money in a tap",
@@ -66,7 +68,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   transactions: {
     title: "Transactions",
-    icon: Receipt,
+    icon: IoReceiptOutline,
     steps: [
       {
         caption: "Every entry, by day",
@@ -81,7 +83,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   budgets: {
     title: "Budgets",
-    icon: PieChart,
+    icon: IoPieChartOutline,
     steps: [
       {
         caption: "See the whole picture",
@@ -100,7 +102,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   accounts: {
     title: "Accounts",
-    icon: Wallet,
+    icon: IoWalletOutline,
     steps: [
       {
         caption: "Track every balance",
@@ -114,7 +116,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   settings: {
     title: "Settings",
-    icon: Settings,
+    icon: IoSettingsOutline,
     steps: [
       {
         caption: "Make it yours",
@@ -134,7 +136,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   reports: {
     title: "Reports",
-    icon: BarChart3,
+    icon: IoStatsChart,
     steps: [
       {
         caption: "Your money at a glance",
@@ -154,7 +156,7 @@ const helpTopics: Partial<Record<View, HelpTopic>> = {
   },
   "manage-categories": {
     title: "Manage categories",
-    icon: Tags,
+    icon: IoPricetags,
     steps: [
       {
         caption: "Add a category",
@@ -250,7 +252,7 @@ function HelpIndex({
         <CloseButton onClose={onClose} />
       </div>
 
-      <div className="mt-5 overflow-hidden rounded-xl border border-border divide-y divide-border">
+      <div className="mt-5 divide-y divide-border overflow-hidden rounded-2xl border border-border">
         {topicOrder.map((key) => {
           const topic = helpTopics[key];
           if (!topic) {
@@ -263,19 +265,17 @@ function HelpIndex({
               key={key}
               type="button"
               onClick={() => onSelect(key)}
-              className="flex w-full items-center gap-3 bg-card px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))]"
+              className="flex w-full items-center gap-3 bg-card px-4 py-3.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))]"
             >
-              <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-muted text-accent-muted-foreground"
+              <Icon
+                className="h-5 w-5 shrink-0 text-muted-foreground"
                 aria-hidden
-              >
-                <Icon className="h-[18px] w-[18px]" />
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-medium leading-5">
+              />
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold leading-5">
                 {topic.title}
               </span>
               <ChevronRight
-                className="h-5 w-5 shrink-0 text-muted-foreground/60"
+                className="h-4 w-4 shrink-0 text-muted-foreground"
                 aria-hidden
               />
             </button>
