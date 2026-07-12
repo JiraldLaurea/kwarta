@@ -2156,12 +2156,12 @@ function DesktopEditModal({
             return;
         }
 
-        const timeout = window.setTimeout(
-            onClose,
-            prefersReducedMotion ? 0 : window.innerWidth >= 640 ? 100 : 240,
-        );
+        // This component only mounts at the sm+ breakpoint (EditModal routes
+        // narrower viewports to MobileBottomSheet instead), and the desktop
+        // modal has no open/close fade to wait out, so close immediately.
+        const timeout = window.setTimeout(onClose, 0);
         return () => window.clearTimeout(timeout);
-    }, [isVisible, onClose, prefersReducedMotion]);
+    }, [isVisible, onClose]);
     const {
         dragOffset,
         isDragging,
@@ -2325,10 +2325,7 @@ function DesktopEditModal({
         <div className="fixed inset-0 z-[60] flex items-stretch justify-center overflow-hidden sm:items-center sm:px-4 sm:py-6">
             <button
                 aria-label="Close modal"
-                className={cn(
-                    "absolute inset-0 cursor-default bg-white/20 transition-opacity duration-200 sm:bg-white/45 sm:backdrop-blur-sm sm:duration-100",
-                    isVisible ? "opacity-100" : "opacity-0",
-                )}
+                className="absolute inset-0 cursor-default bg-white/45 backdrop-blur-sm"
                 style={
                     isDragging || isSwipeDismissing
                         ? { opacity: Math.max(0, 1 - dragOffset / 400) }
@@ -2340,11 +2337,10 @@ function DesktopEditModal({
             <div
                 ref={dialogRef}
                 className={cn(
-                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 will-change-transform transition-transform ease-[cubic-bezier(0.22,1,0.36,1)] sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:overflow-visible sm:rounded-2xl sm:border sm:border-border sm:transition-opacity sm:duration-100 sm:will-change-auto",
+                    "relative flex h-dvh max-h-dvh min-h-dvh w-full flex-col overflow-hidden bg-white opacity-100 will-change-transform transition-transform ease-[cubic-bezier(0.22,1,0.36,1)] sm:h-auto sm:min-h-0 sm:max-h-[calc(100dvh-3rem)] sm:max-w-[540px] sm:!transform-none sm:overflow-visible sm:rounded-2xl sm:border sm:border-border sm:will-change-auto",
                     disableTransform ? "duration-0" : "duration-[160ms]",
                     allowContentScroll && "sm:overflow-hidden",
                     mobileMotion === "bottom" && "rounded-t-2xl",
-                    !isVisible && "sm:opacity-0",
                     className,
                 )}
                 style={{ transform: modalTransform }}
