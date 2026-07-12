@@ -579,6 +579,7 @@ export function PeriodSelector({
             {value.frequency === "weekly" && (
                 <div className="min-w-0 flex-1 sm:w-64 sm:flex-none">
                     <WeekPickerInput
+                        mobileFullWidth
                         triggerClassName="h-11 rounded-xl"
                         value={value.startDate}
                         onChange={(date) => onChange(createWeeklyPeriod(date))}
@@ -588,6 +589,7 @@ export function PeriodSelector({
             {value.frequency === "cycle" && (
                 <div className="min-w-0 flex-1 sm:w-64 sm:flex-none">
                     <BudgetCyclePickerInput
+                        mobileFullWidth
                         settings={budgetCycleSettings}
                         triggerClassName="h-11 rounded-xl"
                         value={value.startDate}
@@ -620,12 +622,14 @@ export function PeriodSelector({
 }
 
 export function BudgetCyclePickerInput({
+    mobileFullWidth = false,
     onChange,
     onSettingsChange,
     settings,
     triggerClassName,
     value,
 }: {
+    mobileFullWidth?: boolean;
     onChange: (value: string) => void;
     onSettingsChange?: (value: BudgetCycleSettings) => void;
     settings: BudgetCycleSettings;
@@ -777,10 +781,16 @@ export function BudgetCyclePickerInput({
             {isOpen && (
                 <div
                     className={cn(
-                        "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-full sm:min-w-[344px]",
-                        popoverSide === "above"
-                            ? "bottom-[var(--pop-y)] sm:bottom-full sm:mb-2"
-                            : "top-[var(--pop-y)] sm:top-full sm:mt-2",
+                        mobileFullWidth
+                            ? "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-full sm:min-w-[344px]"
+                            : "absolute left-0 z-[70] w-full min-w-[344px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
+                        mobileFullWidth
+                            ? popoverSide === "above"
+                                ? "bottom-[var(--pop-y)] sm:bottom-full sm:mb-2"
+                                : "top-[var(--pop-y)] sm:top-full sm:mt-2"
+                            : popoverSide === "above"
+                              ? "bottom-full mb-2"
+                              : "top-full mt-2",
                     )}
                     style={
                         { "--pop-y": `${popoverOffset}px` } as CSSProperties
@@ -939,10 +949,12 @@ export function BudgetCyclePickerInput({
 }
 
 export function WeekPickerInput({
+    mobileFullWidth = false,
     onChange,
     triggerClassName,
     value,
 }: {
+    mobileFullWidth?: boolean;
     onChange: (value: string) => void;
     triggerClassName?: string;
     value: string;
@@ -1035,10 +1047,16 @@ export function WeekPickerInput({
             {isOpen && (
                 <div
                     className={cn(
-                        "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-full sm:min-w-[344px]",
-                        popoverSide === "above"
-                            ? "bottom-[var(--pop-y)] sm:bottom-full sm:mb-2"
-                            : "top-[var(--pop-y)] sm:top-full sm:mt-2",
+                        mobileFullWidth
+                            ? "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-full sm:min-w-[344px]"
+                            : "absolute left-0 z-[70] w-full min-w-[344px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
+                        mobileFullWidth
+                            ? popoverSide === "above"
+                                ? "bottom-[var(--pop-y)] sm:bottom-full sm:mb-2"
+                                : "top-[var(--pop-y)] sm:top-full sm:mt-2"
+                            : popoverSide === "above"
+                              ? "bottom-full mb-2"
+                              : "top-full mt-2",
                     )}
                     style={
                         { "--pop-y": `${popoverOffset}px` } as CSSProperties

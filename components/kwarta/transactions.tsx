@@ -203,23 +203,62 @@ export function TransactionForm({
             >
                 <CardHeader className={cn(isEditing && "px-6 pb-2 pt-4")}>
                     {backButton}
-                    <CardTitle
-                        className={cn(
-                            isEditing && "text-2xl font-medium leading-8",
-                        )}
-                    >
-                        {editing ? "Edit transaction" : "Add transaction"}
-                    </CardTitle>
-                    <p
-                        className={cn(
-                            "text-sm text-muted-foreground",
-                            isEditing && "text-base leading-6",
-                        )}
-                    >
-                        {editing
-                            ? "Update this transaction's amount, subcategory, category, and date."
-                            : "Record a new income or expense with its subcategory, category, and date."}
-                    </p>
+                    {isPage ? (
+                        <>
+                            <div className="!m-0 !mb-3 flex items-start justify-between">
+                                {selectedCategory && (
+                                    <CategoryIconBadge
+                                        category={selectedCategory}
+                                        className="h-10 w-10"
+                                        iconClassName="h-4 w-4"
+                                    />
+                                )}
+                                <div className="w-[164px]">
+                                    <DatePickerInput
+                                        ariaLabel="Select transaction date"
+                                        displayTodayLabel
+                                        popoverAlign="right"
+                                        value={form.watch("date")}
+                                        onChange={(value) =>
+                                            form.setValue("date", value, {
+                                                shouldValidate: true,
+                                            })
+                                        }
+                                    />
+                                </div>
+                            </div>
+                            <CardTitle className="text-2xl font-medium leading-8">
+                                Edit {selectedCategory?.name}
+                            </CardTitle>
+                            <p className="text-base leading-6 text-muted-foreground">
+                                Update this transaction&apos;s amount,
+                                subcategory, category, and date.
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <CardTitle
+                                className={cn(
+                                    isEditing &&
+                                        "text-2xl font-medium leading-8",
+                                )}
+                            >
+                                {editing
+                                    ? "Edit transaction"
+                                    : "Add transaction"}
+                            </CardTitle>
+                            <p
+                                className={cn(
+                                    "text-sm text-muted-foreground",
+                                    isEditing && "text-base leading-6",
+                                )}
+                            >
+                                {editing
+                                    ? "Update this transaction's amount, subcategory, category, and date."
+                                    : "Record a new income or expense with its subcategory, category, and date."}
+                            </p>
+                        </>
+                    )}
                 </CardHeader>
                 <CardContent
                     className={cn(
@@ -396,19 +435,6 @@ export function TransactionForm({
                           </div>
                         </div>
                       )}
-                      <div className="mt-3">
-                        <Label className="text-muted-foreground">Date</Label>
-                        <div className="mt-2">
-                          <DatePickerInput
-                            value={form.watch("date")}
-                            onChange={(value) =>
-                              form.setValue("date", value, {
-                                shouldValidate: true,
-                              })
-                            }
-                          />
-                        </div>
-                      </div>
                       <div className="mt-3">
                         <Label className="text-muted-foreground">
                           Amount
