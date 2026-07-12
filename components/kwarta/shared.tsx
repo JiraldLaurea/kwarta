@@ -14,7 +14,13 @@ import {
     LuReceipt as Receipt,
 } from "react-icons/lu";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+    type CSSProperties,
+} from "react";
 import { createPortal } from "react-dom";
 import type { IconType } from "react-icons";
 import { FaCar } from "react-icons/fa";
@@ -342,6 +348,7 @@ export function MonthPickerInput({
     const [isOpen, setIsOpen] = useState(false);
     const [visibleYear, setVisibleYear] = useState(selectedYear);
     const [popoverSide, setPopoverSide] = useState<"above" | "below">("below");
+    const [popoverOffset, setPopoverOffset] = useState(0);
     const pickerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -371,7 +378,12 @@ export function MonthPickerInput({
 
     function togglePicker() {
         if (!isOpen) {
-            setPopoverSide(getPopoverSide(pickerRef.current, 280));
+            const { side, offset } = getPopoverPlacement(
+                pickerRef.current,
+                280,
+            );
+            setPopoverSide(side);
+            setPopoverOffset(offset);
         }
 
         setIsOpen((open) => !open);
@@ -412,10 +424,17 @@ export function MonthPickerInput({
                         mobileFullWidth
                             ? "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-auto sm:min-w-[210px]"
                             : "absolute left-0 z-[70] w-auto min-w-[210px] rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)]",
-                        popoverSide === "above"
-                            ? "bottom-full mb-2"
-                            : "top-full mt-2",
+                        mobileFullWidth
+                            ? popoverSide === "above"
+                                ? "bottom-[var(--pop-y)] sm:bottom-full sm:mb-2"
+                                : "top-[var(--pop-y)] sm:top-full sm:mt-2"
+                            : popoverSide === "above"
+                              ? "bottom-full mb-2"
+                              : "top-full mt-2",
                     )}
+                    style={
+                        { "--pop-y": `${popoverOffset}px` } as CSSProperties
+                    }
                 >
                     <div className="mb-4 flex items-center justify-between">
                         <p className="text-base font-medium leading-6">
@@ -619,6 +638,7 @@ export function BudgetCyclePickerInput({
     const selectedStartMonth = selectedStart.getMonth();
     const [isOpen, setIsOpen] = useState(false);
     const [popoverSide, setPopoverSide] = useState<"above" | "below">("below");
+    const [popoverOffset, setPopoverOffset] = useState(0);
     const [visibleMonth, setVisibleMonth] = useState(
         new Date(selectedStartYear, selectedStartMonth, 1),
     );
@@ -694,7 +714,12 @@ export function BudgetCyclePickerInput({
 
     function togglePicker() {
         if (!isOpen) {
-            setPopoverSide(getPopoverSide(pickerRef.current, 260));
+            const { side, offset } = getPopoverPlacement(
+                pickerRef.current,
+                260,
+            );
+            setPopoverSide(side);
+            setPopoverOffset(offset);
         }
 
         setIsOpen((open) => !open);
@@ -754,9 +779,12 @@ export function BudgetCyclePickerInput({
                     className={cn(
                         "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-full sm:min-w-[344px]",
                         popoverSide === "above"
-                            ? "bottom-full mb-2"
-                            : "top-full mt-2",
+                            ? "bottom-[var(--pop-y)] sm:bottom-full sm:mb-2"
+                            : "top-[var(--pop-y)] sm:top-full sm:mt-2",
                     )}
+                    style={
+                        { "--pop-y": `${popoverOffset}px` } as CSSProperties
+                    }
                 >
                     {!isEditingCycle && (
                         <div className="mb-4 flex items-center justify-between">
@@ -925,6 +953,7 @@ export function WeekPickerInput({
     const selectedStartMonth = selectedStart.getMonth();
     const [isOpen, setIsOpen] = useState(false);
     const [popoverSide, setPopoverSide] = useState<"above" | "below">("below");
+    const [popoverOffset, setPopoverOffset] = useState(0);
     const [visibleMonth, setVisibleMonth] = useState(
         new Date(selectedStartYear, selectedStartMonth, 1),
     );
@@ -969,7 +998,12 @@ export function WeekPickerInput({
 
     function togglePicker() {
         if (!isOpen) {
-            setPopoverSide(getPopoverSide(pickerRef.current, 390));
+            const { side, offset } = getPopoverPlacement(
+                pickerRef.current,
+                390,
+            );
+            setPopoverSide(side);
+            setPopoverOffset(offset);
         }
 
         setIsOpen((open) => !open);
@@ -1003,9 +1037,12 @@ export function WeekPickerInput({
                     className={cn(
                         "fixed left-4 right-4 z-[70] w-auto min-w-0 rounded-2xl border border-border bg-white p-4 shadow-[0_18px_60px_rgba(0,0,0,0.12)] sm:absolute sm:left-0 sm:w-full sm:min-w-[344px]",
                         popoverSide === "above"
-                            ? "bottom-full mb-2"
-                            : "top-full mt-2",
+                            ? "bottom-[var(--pop-y)] sm:bottom-full sm:mb-2"
+                            : "top-[var(--pop-y)] sm:top-full sm:mt-2",
                     )}
+                    style={
+                        { "--pop-y": `${popoverOffset}px` } as CSSProperties
+                    }
                 >
                     <div className="mb-4 flex items-center justify-between">
                         <Button
@@ -1132,6 +1169,31 @@ function getPopoverSide(element: HTMLElement | null, estimatedHeight: number) {
     return spaceBelow < estimatedHeight && spaceAbove > spaceBelow
         ? "above"
         : "below";
+}
+
+// On mobile the calendar popovers are pinned full-width with `position: fixed`
+// (so a narrow trigger, e.g. the header period pill, still gets a full-width
+// calendar). `fixed` makes `top-full` resolve against the viewport instead of
+// the trigger, which pushed the popover off-screen — so compute the viewport
+// offset from the trigger and expose it as the --pop-y CSS variable. At `sm`
+// and up the popover is `absolute` and uses top-full/bottom-full instead.
+function getPopoverPlacement(
+    element: HTMLElement | null,
+    estimatedHeight: number,
+): { side: "above" | "below"; offset: number } {
+    const side = getPopoverSide(element, estimatedHeight);
+
+    if (!element) {
+        return { side, offset: 0 };
+    }
+
+    const rect = element.getBoundingClientRect();
+    const offset =
+        side === "above"
+            ? window.innerHeight - rect.top + 8
+            : rect.bottom + 8;
+
+    return { side, offset };
 }
 
 type MobileModalMotion = "bottom" | "right";
