@@ -1915,15 +1915,24 @@ export function formatAmountDisplay(value: string) {
 // between the two.
 export function AmountDisplay({
     value,
+    active = true,
     className,
 }: {
     value: string;
+    // The keypad's current target. Active fields drop the grey fill for a
+    // clean surface with an accent border + soft ring (so the readout leads
+    // instead of blending into the grey keypad); inactive fields (e.g. the
+    // unfocused amount in the transfer form) stay a quiet, recessed grey.
+    active?: boolean;
     className?: string;
 }) {
     return (
         <div
             className={cn(
-                "flex h-16 items-center rounded-2xl border border-border bg-muted px-4 tabular-nums",
+                "flex h-16 items-center rounded-2xl border px-4 tabular-nums",
+                active
+                    ? "border-accent bg-card ring-2 ring-accent/20"
+                    : "border-border bg-muted",
                 className,
             )}
         >

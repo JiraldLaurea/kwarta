@@ -721,10 +721,7 @@ function TransferForm({
                                 onClick={() => setFocusedAmount("amount")}
                             >
                                 <AmountDisplay
-                                    className={cn(
-                                        focusedAmount === "amount" &&
-                                            "border-accent ring-1 ring-accent",
-                                    )}
+                                    active={focusedAmount === "amount"}
                                     value={amountText}
                                 />
                             </button>
@@ -739,10 +736,7 @@ function TransferForm({
                                 onClick={() => setFocusedAmount("fee")}
                             >
                                 <AmountDisplay
-                                    className={cn(
-                                        focusedAmount === "fee" &&
-                                            "border-accent ring-1 ring-accent",
-                                    )}
+                                    active={focusedAmount === "fee"}
                                     value={feeText}
                                 />
                             </button>
