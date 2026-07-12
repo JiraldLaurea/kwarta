@@ -1502,8 +1502,10 @@ export function MobileBottomSheet({
         let tracking = false;
         let dragging = false;
 
-        // Text-entry controls always need their own gesture handling. Plain
-        // buttons (nav rows, pills, keypad keys) are deliberately not
+        // Text-entry controls always need their own gesture handling, and
+        // drag-to-reorder handles ([data-dnd-handle]) own the vertical drag so
+        // the sheet must not also follow the finger down while reordering.
+        // Plain buttons (nav rows, pills, keypad keys) are deliberately not
         // excluded here: the 6px vertical dead zone below already tells a tap
         // apart from a real downward swipe, so a swipe starting on a button
         // still dismisses the sheet instead of only working from the gaps
@@ -1513,7 +1515,7 @@ export function MobileBottomSheet({
                 target instanceof Element &&
                 Boolean(
                     target.closest(
-                        "input,select,textarea,[role='combobox'],[data-radix-select-trigger]",
+                        "input,select,textarea,[role='combobox'],[data-radix-select-trigger],[data-dnd-handle]",
                     ),
                 )
             );

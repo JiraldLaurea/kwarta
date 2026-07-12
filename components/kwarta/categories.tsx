@@ -862,6 +862,7 @@ function SubcategoryRowContent({
           !disabled && "cursor-grab active:cursor-grabbing",
           isDragging && "cursor-grabbing",
         )}
+        data-dnd-handle="true"
         disabled={disabled}
         type="button"
         variant="secondary"
