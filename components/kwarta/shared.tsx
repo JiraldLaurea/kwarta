@@ -414,7 +414,7 @@ export function MonthPickerInput({
             >
                 <Calendar className="h-4 w-4" aria-hidden />
                 {selectedMonth.toLocaleDateString("en-US", {
-                    month: "long",
+                    month: "short",
                     year: "numeric",
                 })}
             </Button>
