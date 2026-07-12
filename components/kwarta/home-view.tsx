@@ -97,9 +97,9 @@ const CATEGORY_CARD_WRAPPER: Record<HomeItemStyle, string> = {
     "flex min-h-[52px] items-center gap-3 border-0 px-4 py-2.5 md:hover:bg-[hsl(var(--hover-surface))]",
   meter: "block border-0 px-4 py-3 md:hover:bg-[hsl(var(--hover-surface))]",
   cards:
-    "rounded-xl border border-border p-4 md:hover:bg-[hsl(var(--hover-surface))]",
+    "rounded-2xl border border-border p-4 md:hover:bg-[hsl(var(--hover-surface))]",
   rings:
-    "flex flex-col items-center gap-2 rounded-xl border border-border p-3 text-center md:hover:bg-[hsl(var(--hover-surface))]",
+    "flex flex-col items-center gap-2 rounded-2xl border border-border p-3 text-center md:hover:bg-[hsl(var(--hover-surface))]",
 };
 
 // Shared progress ring used by both the Cards and Rings home layouts, so the
@@ -285,7 +285,7 @@ function HomeSummaryPanel({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm leading-5 text-muted-foreground">{label}</p>
-          <p className="mt-1 text-3xl font-bold leading-9 tracking-tight">
+          <p className="mt-1 text-3xl font-semibold leading-9 tracking-tight">
             {formatCurrency(totalSpent)}
             {hasBudget && (
               <span className="ml-1.5 text-base font-medium text-muted-foreground">
@@ -435,7 +435,7 @@ function CategoryQuickAddSection({
             <div
               className={cn(
                 isListLayout(homeItemStyle)
-                  ? "overflow-hidden rounded-xl border border-border bg-card divide-y divide-border"
+                  ? "overflow-hidden rounded-2xl border border-border bg-card divide-y divide-border"
                   : gridLayoutClass(homeItemStyle),
               )}
             >
