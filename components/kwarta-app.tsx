@@ -1435,7 +1435,7 @@ export function KwartaApp() {
                     </div>
                 </header>
 
-                <div className="w-full px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-5 md:px-5 md:py-7">
+                <div className="w-full px-4 pb-[calc(6rem+var(--offline-banner-pad,0px)+env(safe-area-inset-bottom))] pt-5 md:px-5 md:py-7">
                     {view === "dashboard" && (
                         <HomeView
                             budgets={periodBudgets}
