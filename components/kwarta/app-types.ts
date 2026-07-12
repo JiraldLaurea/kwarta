@@ -7,7 +7,8 @@ export type View =
   | "accounts"
   | "reports"
   | "settings"
-  | "manage-categories";
+  | "manage-categories"
+  | "review-inbox";
 
 export type AccentTheme =
   | "black"

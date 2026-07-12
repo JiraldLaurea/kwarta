@@ -269,6 +269,33 @@ export function parseCapturedMessage(
     };
 }
 
+const FINANCIAL_CONTEXT_PATTERN =
+    /gcash|maya|paymaya|bpi|bdo|unionbank|metrobank|landbank|pnb|security bank|maribank|gotyme|bank|debited|credited|deposited|you (?:paid|sent|received)/i;
+
+/**
+ * True when a message that failed to parse still looks like a real money
+ * alert (has a peso amount, isn't an OTP/promo, comes from a financial
+ * context). These surface in the inbox as "couldn't read this format" so the
+ * user can add them manually, rather than being silently dropped.
+ */
+export function messageLooksFinancial(message: RawCapturedMessage): boolean {
+    const body = message.body.trim();
+
+    if (!body || IGNORE_PATTERN.test(body)) {
+        return false;
+    }
+
+    if (extractFirstAmount(body) === null) {
+        return false;
+    }
+
+    const haystack = `${message.appId ?? ""} ${message.sender ?? ""} ${
+        message.title ?? ""
+    } ${body}`;
+
+    return FINANCIAL_CONTEXT_PATTERN.test(haystack);
+}
+
 /**
  * Stable dedup key for a parsed message. The provider reference number wins;
  * without one, fall back to the transaction's shape plus arrival time so

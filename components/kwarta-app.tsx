@@ -1,6 +1,9 @@
 "use client";
 
-import { LuChevronRight as ChevronRight } from "react-icons/lu";
+import {
+    LuChevronRight as ChevronRight,
+    LuInbox as Inbox,
+} from "react-icons/lu";
 import { FaRegLightbulb } from "react-icons/fa6";
 import type { User } from "@supabase/supabase-js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -87,6 +90,17 @@ import {
     MobileTabBar,
 } from "@/components/kwarta/app-navigation";
 import { SettingsView } from "@/components/kwarta/settings-view";
+import { ReviewInboxView } from "@/components/kwarta/review-inbox";
+import {
+    ingestCapturedMessage,
+    markProcessed,
+    readMerchantCategoryMap,
+    readPendingCaptures,
+    readProcessedCaptures,
+    rememberMerchantCategory,
+    writePendingCaptures,
+    type PendingCapture,
+} from "@/lib/kwarta/pending-captures";
 import { HelpPanel } from "@/components/kwarta/help-panel";
 import {
     AuthLoadingScreen,
@@ -330,6 +344,10 @@ export function KwartaApp() {
     const [quickAddCategory, setQuickAddCategory] = useState<Category | null>(
         null,
     );
+    const [pendingCaptures, setPendingCaptures] = useState<PendingCapture[]>(
+        [],
+    );
+    const [inboxReturnView, setInboxReturnView] = useState<View>("dashboard");
     const [helpOpen, setHelpOpen] = useState(false);
     const [helpShowIndex, setHelpShowIndex] = useState(false);
     const openHelp = (_targetView: View) => {
@@ -396,6 +414,23 @@ export function KwartaApp() {
         setAutomaticBackup(readAutomaticBackup(userId));
         setPreviousBackup(readPreviousBackup(userId));
     }, [userId]);
+
+    useEffect(() => {
+        if (!userId) {
+            setPendingCaptures([]);
+            return;
+        }
+
+        setPendingCaptures(readPendingCaptures(userId));
+    }, [userId]);
+
+    useEffect(() => {
+        if (!userId) {
+            return;
+        }
+
+        writePendingCaptures(userId, pendingCaptures);
+    }, [userId, pendingCaptures]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -978,6 +1013,99 @@ export function KwartaApp() {
         setQuickAddCategory(null);
     }
 
+    function buildTransactionFromCapture(
+        capture: PendingCapture,
+        categoryId: string,
+    ): Transaction {
+        return {
+            id: crypto.randomUUID(),
+            type: capture.direction === "in" ? "income" : "expense",
+            amount: capture.amount,
+            categoryId,
+            accountId: capture.accountId || getFirstAccountId(accounts),
+            subcategory: "",
+            note: capture.counterparty ?? "",
+            date: toDateInputValue(new Date(capture.createdAt)),
+            time: getCurrentTimeInputValue(),
+        };
+    }
+
+    function handleIngestCaptureText(text: string) {
+        if (!userId) {
+            return;
+        }
+
+        const result = ingestCapturedMessage(
+            { source: "paste", body: text },
+            {
+                accounts,
+                pending: pendingCaptures,
+                processed: readProcessedCaptures(userId),
+                merchantMap: readMerchantCategoryMap(userId),
+            },
+        );
+
+        if (result.status === "added") {
+            setPendingCaptures((current) => [result.capture, ...current]);
+        }
+    }
+
+    function handleDismissCapture(capture: PendingCapture) {
+        if (userId) {
+            markProcessed(userId, capture.externalRef);
+        }
+
+        setPendingCaptures((current) =>
+            current.filter((item) => item.id !== capture.id),
+        );
+    }
+
+    function handleConfirmCapture(capture: PendingCapture, categoryId: string) {
+        if (userId) {
+            rememberMerchantCategory(userId, capture.counterparty, categoryId);
+            markProcessed(userId, capture.externalRef);
+        }
+
+        setTransactions((current) => [
+            buildTransactionFromCapture(capture, categoryId),
+            ...current,
+        ]);
+        setPendingCaptures((current) =>
+            current.filter((item) => item.id !== capture.id),
+        );
+    }
+
+    function handleConfirmAllSuggested() {
+        const suggested = pendingCaptures.filter(
+            (capture) => capture.recognized && capture.suggestedCategoryId,
+        );
+
+        if (suggested.length === 0) {
+            return;
+        }
+
+        const newTransactions = suggested.map((capture) =>
+            buildTransactionFromCapture(capture, capture.suggestedCategoryId!),
+        );
+
+        if (userId) {
+            suggested.forEach((capture) => {
+                rememberMerchantCategory(
+                    userId,
+                    capture.counterparty,
+                    capture.suggestedCategoryId!,
+                );
+                markProcessed(userId, capture.externalRef);
+            });
+        }
+
+        const confirmedIds = new Set(suggested.map((capture) => capture.id));
+        setTransactions((current) => [...newTransactions, ...current]);
+        setPendingCaptures((current) =>
+            current.filter((capture) => !confirmedIds.has(capture.id)),
+        );
+    }
+
     function handleSubcategorySubmit(values: SubcategoryFormValues) {
         setCategories((current) =>
             current.map((category) =>
@@ -1424,14 +1552,36 @@ export function KwartaApp() {
                                 onChange={setSelectedPeriod}
                             />
                         </div>
-                        <button
-                            aria-label="Help & tips"
-                            type="button"
-                            onClick={() => openHelp(view)}
-                            className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
-                        >
-                            <FaRegLightbulb className="h-5 w-5" aria-hidden />
-                        </button>
+                        <div className="ml-auto flex items-center gap-2">
+                            <button
+                                aria-label={`Review inbox${
+                                    pendingCaptures.length > 0
+                                        ? ` (${pendingCaptures.length} pending)`
+                                        : ""
+                                }`}
+                                type="button"
+                                onClick={() => {
+                                    setInboxReturnView(view);
+                                    setView("review-inbox");
+                                }}
+                                className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
+                            >
+                                <Inbox className="h-5 w-5" aria-hidden />
+                                {pendingCaptures.length > 0 && (
+                                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-none text-accent-foreground">
+                                        {pendingCaptures.length}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                aria-label="Help & tips"
+                                type="button"
+                                onClick={() => openHelp(view)}
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
+                            >
+                                <FaRegLightbulb className="h-5 w-5" aria-hidden />
+                            </button>
+                        </div>
                     </div>
                 </header>
 
@@ -1835,6 +1985,25 @@ export function KwartaApp() {
                                         ),
                                     )
                                 }
+                            />
+                        </SwipeBackArea>
+                    )}
+                    {view === "review-inbox" && (
+                        <SwipeBackArea
+                            onBack={() => setView(inboxReturnView)}
+                        >
+                            <ReviewInboxView
+                                accounts={accounts}
+                                captures={pendingCaptures}
+                                expenseCategories={expenseCategories}
+                                incomeCategories={incomeCategories}
+                                onBack={() => setView(inboxReturnView)}
+                                onConfirm={handleConfirmCapture}
+                                onConfirmAllSuggested={
+                                    handleConfirmAllSuggested
+                                }
+                                onDismiss={handleDismissCapture}
+                                onIngestText={handleIngestCaptureText}
                             />
                         </SwipeBackArea>
                     )}
