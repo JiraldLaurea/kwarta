@@ -176,6 +176,7 @@ export function HomeView({
   onEditCategory,
   onReorderCategory,
   onSelectCategory,
+  periodFrequency,
   transactions,
 }: {
   budgets: Budget[];
@@ -191,42 +192,126 @@ export function HomeView({
     toId: string,
   ) => void;
   onSelectCategory: (category: Category) => void;
+  periodFrequency: "monthly" | "weekly" | "cycle";
   transactions: Transaction[];
 }) {
   return (
-    <div
-      className={cn(
-        "space-y-5",
-        isListLayout(homeItemStyle) &&
-          "md:grid md:grid-cols-2 md:items-start md:gap-5 md:space-y-0",
+    <div className="space-y-5">
+      {budgetsEnabled && (
+        <HomeSummaryPanel
+          budgets={budgets}
+          periodFrequency={periodFrequency}
+          transactions={transactions}
+        />
       )}
-    >
-      <CategoryQuickAddSection
-        budgets={budgets}
-        budgetsEnabled={budgetsEnabled}
-        editMode={false}
-        title="Expenses"
-        homeItemStyle={homeItemStyle}
-        categories={expenseCategories}
-        onDeleteCategory={onDeleteCategory}
-        onEditCategory={onEditCategory}
-        onReorderCategory={onReorderCategory}
-        transactions={transactions}
-        onSelectCategory={onSelectCategory}
-      />
-      <CategoryQuickAddSection
-        budgets={budgets}
-        budgetsEnabled={budgetsEnabled}
-        editMode={false}
-        title="Income"
-        homeItemStyle={homeItemStyle}
-        categories={incomeCategories}
-        onDeleteCategory={onDeleteCategory}
-        onEditCategory={onEditCategory}
-        onReorderCategory={onReorderCategory}
-        transactions={transactions}
-        onSelectCategory={onSelectCategory}
-      />
+      <div
+        className={cn(
+          "space-y-5",
+          isListLayout(homeItemStyle) &&
+            "md:grid md:grid-cols-2 md:items-start md:gap-5 md:space-y-0",
+        )}
+      >
+        <CategoryQuickAddSection
+          budgets={budgets}
+          budgetsEnabled={budgetsEnabled}
+          editMode={false}
+          title="Expenses"
+          homeItemStyle={homeItemStyle}
+          categories={expenseCategories}
+          onDeleteCategory={onDeleteCategory}
+          onEditCategory={onEditCategory}
+          onReorderCategory={onReorderCategory}
+          transactions={transactions}
+          onSelectCategory={onSelectCategory}
+        />
+        <CategoryQuickAddSection
+          budgets={budgets}
+          budgetsEnabled={budgetsEnabled}
+          editMode={false}
+          title="Income"
+          homeItemStyle={homeItemStyle}
+          categories={incomeCategories}
+          onDeleteCategory={onDeleteCategory}
+          onEditCategory={onEditCategory}
+          onReorderCategory={onReorderCategory}
+          transactions={transactions}
+          onSelectCategory={onSelectCategory}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Budget-usage summary shown at the top of Home: the period, the total spent
+// (of the total budget when one is set), and a "N% used" badge — mirroring the
+// Budgets page summary in a compact card.
+function HomeSummaryPanel({
+  budgets,
+  periodFrequency,
+  transactions,
+}: {
+  budgets: Budget[];
+  periodFrequency: "monthly" | "weekly" | "cycle";
+  transactions: Transaction[];
+}) {
+  const label =
+    periodFrequency === "weekly"
+      ? "This week"
+      : periodFrequency === "cycle"
+        ? "This cycle"
+        : "This month";
+
+  // One budget per category, matching the Budgets page total (reused budgets
+  // can otherwise leave more than one row for the same category).
+  const budgetByCategoryId = new Map<string, Budget>();
+  budgets.forEach((budget) => {
+    if (!budgetByCategoryId.has(budget.categoryId)) {
+      budgetByCategoryId.set(budget.categoryId, budget);
+    }
+  });
+  const totalBudget = Array.from(budgetByCategoryId.values()).reduce(
+    (sum, budget) => sum + budget.limit,
+    0,
+  );
+  const totalSpent = transactions
+    .filter((transaction) => normalizeTransactionType(transaction.type) === "expense")
+    .reduce((sum, transaction) => sum + transaction.amount, 0);
+  const hasBudget = totalBudget > 0;
+  const usage = hasBudget ? Math.round((totalSpent / totalBudget) * 100) : 0;
+  const isOver = hasBudget && totalSpent > totalBudget;
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm leading-5 text-muted-foreground">{label}</p>
+          <p className="mt-1 text-3xl font-bold leading-9 tracking-tight">
+            {formatCurrency(totalSpent)}
+            {hasBudget && (
+              <span className="ml-1.5 text-base font-medium text-muted-foreground">
+                of {formatCurrency(totalBudget)}
+              </span>
+            )}
+          </p>
+          {!hasBudget && (
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              spent {label.toLowerCase()}
+            </p>
+          )}
+        </div>
+        {hasBudget && (
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold leading-4",
+              isOver
+                ? "bg-destructive/10 text-destructive"
+                : "bg-accent-muted text-accent-muted-foreground",
+            )}
+          >
+            {usage}% used
+          </span>
+        )}
+      </div>
     </div>
   );
 }

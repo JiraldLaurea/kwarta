@@ -75,14 +75,18 @@ import { Select } from "@/components/ui/select";
 // that keeps a white glyph legible while sharing the accent hue family. The
 // picker swatch, the icon badge, and progress bars all use this exact value.
 export const colorChoices = [
-    "#25C18B", // green
-    "#25B9C1", // teal
-    "#257AC1", // blue
-    "#253BC1", // indigo
-    "#4F25C1", // purple
-    "#C12588", // rose
-    "#C18A25", // amber
-    "#C12539", // pink
+    "#16A34A", // green
+    "#0D9488", // teal
+    "#0EA5E9", // sky
+    "#2563EB", // blue
+    "#4F46E5", // indigo
+    "#7C3AED", // violet
+    "#9333EA", // purple
+    "#DB2777", // pink
+    "#E11D48", // rose
+    "#DC2626", // red
+    "#EA580C", // orange
+    "#D97706", // amber
 ];
 
 export const categoryIconChoices = [

@@ -1458,6 +1458,7 @@ export function KwartaApp() {
                                 )
                             }
                             onSelectCategory={openQuickAdd}
+                            periodFrequency={selectedPeriod.frequency}
                             transactions={periodTransactions}
                         />
                     )}
