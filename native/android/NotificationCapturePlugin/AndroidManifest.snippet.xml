@@ -1,0 +1,16 @@
+<!--
+  Merge these into android/app/src/main/AndroidManifest.xml.
+  The <service> goes inside <application>; the listener is bound by the OS once
+  the user grants "Notification access" in Settings.
+-->
+
+<!-- Inside <application> ... </application> -->
+<service
+    android:name="com.kwarta.app.KwartaNotificationListenerService"
+    android:label="Kwarta capture"
+    android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+    android:exported="false">
+    <intent-filter>
+        <action android:name="android.service.notification.NotificationListenerService" />
+    </intent-filter>
+</service>

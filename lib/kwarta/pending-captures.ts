@@ -8,7 +8,8 @@
 // column, so the "processed" ledger below is the durable source of truth for
 // "have I already dealt with this alert?" across reloads and devices' own
 // storage.
-import type { Account } from "@/lib/types";
+import type { Account, Transaction, Transfer } from "@/lib/types";
+import { getAccountBalance } from "@/lib/kwarta/helpers";
 import {
     buildExternalRef,
     messageLooksFinancial,
@@ -41,6 +42,9 @@ export type PendingCapture = {
 const PENDING_KEY = (userId: string) => `kwarta:pending-captures:${userId}`;
 const MERCHANT_KEY = (userId: string) => `kwarta:merchant-categories:${userId}`;
 const PROCESSED_KEY = (userId: string) => `kwarta:processed-captures:${userId}`;
+const AUTO_CONFIRM_KEY = (userId: string) =>
+    `kwarta:auto-import-confirm:${userId}`;
+const SYNC_BALANCE_KEY = (userId: string) => `kwarta:auto-import-sync:${userId}`;
 // Cap the processed ledger so it can't grow without bound.
 const PROCESSED_LIMIT = 1000;
 
@@ -119,6 +123,27 @@ export function markProcessed(userId: string, externalRef: string) {
     writeJson(PROCESSED_KEY(userId), list.slice(-PROCESSED_LIMIT));
 }
 
+// Auto-import preferences (per user, opt-in). "Auto-confirm" logs high-confidence
+// captures of already-taught merchants without a review tap; "balance sync"
+// nudges the mapped account's opening balance to match the alert's stated
+// balance on confirm. Both default off so nothing rewrites a user's data by
+// surprise.
+export function readAutoConfirmPref(userId: string): boolean {
+    return readJson<boolean>(AUTO_CONFIRM_KEY(userId), false) === true;
+}
+
+export function writeAutoConfirmPref(userId: string, value: boolean) {
+    writeJson(AUTO_CONFIRM_KEY(userId), value);
+}
+
+export function readSyncBalancePref(userId: string): boolean {
+    return readJson<boolean>(SYNC_BALANCE_KEY(userId), false) === true;
+}
+
+export function writeSyncBalancePref(userId: string, value: boolean) {
+    writeJson(SYNC_BALANCE_KEY(userId), value);
+}
+
 // GCash / Maya alerts map to the matching connected account; the generic bank
 // fallback can't tell which bank, so it's left for the user to pick.
 function mapProviderToAccount(
@@ -134,6 +159,41 @@ function mapProviderToAccount(
     }
 
     return undefined;
+}
+
+// Balance sync: when an alert states the wallet/account balance after the
+// transaction, nudge that account's opening balance so Kwarta's computed
+// balance matches the bank's authoritative number (absorbing any drift from
+// missed entries or rounding). Opt-in; returns accounts unchanged when there's
+// nothing to reconcile.
+export function reconcileOpeningBalance(
+    accounts: Account[],
+    transactions: Transaction[],
+    transfers: Transfer[],
+    capture: PendingCapture,
+): Account[] {
+    if (!capture.accountId || capture.balanceAfter == null) {
+        return accounts;
+    }
+
+    const account = accounts.find((item) => item.id === capture.accountId);
+
+    if (!account) {
+        return accounts;
+    }
+
+    const computed = getAccountBalance(account, transactions, transfers);
+    const delta = capture.balanceAfter - computed;
+
+    if (Math.abs(delta) < 0.005) {
+        return accounts;
+    }
+
+    return accounts.map((item) =>
+        item.id === account.id
+            ? { ...item, openingBalance: item.openingBalance + delta }
+            : item,
+    );
 }
 
 export type IngestContext = {

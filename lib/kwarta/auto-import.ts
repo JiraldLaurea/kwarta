@@ -68,7 +68,6 @@ type DirectionRule = {
 
 type ProviderRules = {
     id: AutoImportProviderId;
-    matches: (message: RawCapturedMessage) => boolean;
     rules: DirectionRule[];
 };
 
@@ -76,10 +75,6 @@ const AMOUNT_INLINE = String.raw`(?:PHP|Php|php|₱|P)\s*[\d,]+(?:\.\d{1,2})?`;
 
 const gcash: ProviderRules = {
     id: "gcash",
-    matches: (message) =>
-        /gcash/i.test(message.appId ?? "") ||
-        /gcash/i.test(message.sender ?? "") ||
-        /\bgcash\b/i.test(`${message.title ?? ""} ${message.body}`),
     rules: [
         {
             direction: "out",
@@ -118,10 +113,6 @@ const gcash: ProviderRules = {
 
 const maya: ProviderRules = {
     id: "maya",
-    matches: (message) =>
-        /paymaya|maya/i.test(message.appId ?? "") ||
-        /^(?:pay)?maya$/i.test((message.sender ?? "").trim()) ||
-        /\b(?:pay)?maya\b/i.test(`${message.title ?? ""} ${message.body}`),
     rules: [
         {
             direction: "out",
@@ -142,41 +133,79 @@ const maya: ProviderRules = {
     ],
 };
 
-// Fallback for bank alerts (BPI, BDO, UnionBank, Metrobank…): phrasing varies,
-// so match on debit/credit verbs rather than exact templates.
+// Fallback for bank alerts (BPI, BDO, UnionBank, Metrobank, RCBC, Landbank,
+// PNB, GoTyme, SeaBank, InstaPay/PESONet…): phrasing varies wildly between
+// banks, so match on debit/credit verbs and the "to/at/from <party>" shape
+// rather than per-bank templates. The party stops at the first trailing clause
+// (on/via/ref/dated/using/for).
+const PARTY_STOP = String.raw`(?=\s+on\b|\s+via\b|\s+ref\b|\s+dated\b|\s+using\b|\s+for\b|\s+with\b|\s+was\b|\s+is\b|\s+has\b|\s+account\b|\s*\.|,|$)`;
+
 const bank: ProviderRules = {
     id: "bank",
-    matches: () => true,
     rules: [
         {
             direction: "out",
-            test: /\b(?:debited|charged|deducted|purchase of|payment of)\b/i,
+            test: /\b(?:debited|charged|deducted|spent|withdrawn|purchase of|payment of|you (?:paid|sent)|fund transfer|transferred|sent to)\b/i,
+            // Skip "to your card / my account" so the real merchant after "at"
+            // wins over the account the money left.
             counterparty: new RegExp(
-                String.raw`\bat\s+(?<cp>.+?)(?=\s+on\s|\s*\.|,|$)`,
-                "i",
-            ),
-        },
-        {
-            direction: "out",
-            test: /\byou (?:paid|sent)\b/i,
-            counterparty: new RegExp(
-                String.raw`(?:paid|sent)\s+${AMOUNT_INLINE}\s+to\s+(?<cp>.+?)(?=\s+via\b|\s+on\s|\s*\.|,|$)`,
+                String.raw`\b(?:to|at)\s+(?!your\b|my\b|the\b|a\b|account\b|card\b)(?<cp>.+?)${PARTY_STOP}`,
                 "i",
             ),
         },
         {
             direction: "in",
-            test: /\b(?:credited|deposited|you received)\b/i,
+            test: /\b(?:credited|deposited|refund(?:ed)? (?:of|to)|(?:you )?received)\b/i,
             counterparty: new RegExp(
-                String.raw`received\s+${AMOUNT_INLINE}\s+from\s+(?<cp>.+?)(?=\s+via\b|\s+on\s|\s*\.|,|$)`,
+                String.raw`\bfrom\s+(?<cp>.+?)${PARTY_STOP}`,
                 "i",
             ),
         },
     ],
 };
 
-// Order matters: specific wallets first, bank fallback last.
-const PROVIDERS: ProviderRules[] = [gcash, maya, bank];
+const PROVIDER_RULES: Record<AutoImportProviderId, ProviderRules> = {
+    gcash,
+    maya,
+    bank,
+};
+
+// The sending app decides the provider — the notification's package / sender /
+// title, not the body (a bank alert can name "GCash" as the counterparty, and
+// a pasted body has no metadata). Named banks route to the bank rules so a body
+// keyword can't hijack them; only when there's no useful source metadata (a
+// pasted body) do we fall back to body keywords.
+const BANK_SOURCE_PATTERN =
+    /gotyme|bpi|bdo|unionbank|metrobank|landbank|\bpnb\b|security ?bank|seabank|cimb|rcbc|chinabank|eastwest|\bub\b|\bbank\b/i;
+
+function detectProvider(message: RawCapturedMessage): AutoImportProviderId {
+    const source = `${message.appId ?? ""} ${message.sender ?? ""} ${
+        message.title ?? ""
+    }`;
+
+    if (/gcash/i.test(source)) {
+        return "gcash";
+    }
+
+    if (/maya|paymaya/i.test(source)) {
+        return "maya";
+    }
+
+    if (BANK_SOURCE_PATTERN.test(source)) {
+        return "bank";
+    }
+
+    // No useful source metadata (e.g. a pasted body): fall back to keywords.
+    if (/\bgcash\b/i.test(message.body)) {
+        return "gcash";
+    }
+
+    if (/\b(?:pay)?maya\b/i.test(message.body)) {
+        return "maya";
+    }
+
+    return "bank";
+}
 
 function parseAmountString(value: string) {
     const parsed = Number.parseFloat(value.replace(/,/g, ""));
@@ -239,12 +268,7 @@ export function parseCapturedMessage(
         return null;
     }
 
-    const provider = PROVIDERS.find((candidate) => candidate.matches(message));
-
-    if (!provider) {
-        return null;
-    }
-
+    const provider = PROVIDER_RULES[detectProvider(message)];
     const rule = provider.rules.find((candidate) => candidate.test.test(body));
     const amount = extractFirstAmount(body);
 

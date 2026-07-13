@@ -5,6 +5,8 @@ import {
     LuArrowLeft as ArrowLeft,
     LuInbox as Inbox,
     LuClipboardPaste as ClipboardPaste,
+    LuSettings2 as Settings2,
+    LuChevronDown as ChevronDown,
 } from "react-icons/lu";
 import type { Account, Category } from "@/lib/types";
 import type { PendingCapture } from "@/lib/kwarta/pending-captures";
@@ -43,6 +45,10 @@ export function ReviewInboxView({
     expenseCategories,
     incomeCategories,
     accounts,
+    autoConfirmEnabled,
+    syncBalanceEnabled,
+    onAutoConfirmChange,
+    onSyncBalanceChange,
     onBack,
     onConfirm,
     onDismiss,
@@ -53,6 +59,10 @@ export function ReviewInboxView({
     expenseCategories: Category[];
     incomeCategories: Category[];
     accounts: Account[];
+    autoConfirmEnabled: boolean;
+    syncBalanceEnabled: boolean;
+    onAutoConfirmChange: (value: boolean) => void;
+    onSyncBalanceChange: (value: boolean) => void;
     onBack: () => void;
     onConfirm: (capture: PendingCapture, categoryId: string) => void;
     onDismiss: (capture: PendingCapture) => void;
@@ -60,6 +70,7 @@ export function ReviewInboxView({
     onIngestText: (text: string) => void;
 }) {
     const [pasteOpen, setPasteOpen] = useState(false);
+    const [settingsOpen, setSettingsOpen] = useState(false);
 
     const suggestedCount = useMemo(
         () =>
@@ -94,6 +105,41 @@ export function ReviewInboxView({
                 <ClipboardPaste className="h-4 w-4" aria-hidden />
                 Paste an alert from GCash, Maya or your bank
             </button>
+
+            <div className="rounded-2xl border border-border bg-card">
+                <button
+                    type="button"
+                    aria-expanded={settingsOpen}
+                    onClick={() => setSettingsOpen((open) => !open)}
+                    className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))] rounded-2xl"
+                >
+                    <Settings2 className="h-4 w-4 text-muted-foreground" aria-hidden />
+                    Automation
+                    <ChevronDown
+                        className={cn(
+                            "ml-auto h-4 w-4 text-muted-foreground transition-transform",
+                            settingsOpen && "rotate-180",
+                        )}
+                        aria-hidden
+                    />
+                </button>
+                {settingsOpen && (
+                    <div className="space-y-4 border-t border-border px-4 py-4">
+                        <SettingRow
+                            title="Auto-confirm known merchants"
+                            description="Log high-confidence alerts from merchants you've already categorized, without a review tap."
+                            checked={autoConfirmEnabled}
+                            onChange={onAutoConfirmChange}
+                        />
+                        <SettingRow
+                            title="Sync account balance"
+                            description="When an alert states the balance, nudge the matched account's opening balance to match it."
+                            checked={syncBalanceEnabled}
+                            onChange={onSyncBalanceChange}
+                        />
+                    </div>
+                )}
+            </div>
 
             {captures.length === 0 ? (
                 <EmptyState
@@ -291,6 +337,46 @@ function PendingCaptureCard({
                     Add{selectedCategory ? ` to ${selectedCategory.name}` : ""}
                 </Button>
             </div>
+        </div>
+    );
+}
+
+function SettingRow({
+    title,
+    description,
+    checked,
+    onChange,
+}: {
+    title: string;
+    description: string;
+    checked: boolean;
+    onChange: (value: boolean) => void;
+}) {
+    return (
+        <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-5">{title}</p>
+                <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                    {description}
+                </p>
+            </div>
+            <button
+                type="button"
+                role="switch"
+                aria-checked={checked}
+                onClick={() => onChange(!checked)}
+                className={cn(
+                    "relative mt-0.5 inline-block h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                    checked ? "bg-accent" : "bg-neutral-300",
+                )}
+            >
+                <span
+                    className={cn(
+                        "pointer-events-none absolute left-[2px] top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
+                        checked && "left-[22px]",
+                    )}
+                />
+            </button>
         </div>
     );
 }

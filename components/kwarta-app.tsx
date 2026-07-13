@@ -94,11 +94,16 @@ import { ReviewInboxView } from "@/components/kwarta/review-inbox";
 import {
     ingestCapturedMessage,
     markProcessed,
+    readAutoConfirmPref,
     readMerchantCategoryMap,
     readPendingCaptures,
     readProcessedCaptures,
+    readSyncBalancePref,
+    reconcileOpeningBalance,
     rememberMerchantCategory,
+    writeAutoConfirmPref,
     writePendingCaptures,
+    writeSyncBalancePref,
     type PendingCapture,
 } from "@/lib/kwarta/pending-captures";
 import { HelpPanel } from "@/components/kwarta/help-panel";
@@ -348,6 +353,12 @@ export function KwartaApp() {
         [],
     );
     const [inboxReturnView, setInboxReturnView] = useState<View>("dashboard");
+    const [sharedCaptureText, setSharedCaptureText] = useState<string | null>(
+        null,
+    );
+    // Auto-import automation prefs (opt-in, per user; loaded from storage below).
+    const [autoConfirmEnabled, setAutoConfirmEnabled] = useState(false);
+    const [syncBalanceEnabled, setSyncBalanceEnabled] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
     const [helpShowIndex, setHelpShowIndex] = useState(false);
     const openHelp = (_targetView: View) => {
@@ -422,7 +433,23 @@ export function KwartaApp() {
         }
 
         setPendingCaptures(readPendingCaptures(userId));
+        setAutoConfirmEnabled(readAutoConfirmPref(userId));
+        setSyncBalanceEnabled(readSyncBalancePref(userId));
     }, [userId]);
+
+    function handleAutoConfirmChange(value: boolean) {
+        setAutoConfirmEnabled(value);
+        if (userId) {
+            writeAutoConfirmPref(userId, value);
+        }
+    }
+
+    function handleSyncBalanceChange(value: boolean) {
+        setSyncBalanceEnabled(value);
+        if (userId) {
+            writeSyncBalancePref(userId, value);
+        }
+    }
 
     useEffect(() => {
         if (!userId) {
@@ -431,6 +458,36 @@ export function KwartaApp() {
 
         writePendingCaptures(userId, pendingCaptures);
     }, [userId, pendingCaptures]);
+
+    // Web Share Target: an alert shared into the installed app arrives as
+    // ?text=…&title=… on /app. Read it once, then strip it from the URL.
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const shared = [params.get("title"), params.get("text")]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+
+        if (shared) {
+            setSharedCaptureText(shared);
+            window.history.replaceState({}, "", window.location.pathname);
+        }
+    }, []);
+
+    // Once signed in and loaded, ingest the shared alert and open the inbox.
+    useEffect(() => {
+        if (!sharedCaptureText || !userId || !workspaceReady) {
+            return;
+        }
+
+        handleIngestCaptureText(sharedCaptureText, "share");
+        setSharedCaptureText(null);
+        setInboxReturnView("dashboard");
+        setView("review-inbox");
+        // handleIngestCaptureText reads live state at call time; excluding it
+        // keeps this from re-firing on every render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sharedCaptureText, userId, workspaceReady]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -1030,13 +1087,48 @@ export function KwartaApp() {
         };
     }
 
-    function handleIngestCaptureText(text: string) {
+    // Log one capture as a real transaction: remember the merchant→category
+    // mapping, mark the alert handled (dedup), optionally reconcile the account's
+    // opening balance to the alert's stated balance, and add the transaction.
+    // Balance sync must see the new transaction, so reconcile against the list
+    // that already includes it.
+    function applyCaptureConfirmation(
+        capture: PendingCapture,
+        categoryId: string,
+    ) {
+        if (userId) {
+            rememberMerchantCategory(userId, capture.counterparty, categoryId);
+            markProcessed(userId, capture.externalRef);
+        }
+
+        const nextTransactions = [
+            buildTransactionFromCapture(capture, categoryId),
+            ...transactions,
+        ];
+        setTransactions(nextTransactions);
+
+        if (syncBalanceEnabled) {
+            setAccounts((current) =>
+                reconcileOpeningBalance(
+                    current,
+                    nextTransactions,
+                    transfers,
+                    capture,
+                ),
+            );
+        }
+    }
+
+    function handleIngestCaptureText(
+        text: string,
+        source: "paste" | "share" = "paste",
+    ) {
         if (!userId) {
             return;
         }
 
         const result = ingestCapturedMessage(
-            { source: "paste", body: text },
+            { source, body: text },
             {
                 accounts,
                 pending: pendingCaptures,
@@ -1045,9 +1137,26 @@ export function KwartaApp() {
             },
         );
 
-        if (result.status === "added") {
-            setPendingCaptures((current) => [result.capture, ...current]);
+        if (result.status !== "added") {
+            return;
         }
+
+        const { capture } = result;
+
+        // Auto-confirm only fires for a recognized, high-confidence alert whose
+        // merchant the user has already categorized — otherwise it queues for
+        // review as usual.
+        if (
+            autoConfirmEnabled &&
+            capture.recognized &&
+            capture.confidence === "high" &&
+            capture.suggestedCategoryId
+        ) {
+            applyCaptureConfirmation(capture, capture.suggestedCategoryId);
+            return;
+        }
+
+        setPendingCaptures((current) => [capture, ...current]);
     }
 
     function handleDismissCapture(capture: PendingCapture) {
@@ -1061,15 +1170,7 @@ export function KwartaApp() {
     }
 
     function handleConfirmCapture(capture: PendingCapture, categoryId: string) {
-        if (userId) {
-            rememberMerchantCategory(userId, capture.counterparty, categoryId);
-            markProcessed(userId, capture.externalRef);
-        }
-
-        setTransactions((current) => [
-            buildTransactionFromCapture(capture, categoryId),
-            ...current,
-        ]);
+        applyCaptureConfirmation(capture, categoryId);
         setPendingCaptures((current) =>
             current.filter((item) => item.id !== capture.id),
         );
@@ -1099,8 +1200,29 @@ export function KwartaApp() {
             });
         }
 
+        const nextTransactions = [...newTransactions, ...transactions];
+        setTransactions(nextTransactions);
+
+        if (syncBalanceEnabled) {
+            // Fold oldest→newest so that when several alerts touch one account,
+            // the most recent stated balance is the one that sticks.
+            setAccounts((current) =>
+                [...suggested]
+                    .reverse()
+                    .reduce(
+                        (accs, capture) =>
+                            reconcileOpeningBalance(
+                                accs,
+                                nextTransactions,
+                                transfers,
+                                capture,
+                            ),
+                        current,
+                    ),
+            );
+        }
+
         const confirmedIds = new Set(suggested.map((capture) => capture.id));
-        setTransactions((current) => [...newTransactions, ...current]);
         setPendingCaptures((current) =>
             current.filter((capture) => !confirmedIds.has(capture.id)),
         );
@@ -1997,6 +2119,10 @@ export function KwartaApp() {
                                 captures={pendingCaptures}
                                 expenseCategories={expenseCategories}
                                 incomeCategories={incomeCategories}
+                                autoConfirmEnabled={autoConfirmEnabled}
+                                syncBalanceEnabled={syncBalanceEnabled}
+                                onAutoConfirmChange={handleAutoConfirmChange}
+                                onSyncBalanceChange={handleSyncBalanceChange}
                                 onBack={() => setView(inboxReturnView)}
                                 onConfirm={handleConfirmCapture}
                                 onConfirmAllSuggested={
