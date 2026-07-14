@@ -33,6 +33,7 @@ import {
     FieldError,
     MonthPickerInput,
     PageHeader,
+    ToggleSwitch,
     WeekPickerInput,
     useIsMobileViewport,
 } from "@/components/kwarta/shared";
@@ -391,29 +392,15 @@ function BudgetForm({
                 Reuse budget
             </Label>
             <div className="mt-2 flex items-center gap-3">
-                <button
-                    aria-checked={reuseBudget}
-                    className={cn(
-                        "relative inline-block h-6 w-11 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-                        reuseBudget ? "bg-accent" : "bg-neutral-300",
-                    )}
+                <ToggleSwitch
+                    checked={reuseBudget}
                     id="reuse-budget"
-                    role="switch"
-                    type="button"
-                    onClick={() =>
-                        form.setValue("reuseBudget", !reuseBudget, {
+                    onChange={(value) =>
+                        form.setValue("reuseBudget", value, {
                             shouldDirty: true,
                         })
                     }
-                >
-                    <span
-                        className={cn(
-                            "pointer-events-none absolute left-[2px] top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
-                            reuseBudget && "left-[22px]",
-                        )}
-                        style={{ backgroundColor: "#fff" }}
-                    />
-                </button>
+                />
                 <p className="text-sm leading-5 text-muted-foreground">
                     Reuse this same budget for succeeding periods.
                 </p>

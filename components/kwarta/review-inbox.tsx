@@ -19,6 +19,7 @@ import {
     EditModal,
     EmptyState,
     PageHeader,
+    ToggleSwitch,
 } from "@/components/kwarta/shared";
 
 const PROVIDER_LABEL: Record<PendingCapture["providerId"], string> = {
@@ -83,21 +84,11 @@ export function ReviewInboxView({
     return (
         <>
             <EditModal allowContentScroll onClose={onClose}>
-                <div className="space-y-5 bg-white px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-1">
-                    <div className="flex items-start gap-2">
-                        <button
-                            aria-label="Close review inbox"
-                            data-modal-close
-                            type="button"
-                            className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
-                        >
-                            <ArrowLeft className="h-5 w-5" aria-hidden />
-                        </button>
-                        <PageHeader
-                            title="Review inbox"
-                            description="Captured money alerts waiting for you. Nothing is logged until you confirm."
-                        />
-                    </div>
+                <div className="space-y-5 bg-white px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-2">
+                    <PageHeader
+                        title="Review inbox"
+                        description="Captured money alerts waiting for you. Nothing is logged until you confirm."
+                    />
 
                     <button
                         type="button"
@@ -367,23 +358,11 @@ function SettingRow({
                     {description}
                 </p>
             </div>
-            <button
-                type="button"
-                role="switch"
-                aria-checked={checked}
-                onClick={() => onChange(!checked)}
-                className={cn(
-                    "relative mt-0.5 inline-block h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-                    checked ? "bg-accent" : "bg-neutral-300",
-                )}
-            >
-                <span
-                    className={cn(
-                        "pointer-events-none absolute left-[2px] top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
-                        checked && "left-[22px]",
-                    )}
-                />
-            </button>
+            <ToggleSwitch
+                checked={checked}
+                onChange={onChange}
+                className="mt-0.5"
+            />
         </div>
     );
 }
@@ -419,7 +398,6 @@ function PasteAlertModal({
                     is never uploaded.
                 </p>
                 <textarea
-                    autoFocus
                     value={text}
                     onChange={(event) => setText(event.target.value)}
                     rows={5}
@@ -428,7 +406,7 @@ function PasteAlertModal({
                 />
                 <Button
                     type="button"
-                    className="mt-4 h-14 w-full select-none rounded-2xl text-base font-bold"
+                    className="mt-4 h-14 w-full select-none rounded-2xl text-base font-bold disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
                     disabled={text.trim().length === 0}
                     onClick={() => onSubmit(text.trim())}
                 >

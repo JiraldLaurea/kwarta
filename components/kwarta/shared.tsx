@@ -1403,7 +1403,16 @@ function usePrefersReducedMotion() {
 // Reactive viewport check matching the `sm` Tailwind breakpoint (640px).
 // SSR-safe: starts false on the server and first client render.
 export function useIsMobileViewport() {
-    const [isMobile, setIsMobile] = useState(false);
+    // Resolve the real viewport synchronously on the first client render. These
+    // components are never server-rendered (the app is client-gated on auth), so
+    // reading matchMedia in the initializer is safe — and it avoids a one-frame
+    // flash of the desktop variant (e.g. EditModal briefly rendering the centered
+    // desktop modal before switching to the bottom sheet) when a sheet opens.
+    const [isMobile, setIsMobile] = useState(() =>
+        typeof window !== "undefined"
+            ? window.matchMedia("(max-width: 639px)").matches
+            : false,
+    );
 
     useEffect(() => {
         const query = window.matchMedia("(max-width: 639px)");
@@ -2411,6 +2420,63 @@ export function ModalBackButton(_props: { onClick: () => void }) {
             <ChevronLeft className="h-5 w-5" aria-hidden />
             <span className="sr-only">Back</span>
         </Button>
+    );
+}
+
+// The one switch used across the app (settings, budget forms, the review
+// inbox). iOS-style pill with a sliding knob. Defaults to a white knob on the
+// accent track; when the user's accent is white, the off-track darkens and the
+// on-knob turns black so it stays visible.
+export function ToggleSwitch({
+    checked,
+    onChange,
+    id,
+    accentColor,
+    themeSwitch,
+    className,
+}: {
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+    id?: string;
+    accentColor?: string;
+    /** Marks the dark-mode toggle so the theme layer can find it. */
+    themeSwitch?: boolean;
+    className?: string;
+}) {
+    const normalizedAccent = accentColor?.replace(/\s/g, "").toLowerCase();
+    const isWhiteAccent =
+        normalizedAccent === "#fff" ||
+        normalizedAccent === "#ffffff" ||
+        normalizedAccent === "white";
+    const knobColor = isWhiteAccent && checked ? "#000" : "#fff";
+
+    return (
+        <button
+            aria-checked={checked}
+            data-theme-switch={themeSwitch ? "true" : undefined}
+            id={id}
+            role="switch"
+            type="button"
+            onClick={() => onChange(!checked)}
+            style={
+                isWhiteAccent && !checked
+                    ? { backgroundColor: "#525252" }
+                    : undefined
+            }
+            className={cn(
+                "relative inline-block h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                checked ? "bg-accent" : "bg-neutral-300",
+                className,
+            )}
+        >
+            <span
+                className={cn(
+                    "pointer-events-none absolute left-[2px] top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
+                    checked && "left-[22px]",
+                )}
+                style={{ backgroundColor: knobColor }}
+            />
+        </button>
     );
 }
 

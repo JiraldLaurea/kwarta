@@ -28,7 +28,12 @@ import { IoPricetags, IoStatsChart } from "react-icons/io5";
 import type { User } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogoMark, PageHeader, ProfileImage } from "@/components/kwarta/shared";
+import {
+    LogoMark,
+    PageHeader,
+    ProfileImage,
+    ToggleSwitch,
+} from "@/components/kwarta/shared";
 import { BackupActions } from "@/components/kwarta/backup-controls";
 import type { HomeItemStyle } from "@/components/kwarta/home-view";
 import {
@@ -633,39 +638,14 @@ function SettingsSwitch({
     accentColor?: string;
     onChange: (checked: boolean) => void;
 }) {
-    const normalizedAccent = accentColor?.replace(/\s/g, "").toLowerCase();
-    const isWhiteAccent =
-        normalizedAccent === "#fff" ||
-        normalizedAccent === "#ffffff" ||
-        normalizedAccent === "white";
-    const knobColor = isWhiteAccent && checked ? "#000" : "#fff";
-
     return (
-        <button
-            aria-checked={checked}
-            data-theme-switch={id === "dark-mode" ? "true" : undefined}
-            className={cn(
-                "relative inline-block h-6 w-11 shrink-0 cursor-pointer rounded-full transition-[background,border-color] duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
-                checked ? "bg-accent" : "bg-neutral-300",
-            )}
+        <ToggleSwitch
+            checked={checked}
             id={id}
-            role="switch"
-            type="button"
-            style={
-                isWhiteAccent && !checked
-                    ? { backgroundColor: "#525252" }
-                    : undefined
-            }
-            onClick={() => onChange(!checked)}
-        >
-            <span
-                className={cn(
-                    "pointer-events-none absolute left-[2px] top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
-                    checked && "left-[22px]",
-                )}
-                style={{ backgroundColor: knobColor }}
-            />
-        </button>
+            accentColor={accentColor}
+            themeSwitch={id === "dark-mode"}
+            onChange={onChange}
+        />
     );
 }
 
