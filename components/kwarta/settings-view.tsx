@@ -137,7 +137,7 @@ export function SettingsView({
                     onClick={onManageCategories}
                 />
                 {/* Inset divider aligned with the row text (icon + gaps). */}
-                <div className="ml-[4.375rem] border-t border-border" aria-hidden />
+                <div className="ml-[3.875rem] border-t border-border" aria-hidden />
                 <SettingsNavRow
                     icon={IoStatsChart}
                     title="Reports"
@@ -582,10 +582,10 @@ function GeneralBlock({
 function SettingIconBadge({ icon: Icon }: { icon: IconType }) {
     return (
         <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"
             aria-hidden
         >
-            <Icon className="h-[18px] w-[18px]" />
+            <Icon className="h-4 w-4" />
         </span>
     );
 }
@@ -606,10 +606,10 @@ function SettingsNavRow({
         <button
             type="button"
             onClick={onClick}
-            className="flex w-full items-center gap-3.5 p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
+            className="flex w-full items-center gap-3.5 px-4 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
         >
             <SettingIconBadge icon={icon} />
-            <p className="min-w-0 flex-1 text-base font-semibold leading-5">
+            <p className="min-w-0 flex-1 text-base font-medium leading-5">
                 {title}
             </p>
             <ChevronRight
