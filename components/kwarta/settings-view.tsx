@@ -130,16 +130,18 @@ export function SettingsView({
                 description="Manage app preferences, budget behavior, and account access."
             />
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <SettingsNavCard
-                    icon={IoStatsChart}
-                    title="Reports"
-                    onClick={onViewReports}
-                />
-                <SettingsNavCard
+            <div className="overflow-hidden rounded-2xl border border-border bg-card">
+                <SettingsNavRow
                     icon={IoPricetags}
                     title="Manage categories"
                     onClick={onManageCategories}
+                />
+                {/* Inset divider aligned with the row text (icon + gaps). */}
+                <div className="ml-[4.375rem] border-t border-border" aria-hidden />
+                <SettingsNavRow
+                    icon={IoStatsChart}
+                    title="Reports"
+                    onClick={onViewReports}
                 />
             </div>
 
@@ -588,10 +590,10 @@ function SettingIconBadge({ icon: Icon }: { icon: IconType }) {
     );
 }
 
-// Full-width navigation card for Reports / Manage categories: an accent icon
-// badge, title, and a trailing chevron. Stacks on mobile and sits two-up on
-// desktop.
-function SettingsNavCard({
+// A single navigation row (Reports / Manage categories): an accent icon badge,
+// title, and a trailing chevron. Sits inside a grouped container (see the
+// Settings header) with inset dividers between rows, iOS Settings style.
+function SettingsNavRow({
     icon,
     title,
     onClick,
@@ -604,7 +606,7 @@ function SettingsNavCard({
         <button
             type="button"
             onClick={onClick}
-            className="flex items-center gap-3.5 rounded-2xl border border-border bg-card p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
+            className="flex w-full items-center gap-3.5 p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
         >
             <SettingIconBadge icon={icon} />
             <p className="min-w-0 flex-1 text-base font-semibold leading-5">
