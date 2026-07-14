@@ -122,7 +122,6 @@ export function SettingsView({
         (colorMode === "system" &&
             typeof window !== "undefined" &&
             window.matchMedia("(prefers-color-scheme: dark)").matches);
-    const currentAccentColor = getAccentSwatchHex(accentTheme, isDarkEffective);
 
     return (
         <div className="w-full space-y-5">
@@ -356,7 +355,6 @@ export function SettingsView({
                             <SettingsSwitch
                                 checked={!budgetsEnabled}
                                 id="disable-budget-tracking"
-                                accentColor={currentAccentColor}
                                 onChange={(checked) =>
                                     onBudgetsEnabledChange(!checked)
                                 }
@@ -630,19 +628,16 @@ function SettingsNavCard({
 function SettingsSwitch({
     checked,
     id,
-    accentColor,
     onChange,
 }: {
     checked: boolean;
     id: string;
-    accentColor?: string;
     onChange: (checked: boolean) => void;
 }) {
     return (
         <ToggleSwitch
             checked={checked}
             id={id}
-            accentColor={accentColor}
             themeSwitch={id === "dark-mode"}
             onChange={onChange}
         />

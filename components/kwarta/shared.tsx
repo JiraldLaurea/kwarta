@@ -2424,32 +2424,25 @@ export function ModalBackButton(_props: { onClick: () => void }) {
 }
 
 // The one switch used across the app (settings, budget forms, the review
-// inbox). iOS-style pill with a sliding knob. Defaults to a white knob on the
-// accent track; when the user's accent is white, the off-track darkens and the
-// on-knob turns black so it stays visible.
+// inbox). iOS-style pill with a sliding knob. The knob uses the `bg-white`
+// class deliberately: in dark mode the app's `.dark .bg-white` rule maps it to
+// the card tone, so the knob softens to a muted grey instead of glaring pure
+// white — and it stays visible on the near-white dark-mode accent track without
+// any per-accent special-casing.
 export function ToggleSwitch({
     checked,
     onChange,
     id,
-    accentColor,
     themeSwitch,
     className,
 }: {
     checked: boolean;
     onChange: (checked: boolean) => void;
     id?: string;
-    accentColor?: string;
     /** Marks the dark-mode toggle so the theme layer can find it. */
     themeSwitch?: boolean;
     className?: string;
 }) {
-    const normalizedAccent = accentColor?.replace(/\s/g, "").toLowerCase();
-    const isWhiteAccent =
-        normalizedAccent === "#fff" ||
-        normalizedAccent === "#ffffff" ||
-        normalizedAccent === "white";
-    const knobColor = isWhiteAccent && checked ? "#000" : "#fff";
-
     return (
         <button
             aria-checked={checked}
@@ -2458,11 +2451,6 @@ export function ToggleSwitch({
             role="switch"
             type="button"
             onClick={() => onChange(!checked)}
-            style={
-                isWhiteAccent && !checked
-                    ? { backgroundColor: "#525252" }
-                    : undefined
-            }
             className={cn(
                 "relative inline-block h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-150 ease-[cubic-bezier(0,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
                 checked ? "bg-accent" : "bg-neutral-300",
@@ -2471,10 +2459,9 @@ export function ToggleSwitch({
         >
             <span
                 className={cn(
-                    "pointer-events-none absolute left-[2px] top-1/2 h-5 w-5 -translate-y-1/2 rounded-full shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
+                    "pointer-events-none absolute left-[2px] top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.25)] transition-[left] duration-150 ease-[cubic-bezier(0,0,0.2,1)]",
                     checked && "left-[22px]",
                 )}
-                style={{ backgroundColor: knobColor }}
             />
         </button>
     );
