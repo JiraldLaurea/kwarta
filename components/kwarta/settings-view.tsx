@@ -134,13 +134,11 @@ export function SettingsView({
                 <SettingsNavCard
                     icon={IoStatsChart}
                     title="Reports"
-                    description="Spending trends & insights"
                     onClick={onViewReports}
                 />
                 <SettingsNavCard
                     icon={IoPricetags}
                     title="Manage categories"
-                    description="Add, edit & reorder categories"
                     onClick={onManageCategories}
                 />
             </div>
@@ -591,17 +589,15 @@ function SettingIconBadge({ icon: Icon }: { icon: IconType }) {
 }
 
 // Full-width navigation card for Reports / Manage categories: an accent icon
-// badge, title and subtitle, and a trailing chevron. Stacks on mobile and sits
-// two-up on desktop.
+// badge, title, and a trailing chevron. Stacks on mobile and sits two-up on
+// desktop.
 function SettingsNavCard({
     icon,
     title,
-    description,
     onClick,
 }: {
     icon: IconType;
     title: string;
-    description: string;
     onClick: () => void;
 }) {
     return (
@@ -611,12 +607,9 @@ function SettingsNavCard({
             className="flex items-center gap-3.5 rounded-2xl border border-border bg-card p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
         >
             <SettingIconBadge icon={icon} />
-            <div className="min-w-0 flex-1">
-                <p className="text-base font-bold leading-5">{title}</p>
-                <p className="mt-1 text-xs leading-4 text-muted-foreground">
-                    {description}
-                </p>
-            </div>
+            <p className="min-w-0 flex-1 text-base font-semibold leading-5">
+                {title}
+            </p>
             <ChevronRight
                 className="h-5 w-5 shrink-0 text-muted-foreground"
                 aria-hidden
