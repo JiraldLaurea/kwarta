@@ -16,6 +16,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/landing/reveal";
 import { ThemeToggle } from "@/components/landing/theme-toggle";
+import {
+  LOGO_MARK_DATA_URI,
+  LOGO_MARK_DATA_URI_DARK,
+} from "@/lib/kwarta/logo-mark";
 
 const ACCOUNT_LOGOS = [
   "bdo",
@@ -96,14 +100,25 @@ function Logo({ className }: { className?: string }) {
       className={`flex items-center gap-2 ${className ?? ""}`}
       aria-label="Kwarta home"
     >
-      <Image
+      {/* Light mark (dark glyph); the dark-mode variant is the white square with
+          a black glyph, swapped in via `dark:` so no theme check is needed. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         aria-hidden
-        className="shrink-0 rounded-md"
-        height={28}
-        src="/icons/icon-192.png"
         alt=""
+        className="shrink-0 rounded-md dark:hidden"
+        height={28}
+        src={LOGO_MARK_DATA_URI}
         width={28}
-        unoptimized
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        aria-hidden
+        alt=""
+        className="hidden shrink-0 rounded-md dark:block"
+        height={28}
+        src={LOGO_MARK_DATA_URI_DARK}
+        width={28}
       />
       <span className="text-lg font-semibold tracking-tight">Kwarta</span>
     </Link>

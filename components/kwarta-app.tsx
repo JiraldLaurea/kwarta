@@ -352,7 +352,9 @@ export function KwartaApp() {
     const [pendingCaptures, setPendingCaptures] = useState<PendingCapture[]>(
         [],
     );
-    const [inboxReturnView, setInboxReturnView] = useState<View>("dashboard");
+    // The Review Inbox is a bottom sheet overlaid on the current page, not a
+    // full page view, so it's tracked by an open flag rather than `view`.
+    const [inboxOpen, setInboxOpen] = useState(false);
     const [sharedCaptureText, setSharedCaptureText] = useState<string | null>(
         null,
     );
@@ -482,8 +484,7 @@ export function KwartaApp() {
 
         handleIngestCaptureText(sharedCaptureText, "share");
         setSharedCaptureText(null);
-        setInboxReturnView("dashboard");
-        setView("review-inbox");
+        setInboxOpen(true);
         // handleIngestCaptureText reads live state at call time; excluding it
         // keeps this from re-firing on every render.
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1682,10 +1683,7 @@ export function KwartaApp() {
                                         : ""
                                 }`}
                                 type="button"
-                                onClick={() => {
-                                    setInboxReturnView(view);
-                                    setView("review-inbox");
-                                }}
+                                onClick={() => setInboxOpen(true)}
                                 className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-white text-muted-foreground shadow-[0_1px_0_rgba(0,0,0,0.04)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
                             >
                                 <Inbox className="h-5 w-5" aria-hidden />
@@ -2110,30 +2108,24 @@ export function KwartaApp() {
                             />
                         </SwipeBackArea>
                     )}
-                    {view === "review-inbox" && (
-                        <SwipeBackArea
-                            onBack={() => setView(inboxReturnView)}
-                        >
-                            <ReviewInboxView
-                                accounts={accounts}
-                                captures={pendingCaptures}
-                                expenseCategories={expenseCategories}
-                                incomeCategories={incomeCategories}
-                                autoConfirmEnabled={autoConfirmEnabled}
-                                syncBalanceEnabled={syncBalanceEnabled}
-                                onAutoConfirmChange={handleAutoConfirmChange}
-                                onSyncBalanceChange={handleSyncBalanceChange}
-                                onBack={() => setView(inboxReturnView)}
-                                onConfirm={handleConfirmCapture}
-                                onConfirmAllSuggested={
-                                    handleConfirmAllSuggested
-                                }
-                                onDismiss={handleDismissCapture}
-                                onIngestText={handleIngestCaptureText}
-                            />
-                        </SwipeBackArea>
-                    )}
                 </div>
+                {inboxOpen && (
+                    <ReviewInboxView
+                        accounts={accounts}
+                        captures={pendingCaptures}
+                        expenseCategories={expenseCategories}
+                        incomeCategories={incomeCategories}
+                        autoConfirmEnabled={autoConfirmEnabled}
+                        syncBalanceEnabled={syncBalanceEnabled}
+                        onAutoConfirmChange={handleAutoConfirmChange}
+                        onSyncBalanceChange={handleSyncBalanceChange}
+                        onClose={() => setInboxOpen(false)}
+                        onConfirm={handleConfirmCapture}
+                        onConfirmAllSuggested={handleConfirmAllSuggested}
+                        onDismiss={handleDismissCapture}
+                        onIngestText={handleIngestCaptureText}
+                    />
+                )}
                 {helpOpen && (
                     <HelpPanel
                         view={view}

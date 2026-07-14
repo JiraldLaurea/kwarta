@@ -49,7 +49,7 @@ export function ReviewInboxView({
     syncBalanceEnabled,
     onAutoConfirmChange,
     onSyncBalanceChange,
-    onBack,
+    onClose,
     onConfirm,
     onDismiss,
     onConfirmAllSuggested,
@@ -63,7 +63,7 @@ export function ReviewInboxView({
     syncBalanceEnabled: boolean;
     onAutoConfirmChange: (value: boolean) => void;
     onSyncBalanceChange: (value: boolean) => void;
-    onBack: () => void;
+    onClose: () => void;
     onConfirm: (capture: PendingCapture, categoryId: string) => void;
     onDismiss: (capture: PendingCapture) => void;
     onConfirmAllSuggested: () => void;
@@ -81,100 +81,107 @@ export function ReviewInboxView({
     );
 
     return (
-        <div className="space-y-5">
-            <div className="flex items-start gap-2">
-                <button
-                    aria-label="Back"
-                    type="button"
-                    onClick={onBack}
-                    className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
-                >
-                    <ArrowLeft className="h-5 w-5" aria-hidden />
-                </button>
-                <PageHeader
-                    title="Review inbox"
-                    description="Captured money alerts waiting for you. Nothing is logged until you confirm."
-                />
-            </div>
-
-            <button
-                type="button"
-                onClick={() => setPasteOpen(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card p-4 text-sm font-semibold text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
-            >
-                <ClipboardPaste className="h-4 w-4" aria-hidden />
-                Paste an alert from GCash, Maya or your bank
-            </button>
-
-            <div className="rounded-2xl border border-border bg-card">
-                <button
-                    type="button"
-                    aria-expanded={settingsOpen}
-                    onClick={() => setSettingsOpen((open) => !open)}
-                    className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))] rounded-2xl"
-                >
-                    <Settings2 className="h-4 w-4 text-muted-foreground" aria-hidden />
-                    Automation
-                    <ChevronDown
-                        className={cn(
-                            "ml-auto h-4 w-4 text-muted-foreground transition-transform",
-                            settingsOpen && "rotate-180",
-                        )}
-                        aria-hidden
-                    />
-                </button>
-                {settingsOpen && (
-                    <div className="space-y-4 border-t border-border px-4 py-4">
-                        <SettingRow
-                            title="Auto-confirm known merchants"
-                            description="Log high-confidence alerts from merchants you've already categorized, without a review tap."
-                            checked={autoConfirmEnabled}
-                            onChange={onAutoConfirmChange}
-                        />
-                        <SettingRow
-                            title="Sync account balance"
-                            description="When an alert states the balance, nudge the matched account's opening balance to match it."
-                            checked={syncBalanceEnabled}
-                            onChange={onSyncBalanceChange}
-                        />
-                    </div>
-                )}
-            </div>
-
-            {captures.length === 0 ? (
-                <EmptyState
-                    title="Inbox zero"
-                    description="Paste a GCash, Maya or bank alert above and it'll show up here to confirm. On the app, connect notifications to fill this automatically."
-                />
-            ) : (
-                <>
-                    {suggestedCount > 1 && (
-                        <Button
+        <>
+            <EditModal allowContentScroll onClose={onClose}>
+                <div className="space-y-5 bg-white px-5 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-1">
+                    <div className="flex items-start gap-2">
+                        <button
+                            aria-label="Close review inbox"
+                            data-modal-close
                             type="button"
-                            className="h-12 w-full select-none rounded-2xl text-sm font-bold"
-                            onClick={onConfirmAllSuggested}
+                            className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
                         >
-                            Add all {suggestedCount} suggested
-                        </Button>
-                    )}
-                    <div className="space-y-3">
-                        {captures.map((capture) => (
-                            <PendingCaptureCard
-                                key={capture.id}
-                                capture={capture}
-                                categories={
-                                    capture.direction === "in"
-                                        ? incomeCategories
-                                        : expenseCategories
-                                }
-                                accounts={accounts}
-                                onConfirm={onConfirm}
-                                onDismiss={onDismiss}
-                            />
-                        ))}
+                            <ArrowLeft className="h-5 w-5" aria-hidden />
+                        </button>
+                        <PageHeader
+                            title="Review inbox"
+                            description="Captured money alerts waiting for you. Nothing is logged until you confirm."
+                        />
                     </div>
-                </>
-            )}
+
+                    <button
+                        type="button"
+                        onClick={() => setPasteOpen(true)}
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card p-4 text-sm font-semibold text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
+                    >
+                        <ClipboardPaste className="h-4 w-4" aria-hidden />
+                        Paste an alert from GCash, Maya or your bank
+                    </button>
+
+                    <div className="rounded-2xl border border-border bg-card">
+                        <button
+                            type="button"
+                            aria-expanded={settingsOpen}
+                            onClick={() => setSettingsOpen((open) => !open)}
+                            className="flex w-full items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
+                        >
+                            <Settings2
+                                className="h-4 w-4 text-muted-foreground"
+                                aria-hidden
+                            />
+                            Automation
+                            <ChevronDown
+                                className={cn(
+                                    "ml-auto h-4 w-4 text-muted-foreground transition-transform",
+                                    settingsOpen && "rotate-180",
+                                )}
+                                aria-hidden
+                            />
+                        </button>
+                        {settingsOpen && (
+                            <div className="space-y-4 border-t border-border px-4 py-4">
+                                <SettingRow
+                                    title="Auto-confirm known merchants"
+                                    description="Log high-confidence alerts from merchants you've already categorized, without a review tap."
+                                    checked={autoConfirmEnabled}
+                                    onChange={onAutoConfirmChange}
+                                />
+                                <SettingRow
+                                    title="Sync account balance"
+                                    description="When an alert states the balance, nudge the matched account's opening balance to match it."
+                                    checked={syncBalanceEnabled}
+                                    onChange={onSyncBalanceChange}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {captures.length === 0 ? (
+                        <EmptyState
+                            title="Inbox zero"
+                            description="Paste a GCash, Maya or bank alert above and it'll show up here to confirm. On the app, connect notifications to fill this automatically."
+                        />
+                    ) : (
+                        <>
+                            {suggestedCount > 1 && (
+                                <Button
+                                    type="button"
+                                    className="h-12 w-full select-none rounded-2xl text-sm font-bold"
+                                    onClick={onConfirmAllSuggested}
+                                >
+                                    Add all {suggestedCount} suggested
+                                </Button>
+                            )}
+                            <div className="space-y-3">
+                                {captures.map((capture) => (
+                                    <PendingCaptureCard
+                                        key={capture.id}
+                                        capture={capture}
+                                        categories={
+                                            capture.direction === "in"
+                                                ? incomeCategories
+                                                : expenseCategories
+                                        }
+                                        accounts={accounts}
+                                        onConfirm={onConfirm}
+                                        onDismiss={onDismiss}
+                                    />
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </EditModal>
 
             {pasteOpen && (
                 <PasteAlertModal
@@ -185,7 +192,7 @@ export function ReviewInboxView({
                     }}
                 />
             )}
-        </div>
+        </>
     );
 }
 
@@ -392,9 +399,21 @@ function PasteAlertModal({
 
     return (
         <EditModal allowContentScroll onClose={onClose}>
-            <div className="min-h-dvh bg-white px-6 pb-6 pt-6 sm:min-h-0 sm:rounded-2xl">
-                <h2 className="text-2xl font-medium leading-8">Paste an alert</h2>
-                <p className="mt-1 text-base leading-6 text-muted-foreground">
+            <div className="min-h-dvh bg-white px-6 pb-6 pt-2 sm:min-h-0 sm:rounded-2xl">
+                <div className="flex items-center gap-2">
+                    <button
+                        aria-label="Back to review inbox"
+                        data-modal-close
+                        type="button"
+                        className="-ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:hover:bg-[hsl(var(--hover-surface))] md:hover:text-foreground"
+                    >
+                        <ArrowLeft className="h-5 w-5" aria-hidden />
+                    </button>
+                    <h2 className="text-2xl font-medium leading-8">
+                        Paste an alert
+                    </h2>
+                </div>
+                <p className="mt-2 text-base leading-6 text-muted-foreground">
                     Copy the SMS or notification from GCash, Maya, or your bank
                     and paste it here. Kwarta reads it on your phone — the text
                     is never uploaded.
@@ -407,24 +426,14 @@ function PasteAlertModal({
                     placeholder="You have paid PHP 350.00 to Grab. Ref. No. 1234567890."
                     className="mt-4 w-full resize-none rounded-2xl border border-border bg-muted p-4 text-base leading-6 text-foreground placeholder:text-muted-foreground/50 focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20"
                 />
-                <div className="mt-4 flex items-center gap-2">
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        className="h-14 flex-1 select-none rounded-2xl text-base font-bold"
-                        onClick={onClose}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        type="button"
-                        className="h-14 flex-1 select-none rounded-2xl text-base font-bold"
-                        disabled={text.trim().length === 0}
-                        onClick={() => onSubmit(text.trim())}
-                    >
-                        Add to inbox
-                    </Button>
-                </div>
+                <Button
+                    type="button"
+                    className="mt-4 h-14 w-full select-none rounded-2xl text-base font-bold"
+                    disabled={text.trim().length === 0}
+                    onClick={() => onSubmit(text.trim())}
+                >
+                    Add to inbox
+                </Button>
             </div>
         </EditModal>
     );
