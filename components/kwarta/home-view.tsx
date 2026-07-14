@@ -211,7 +211,9 @@ export function HomeView({
       )}
       <div
         className={cn(
-          "space-y-5",
+          // space-y-4 (not -5) for the same reason as above: the "Income"
+          // heading's line-box leading makes an identical gap read as too big.
+          "space-y-4",
           isListLayout(homeItemStyle) &&
             "md:grid md:grid-cols-2 md:items-start md:gap-5 md:space-y-0",
         )}
