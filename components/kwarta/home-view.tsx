@@ -197,7 +197,11 @@ export function HomeView({
   transactions: Transaction[];
 }) {
   return (
-    <div className="space-y-5">
+    // The gap below the summary card is a touch tighter than the top inset so
+    // it reads as visually equal: the "Expenses" label below sits inside a
+    // taller line-box (leading above the glyph), whereas the card's top border
+    // is a hard edge, so an identical box gap would look bottom-heavy.
+    <div className="space-y-4">
       {budgetsEnabled && (
         <HomeSummaryPanel
           budgets={budgets}
