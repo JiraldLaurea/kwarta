@@ -300,6 +300,9 @@ export function KwartaApp() {
     const [colorMode, setColorMode] = useState<ColorMode>("light");
     const [homeItemStyle, setHomeItemStyle] = useState<HomeItemStyle>("cards");
     const [budgetsEnabled, setBudgetsEnabled] = useState(true);
+    // Off by default: when on, Home hides expense categories that have no
+    // budget set for the period.
+    const [hideUnbudgetedExpenses, setHideUnbudgetedExpenses] = useState(false);
     const [budgetCycleSettings, setBudgetCycleSettings] =
         useState<BudgetCycleSettings>(defaultBudgetCycleSettings);
     const [budgetCycleSettingsReady, setBudgetCycleSettingsReady] =
@@ -557,6 +560,17 @@ export function KwartaApp() {
             setBudgetsEnabled(storedBudgetsEnabled === "true");
         }
 
+        const storedHideUnbudgeted = window.localStorage.getItem(
+            "kwarta:hide-unbudgeted-expenses",
+        );
+
+        if (
+            storedHideUnbudgeted === "true" ||
+            storedHideUnbudgeted === "false"
+        ) {
+            setHideUnbudgetedExpenses(storedHideUnbudgeted === "true");
+        }
+
         const storedBudgetCycleSettings = window.localStorage.getItem(
             "kwarta:budget-cycle-settings",
         );
@@ -638,6 +652,13 @@ export function KwartaApp() {
             String(budgetsEnabled),
         );
     }, [budgetsEnabled]);
+
+    useEffect(() => {
+        window.localStorage.setItem(
+            "kwarta:hide-unbudgeted-expenses",
+            String(hideUnbudgetedExpenses),
+        );
+    }, [hideUnbudgetedExpenses]);
 
     useEffect(() => {
         if (!budgetCycleSettingsReady) {
@@ -1710,6 +1731,7 @@ export function KwartaApp() {
                         <HomeView
                             budgets={periodBudgets}
                             budgetsEnabled={budgetsEnabled}
+                            hideUnbudgetedExpenses={hideUnbudgetedExpenses}
                             expenseCategories={expenseCategories}
                             homeItemStyle={homeItemStyle}
                             incomeCategories={incomeCategories}
@@ -2004,6 +2026,7 @@ export function KwartaApp() {
                             automaticBackup={automaticBackup}
                             previousBackup={previousBackup}
                             budgetsEnabled={budgetsEnabled}
+                            hideUnbudgetedExpenses={hideUnbudgetedExpenses}
                             colorMode={colorMode}
                             homeItemStyle={homeItemStyle}
                             user={user}
@@ -2013,6 +2036,9 @@ export function KwartaApp() {
                             onViewReports={() => setView("reports")}
                             onOpenHelp={openHelpIndex}
                             onBudgetsEnabledChange={setBudgetsEnabled}
+                            onHideUnbudgetedExpensesChange={
+                                setHideUnbudgetedExpenses
+                            }
                             onBackupExport={() =>
                                 downloadWorkspaceBackupFile(
                                     getCurrentWorkspace(),

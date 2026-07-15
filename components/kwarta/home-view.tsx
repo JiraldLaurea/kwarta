@@ -170,6 +170,7 @@ function CategoryProgressRing({
 export function HomeView({
   budgets,
   budgetsEnabled,
+  hideUnbudgetedExpenses,
   expenseCategories,
   homeItemStyle,
   incomeCategories,
@@ -182,6 +183,7 @@ export function HomeView({
 }: {
   budgets: Budget[];
   budgetsEnabled: boolean;
+  hideUnbudgetedExpenses: boolean;
   expenseCategories: Category[];
   homeItemStyle: HomeItemStyle;
   incomeCategories: Category[];
@@ -196,6 +198,16 @@ export function HomeView({
   periodFrequency: "monthly" | "weekly" | "cycle";
   transactions: Transaction[];
 }) {
+  // "Hide unbudgeted expenses": only meaningful while budgets are on. Keep any
+  // expense category that has a budget this period.
+  const budgetedCategoryIds = new Set(budgets.map((budget) => budget.categoryId));
+  const shownExpenseCategories =
+    budgetsEnabled && hideUnbudgetedExpenses
+      ? expenseCategories.filter((category) =>
+          budgetedCategoryIds.has(category.id),
+        )
+      : expenseCategories;
+
   return (
     // The gap below the summary card is a touch tighter than the top inset so
     // it reads as visually equal: the "Expenses" label below sits inside a
@@ -224,7 +236,7 @@ export function HomeView({
           editMode={false}
           title="Expenses"
           homeItemStyle={homeItemStyle}
-          categories={expenseCategories}
+          categories={shownExpenseCategories}
           onDeleteCategory={onDeleteCategory}
           onEditCategory={onEditCategory}
           onReorderCategory={onReorderCategory}

@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 import type { IconType } from "react-icons";
 import {
   IoHome,
@@ -110,9 +110,34 @@ export const MobileTabBar = memo(function MobileTabBar({
   onSelect: (view: View) => void;
 }) {
   const currentNavView = toNavView(activeView);
+  const navRef = useRef<HTMLElement>(null);
+
+  // Publish the tab bar's real height so overlays that must clear it (the
+  // offline banner) can position themselves against it — and fall back cleanly
+  // when the bar isn't mounted (e.g. the loading and auth screens). Height is 0
+  // when hidden at md+, which is the correct offset for those breakpoints too.
+  useEffect(() => {
+    const root = document.documentElement;
+
+    function sync() {
+      const height = navRef.current?.offsetHeight ?? 0;
+      root.style.setProperty("--app-tabbar-h", `${height}px`);
+    }
+
+    sync();
+    window.addEventListener("resize", sync);
+
+    return () => {
+      window.removeEventListener("resize", sync);
+      root.style.removeProperty("--app-tabbar-h");
+    };
+  }, []);
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-white/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] backdrop-blur-md md:hidden">
+    <nav
+      ref={navRef}
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-white/95 px-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(0,0,0,0.06)] backdrop-blur-md md:hidden"
+    >
       <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
         {navigationItems.map((item) => {
           const active = currentNavView === item.view;

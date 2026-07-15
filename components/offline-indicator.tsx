@@ -65,7 +65,7 @@ export function OfflineIndicator() {
         <div
             aria-live="polite"
             role="status"
-            className="pointer-events-none fixed inset-x-0 bottom-[calc(73px+env(safe-area-inset-bottom))] z-[51] md:bottom-auto md:top-[73px] md:flex md:justify-center md:px-4 md:pt-2"
+            className="pointer-events-none fixed inset-x-0 bottom-[var(--app-tabbar-h,env(safe-area-inset-bottom))] z-[51] md:bottom-auto md:top-[73px] md:flex md:justify-center md:px-4 md:pt-2"
         >
             <div
                 ref={bannerRef}

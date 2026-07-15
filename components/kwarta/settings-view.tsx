@@ -4,6 +4,7 @@ import {
     LuCheck as Check,
     LuChevronRight as ChevronRight,
     LuDownload as Download,
+    LuEyeOff as EyeOff,
     LuGauge as Gauge,
     LuCircleHelp as HelpCircle,
     LuInfo as Info,
@@ -67,10 +68,11 @@ const colorModeOptions = [
 // describes itself.
 const SETTINGS_TILE = {
     categories: "#0D9488",
-    reports: "#2563EB",
+    reports: "#34C759",
     homeLayout: "#4F46E5",
     theme: "#7C3AED",
     budget: "#E11D48",
+    hideUnbudgeted: "#64748B",
 } as const;
 const SETTINGS_TILE_PALETTE =
     "conic-gradient(from 215deg, #ff6b6b, #ffcf5c, #4fd6a8, #4f8bff, #a879ff, #ff6b9a, #ff6b6b)";
@@ -83,6 +85,7 @@ export function SettingsView({
     backupImportError,
     backupImportInputRef,
     budgetsEnabled,
+    hideUnbudgetedExpenses,
     colorMode,
     email,
     homeItemStyle,
@@ -97,6 +100,7 @@ export function SettingsView({
     onColorModeChange,
     onAccentThemeChange,
     onBudgetsEnabledChange,
+    onHideUnbudgetedExpensesChange,
     onHomeItemStyleChange,
     onManageCategories,
     onViewReports,
@@ -110,6 +114,7 @@ export function SettingsView({
     backupImportError: string | null;
     backupImportInputRef: RefObject<HTMLInputElement>;
     budgetsEnabled: boolean;
+    hideUnbudgetedExpenses: boolean;
     colorMode: ColorMode;
     email: string;
     homeItemStyle: HomeItemStyle;
@@ -124,6 +129,7 @@ export function SettingsView({
     onColorModeChange: (mode: ColorMode) => void;
     onAccentThemeChange: (theme: AccentTheme) => void;
     onBudgetsEnabledChange: (enabled: boolean) => void;
+    onHideUnbudgetedExpensesChange: (hide: boolean) => void;
     onHomeItemStyleChange: (style: HomeItemStyle) => void;
     onManageCategories: () => void;
     onViewReports: () => void;
@@ -376,6 +382,27 @@ export function SettingsView({
                                 onChange={(checked) =>
                                     onBudgetsEnabledChange(!checked)
                                 }
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted p-4">
+                            <SettingIconBadge
+                                icon={EyeOff}
+                                background={SETTINGS_TILE.hideUnbudgeted}
+                            />
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold leading-5">
+                                    Hide unbudgeted expenses
+                                </p>
+                                <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                                    On Home, hide expense categories with no
+                                    budget set.
+                                </p>
+                            </div>
+                            <SettingsSwitch
+                                checked={hideUnbudgetedExpenses}
+                                id="hide-unbudgeted-expenses"
+                                onChange={onHideUnbudgetedExpensesChange}
                             />
                         </div>
                     </CardContent>
