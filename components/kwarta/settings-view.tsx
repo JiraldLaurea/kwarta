@@ -175,7 +175,6 @@ export function SettingsView({
                             icon={RiLayoutFill}
                             iconBackground={SETTINGS_TILE.homeLayout}
                             label="Home layout"
-                            description="How categories appear on the home screen."
                         >
                             {/* Mobile: horizontal scroll, bled past the card's own x padding
                   so cards aren't clipped by it; pl-5 restores the initial
@@ -247,7 +246,6 @@ export function SettingsView({
                             icon={FaPalette}
                             iconBackground={SETTINGS_TILE_PALETTE}
                             label="Accent color"
-                            description="Tap to apply instantly."
                         >
                             {/* Mobile: horizontal scroll, following the same bleed/restore
                   pattern as Home layout above. Desktop (sm+): wraps into a
@@ -325,7 +323,6 @@ export function SettingsView({
                             icon={FaAdjust}
                             iconBackground={SETTINGS_TILE.theme}
                             label="Theme"
-                            description="Follow your system, or pick light or dark."
                         >
                             <div className="flex gap-1 rounded-full border border-border bg-muted p-1.5">
                                 {colorModeOptions.map(
@@ -583,7 +580,7 @@ function GeneralBlock({
     icon: IconType;
     iconBackground: string;
     label: string;
-    description: string;
+    description?: string;
     children: React.ReactNode;
 }) {
     return (
@@ -592,9 +589,11 @@ function GeneralBlock({
                 <SettingIconBadge icon={icon} background={iconBackground} />
                 <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold leading-5">{label}</p>
-                    <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
-                        {description}
-                    </p>
+                    {description && (
+                        <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
+                            {description}
+                        </p>
+                    )}
                 </div>
             </div>
             {children}
@@ -652,7 +651,7 @@ function SettingsNavRow({
             className="flex w-full items-center gap-3.5 px-4 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
         >
             <SettingIconBadge icon={icon} background={iconBackground} />
-            <p className="min-w-0 flex-1 text-base font-medium leading-5">
+            <p className="min-w-0 flex-1 text-base font-normal leading-5">
                 {title}
             </p>
             <ChevronRight
