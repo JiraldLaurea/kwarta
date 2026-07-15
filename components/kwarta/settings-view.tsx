@@ -62,6 +62,19 @@ const colorModeOptions = [
     { value: "dark" as ColorMode, icon: FaMoon, label: "Dark" },
 ] as const;
 
+// Each settings row owns a fixed tile color (independent of the accent), iOS
+// Settings style. The "Accent color" row keeps a multicolor tile so it
+// describes itself.
+const SETTINGS_TILE = {
+    categories: "#0D9488",
+    reports: "#2563EB",
+    homeLayout: "#4F46E5",
+    theme: "#7C3AED",
+    budget: "#E11D48",
+} as const;
+const SETTINGS_TILE_PALETTE =
+    "conic-gradient(from 215deg, #ff6b6b, #ffcf5c, #4fd6a8, #4f8bff, #a879ff, #ff6b9a, #ff6b6b)";
+
 export function SettingsView({
     accentTheme,
     accountName,
@@ -133,6 +146,7 @@ export function SettingsView({
             <div className="overflow-hidden rounded-2xl border border-border bg-card">
                 <SettingsNavRow
                     icon={IoPricetags}
+                    iconBackground={SETTINGS_TILE.categories}
                     title="Manage categories"
                     onClick={onManageCategories}
                 />
@@ -140,6 +154,7 @@ export function SettingsView({
                 <div className="ml-[3.875rem] border-t border-border" aria-hidden />
                 <SettingsNavRow
                     icon={IoStatsChart}
+                    iconBackground={SETTINGS_TILE.reports}
                     title="Reports"
                     onClick={onViewReports}
                 />
@@ -158,6 +173,7 @@ export function SettingsView({
                     <CardContent className="flex flex-col gap-6 px-5 pb-5 pt-2">
                         <GeneralBlock
                             icon={RiLayoutFill}
+                            iconBackground={SETTINGS_TILE.homeLayout}
                             label="Home layout"
                             description="How categories appear on the home screen."
                         >
@@ -229,6 +245,7 @@ export function SettingsView({
 
                         <GeneralBlock
                             icon={FaPalette}
+                            iconBackground={SETTINGS_TILE_PALETTE}
                             label="Accent color"
                             description="Tap to apply instantly."
                         >
@@ -306,6 +323,7 @@ export function SettingsView({
 
                         <GeneralBlock
                             icon={FaAdjust}
+                            iconBackground={SETTINGS_TILE.theme}
                             label="Theme"
                             description="Follow your system, or pick light or dark."
                         >
@@ -342,7 +360,10 @@ export function SettingsView({
                         </GeneralBlock>
 
                         <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted p-4">
-                            <SettingIconBadge icon={FaChartBar} />
+                            <SettingIconBadge
+                                icon={FaChartBar}
+                                background={SETTINGS_TILE.budget}
+                            />
                             <div className="min-w-0 flex-1">
                                 <p className="text-sm font-semibold leading-5">
                                     Disable Budget Tracking
@@ -554,11 +575,13 @@ function HomeLayoutPreview({ style }: { style: HomeItemStyle }) {
 
 function GeneralBlock({
     icon,
+    iconBackground,
     label,
     description,
     children,
 }: {
     icon: IconType;
+    iconBackground: string;
     label: string;
     description: string;
     children: React.ReactNode;
@@ -566,7 +589,7 @@ function GeneralBlock({
     return (
         <div className="space-y-3.5">
             <div className="flex items-center gap-3">
-                <SettingIconBadge icon={icon} />
+                <SettingIconBadge icon={icon} background={iconBackground} />
                 <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold leading-5">{label}</p>
                     <p className="mt-0.5 text-xs leading-4 text-muted-foreground">
@@ -579,13 +602,31 @@ function GeneralBlock({
     );
 }
 
-function SettingIconBadge({ icon: Icon }: { icon: IconType }) {
+function SettingIconBadge({
+    icon: Icon,
+    background,
+}: {
+    icon: IconType;
+    /** Solid hex or a gradient string; each settings row owns a fixed color. */
+    background: string;
+}) {
+    const isGradient = background.includes("gradient");
+
     return (
         <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white"
+            style={{ background }}
             aria-hidden
         >
-            <Icon className="h-4 w-4" />
+            <Icon
+                className={cn(
+                    "h-4 w-4",
+                    // A white glyph can vanish on the lighter arcs of the palette
+                    // tile; a soft shadow keeps it legible.
+                    isGradient &&
+                        "[filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.35))]",
+                )}
+            />
         </span>
     );
 }
@@ -595,10 +636,12 @@ function SettingIconBadge({ icon: Icon }: { icon: IconType }) {
 // Settings header) with inset dividers between rows, iOS Settings style.
 function SettingsNavRow({
     icon,
+    iconBackground,
     title,
     onClick,
 }: {
     icon: IconType;
+    iconBackground: string;
     title: string;
     onClick: () => void;
 }) {
@@ -608,7 +651,7 @@ function SettingsNavRow({
             onClick={onClick}
             className="flex w-full items-center gap-3.5 px-4 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/30 md:hover:bg-[hsl(var(--hover-surface))]"
         >
-            <SettingIconBadge icon={icon} />
+            <SettingIconBadge icon={icon} background={iconBackground} />
             <p className="min-w-0 flex-1 text-base font-medium leading-5">
                 {title}
             </p>
