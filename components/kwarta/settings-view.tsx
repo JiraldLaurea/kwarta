@@ -67,8 +67,8 @@ const colorModeOptions = [
 // Settings style. The "Accent color" row keeps a multicolor tile so it
 // describes itself.
 const SETTINGS_TILE = {
-    categories: "#0D9488",
-    reports: "#34C759",
+    categories: "#34C759",
+    reports: "#2563EB",
     homeLayout: "#4F46E5",
     theme: "#7C3AED",
     budget: "#E11D48",
