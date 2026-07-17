@@ -261,8 +261,68 @@ export function HomeView({
   );
 }
 
+// Compact usage ring for the Home summary: the period's spend as a fraction of
+// the total budget, with the percentage in the centre. Uses the accent, turning
+// red once spending goes over.
+function SummaryUsageRing({
+  usage,
+  isOver,
+}: {
+  usage: number;
+  isOver: boolean;
+}) {
+  const size = 62;
+  const strokeWidth = 6;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const fraction = Math.min(Math.max(usage / 100, 0), 1);
+
+  return (
+    <div
+      className="relative flex shrink-0 items-center justify-center"
+      style={{ height: size, width: size }}
+    >
+      <svg
+        className="absolute inset-0 h-full w-full -rotate-90"
+        viewBox={`0 0 ${size} ${size}`}
+        aria-hidden
+      >
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="hsl(var(--accent))"
+          strokeOpacity={0.18}
+          strokeWidth={strokeWidth}
+        />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={isOver ? "#DC2626" : "hsl(var(--accent))"}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={circumference * (1 - fraction)}
+          className="transition-all"
+        />
+      </svg>
+      <span
+        className={cn(
+          "text-[13px] font-bold tabular-nums",
+          isOver ? "text-destructive" : "text-foreground",
+        )}
+      >
+        {usage}%
+      </span>
+    </div>
+  );
+}
+
 // Budget-usage summary shown at the top of Home: the period, the total spent
-// (of the total budget when one is set), and a "N% used" badge — mirroring the
+// (of the total budget when one is set), and a usage ring — mirroring the
 // Budgets page summary in a compact card.
 function HomeSummaryPanel({
   budgets,
@@ -301,35 +361,19 @@ function HomeSummaryPanel({
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <p className="text-sm leading-5 text-muted-foreground">{label}</p>
-          <p className="mt-1 text-3xl font-semibold leading-9 tracking-tight">
+          <p className="mt-1.5 text-3xl font-semibold leading-8 tracking-tight tabular-nums">
             {formatCurrency(totalSpent)}
-            {hasBudget && (
-              <span className="ml-1.5 text-base font-medium text-muted-foreground">
-                of {formatCurrency(totalBudget)}
-              </span>
-            )}
           </p>
-          {!hasBudget && (
-            <p className="mt-1 text-sm leading-5 text-muted-foreground">
-              spent {label.toLowerCase()}
-            </p>
-          )}
+          <p className="mt-1.5 text-sm leading-5 text-muted-foreground">
+            {hasBudget
+              ? `of ${formatCurrency(totalBudget)} budget`
+              : `spent ${label.toLowerCase()}`}
+          </p>
         </div>
-        {hasBudget && (
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold leading-4",
-              isOver
-                ? "bg-destructive/10 text-destructive"
-                : "bg-accent-muted text-accent-muted-foreground",
-            )}
-          >
-            {usage}% used
-          </span>
-        )}
+        {hasBudget && <SummaryUsageRing usage={usage} isOver={isOver} />}
       </div>
     </div>
   );
