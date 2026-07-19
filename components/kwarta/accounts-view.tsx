@@ -946,9 +946,10 @@ function AccountForm({
     onDelete?: () => void;
     onSubmit: (values: AccountFormValues) => void;
 }) {
-    // The balance the field edits: the account's live current balance.
+    // The balance the field edits: the account's live current balance, rounded
+    // to cents so summed floats don't surface as 359.77000000000044.
     const currentBalance = editing
-        ? editing.openingBalance + balanceOffset
+        ? Math.round((editing.openingBalance + balanceOffset) * 100) / 100
         : 0;
     const defaultAccountValues: AccountFormValues = {
         name: "",
@@ -1127,8 +1128,12 @@ function AccountForm({
                     onSubmit({
                         ...values,
                         // The field holds the desired current balance; store the
-                        // opening balance the app derives it from.
-                        openingBalance: values.openingBalance - balanceOffset,
+                        // opening balance the app derives it from (rounded to
+                        // cents to avoid float drift).
+                        openingBalance:
+                            Math.round(
+                                (values.openingBalance - balanceOffset) * 100,
+                            ) / 100,
                         provider,
                         icon: provider
                             ? values.icon
