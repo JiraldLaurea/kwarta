@@ -259,6 +259,13 @@ export function AccountsView({
                     <AccountForm
                         canDelete={normalizedAccounts.length > 1}
                         editing={editing}
+                        balanceOffset={
+                            getAccountBalance(
+                                editing,
+                                transactions,
+                                transfers,
+                            ) - editing.openingBalance
+                        }
                         key={editing.id}
                         modal
                         onCancel={onCancelEdit}
@@ -921,6 +928,11 @@ function TransferForm({
 function AccountForm({
     canDelete = true,
     editing,
+    // Net effect of this account's transactions and transfers (current balance
+    // minus opening balance). The balance field shows — and re-adjusts — the
+    // current balance, so on save we back out this offset to store the opening
+    // balance the app computes from. Always 0 for a new account.
+    balanceOffset = 0,
     modal = false,
     onCancel,
     onDelete,
@@ -928,11 +940,16 @@ function AccountForm({
 }: {
     canDelete?: boolean;
     editing?: Account;
+    balanceOffset?: number;
     modal?: boolean;
     onCancel: () => void;
     onDelete?: () => void;
     onSubmit: (values: AccountFormValues) => void;
 }) {
+    // The balance the field edits: the account's live current balance.
+    const currentBalance = editing
+        ? editing.openingBalance + balanceOffset
+        : 0;
     const defaultAccountValues: AccountFormValues = {
         name: "",
         type: "bank",
@@ -964,7 +981,7 @@ function AccountForm({
                       editing.provider && editing.icon
                           ? editing.icon
                           : getDefaultAccountIcon(editingType ?? "cash"),
-                  openingBalance: editing.openingBalance,
+                  openingBalance: currentBalance,
                   provider: editing.provider || undefined,
                   externalId: editing.externalId,
                   syncStatus: editing.syncStatus ?? "manual",
@@ -988,7 +1005,7 @@ function AccountForm({
     // keypad for the balance, matching the other bottom-sheet forms.
     const isPage = isModal && isMobile;
     const [balanceText, setBalanceText] = useState(() =>
-        editing?.openingBalance ? String(editing.openingBalance) : "",
+        editing && currentBalance ? String(currentBalance) : "",
     );
 
     function handleBalanceTextChange(next: string) {
@@ -1109,6 +1126,9 @@ function AccountForm({
                     const provider = values.provider || undefined;
                     onSubmit({
                         ...values,
+                        // The field holds the desired current balance; store the
+                        // opening balance the app derives it from.
+                        openingBalance: values.openingBalance - balanceOffset,
                         provider,
                         icon: provider
                             ? values.icon
