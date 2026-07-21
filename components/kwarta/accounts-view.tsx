@@ -55,6 +55,7 @@ import {
     getAccountTitle,
     getProvidersForType,
 } from "@/lib/kwarta/account-providers";
+import type { AccountSyncRecord } from "@/lib/kwarta/pending-captures";
 
 // Sentinel for the "Other" option in the brand dropdown (maps to no provider).
 const OTHER_PROVIDER_VALUE = "__other__";
@@ -112,6 +113,7 @@ function normalizeAccount(account: Account): Account {
 
 export function AccountsView({
     accounts,
+    accountSync,
     editingId,
     editingTransferId,
     month,
@@ -127,6 +129,7 @@ export function AccountsView({
     transfers,
 }: {
     accounts: Account[];
+    accountSync: Record<string, AccountSyncRecord>;
     editingId: string | null;
     editingTransferId: string | null;
     month: string;
@@ -225,6 +228,7 @@ export function AccountsView({
                                                 transactions,
                                                 transfers,
                                             )}
+                                            sync={accountSync[account.id]}
                                             onSelect={() => onEdit(account)}
                                         />
                                     ))}
@@ -382,13 +386,40 @@ function ConnectAccountCard() {
     );
 }
 
+// Short "how long ago" label for an account's last balance sync.
+function relativeTime(iso: string): string {
+    const then = new Date(iso).getTime();
+
+    if (Number.isNaN(then)) {
+        return "";
+    }
+
+    const minutes = Math.floor((Date.now() - then) / 60000);
+
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes}m ago`;
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+
+    return new Date(iso).toLocaleDateString("en-PH", {
+        month: "short",
+        day: "numeric",
+    });
+}
+
 function AccountCard({
     account,
     balance,
+    sync,
     onSelect,
 }: {
     account: Account;
     balance: number;
+    sync?: AccountSyncRecord;
     onSelect: () => void;
 }) {
     const isLinked = account.syncStatus === "linked";
@@ -412,10 +443,20 @@ function AccountCard({
                     <p className="truncate font-medium text-sm leading-5">
                         {title}
                     </p>
-                    {secondary && (
-                        <p className="mt-0.5 truncate text-xs leading-4 text-muted-foreground">
-                            {secondary}
+                    {sync ? (
+                        <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs leading-4 text-muted-foreground">
+                            <span
+                                className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-muted-foreground"
+                                aria-hidden
+                            />
+                            Synced from {sync.source} · {relativeTime(sync.at)}
                         </p>
+                    ) : (
+                        secondary && (
+                            <p className="mt-0.5 truncate text-xs leading-4 text-muted-foreground">
+                                {secondary}
+                            </p>
+                        )
                     )}
                 </div>
             </div>

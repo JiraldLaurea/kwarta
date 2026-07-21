@@ -96,14 +96,18 @@ import {
     markProcessed,
     readAutoConfirmPref,
     readMerchantCategoryMap,
+    readAccountSyncMap,
     readPendingCaptures,
     readProcessedCaptures,
     readSyncBalancePref,
+    recordAccountSync,
     reconcileOpeningBalance,
     rememberMerchantCategory,
+    providerSyncLabel,
     writeAutoConfirmPref,
     writePendingCaptures,
     writeSyncBalancePref,
+    type AccountSyncRecord,
     type PendingCapture,
 } from "@/lib/kwarta/pending-captures";
 import { HelpPanel } from "@/components/kwarta/help-panel";
@@ -364,6 +368,10 @@ export function KwartaApp() {
     // Auto-import automation prefs (opt-in, per user; loaded from storage below).
     const [autoConfirmEnabled, setAutoConfirmEnabled] = useState(false);
     const [syncBalanceEnabled, setSyncBalanceEnabled] = useState(false);
+    // Per-account "last synced from an alert" status (display-only).
+    const [accountSync, setAccountSync] = useState<
+        Record<string, AccountSyncRecord>
+    >({});
     const [helpOpen, setHelpOpen] = useState(false);
     const [helpShowIndex, setHelpShowIndex] = useState(false);
     const openHelp = (_targetView: View) => {
@@ -440,6 +448,7 @@ export function KwartaApp() {
         setPendingCaptures(readPendingCaptures(userId));
         setAutoConfirmEnabled(readAutoConfirmPref(userId));
         setSyncBalanceEnabled(readSyncBalancePref(userId));
+        setAccountSync(readAccountSyncMap(userId));
     }, [userId]);
 
     function handleAutoConfirmChange(value: boolean) {
@@ -1109,11 +1118,46 @@ export function KwartaApp() {
         };
     }
 
+    // Auto-sync an account's balance to the alert's stated balance — the real
+    // value the bank/wallet reported. Reconciles the opening balance against the
+    // given transaction list, then records the sync so the account can show its
+    // status. No-op unless the user has balance sync on and the alert actually
+    // states a balance for a mapped account.
+    function syncAccountFromCapture(
+        capture: PendingCapture,
+        txList: Transaction[],
+    ) {
+        const accountId = capture.accountId;
+
+        if (
+            !syncBalanceEnabled ||
+            !capture.recognized ||
+            capture.balanceAfter == null ||
+            !accountId
+        ) {
+            return;
+        }
+
+        setAccounts((current) =>
+            reconcileOpeningBalance(current, txList, transfers, capture),
+        );
+
+        const record: AccountSyncRecord = {
+            balance: capture.balanceAfter,
+            source: providerSyncLabel(capture.providerId),
+            at: new Date().toISOString(),
+        };
+
+        if (userId) {
+            recordAccountSync(userId, accountId, record);
+        }
+        setAccountSync((current) => ({ ...current, [accountId]: record }));
+    }
+
     // Log one capture as a real transaction: remember the merchant→category
-    // mapping, mark the alert handled (dedup), optionally reconcile the account's
-    // opening balance to the alert's stated balance, and add the transaction.
-    // Balance sync must see the new transaction, so reconcile against the list
-    // that already includes it.
+    // mapping, mark the alert handled (dedup), sync the account's balance to the
+    // alert's stated balance, and add the transaction. Balance sync must see the
+    // new transaction, so reconcile against the list that already includes it.
     function applyCaptureConfirmation(
         capture: PendingCapture,
         categoryId: string,
@@ -1128,17 +1172,7 @@ export function KwartaApp() {
             ...transactions,
         ];
         setTransactions(nextTransactions);
-
-        if (syncBalanceEnabled) {
-            setAccounts((current) =>
-                reconcileOpeningBalance(
-                    current,
-                    nextTransactions,
-                    transfers,
-                    capture,
-                ),
-            );
-        }
+        syncAccountFromCapture(capture, nextTransactions);
     }
 
     function handleIngestCaptureText(
@@ -1178,6 +1212,10 @@ export function KwartaApp() {
             return;
         }
 
+        // Queued for review, but the balance still syncs automatically — the
+        // stated balance is the real one whether or not the transaction is
+        // categorized yet.
+        syncAccountFromCapture(capture, transactions);
         setPendingCaptures((current) => [capture, ...current]);
     }
 
@@ -1862,6 +1900,7 @@ export function KwartaApp() {
                     {view === "accounts" && (
                         <AccountsView
                             accounts={accounts}
+                            accountSync={accountSync}
                             editingId={editingAccountId}
                             editingTransferId={editingTransferId}
                             month={selectedMonth}

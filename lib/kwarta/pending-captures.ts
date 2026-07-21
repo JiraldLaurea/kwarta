@@ -45,6 +45,8 @@ const PROCESSED_KEY = (userId: string) => `kwarta:processed-captures:${userId}`;
 const AUTO_CONFIRM_KEY = (userId: string) =>
     `kwarta:auto-import-confirm:${userId}`;
 const SYNC_BALANCE_KEY = (userId: string) => `kwarta:auto-import-sync:${userId}`;
+const ACCOUNT_SYNC_KEY = (userId: string) =>
+    `kwarta:account-sync:${userId}`;
 // Cap the processed ledger so it can't grow without bound.
 const PROCESSED_LIMIT = 1000;
 
@@ -142,6 +144,47 @@ export function readSyncBalancePref(userId: string): boolean {
 
 export function writeSyncBalancePref(userId: string, value: boolean) {
     writeJson(SYNC_BALANCE_KEY(userId), value);
+}
+
+// When an account's balance is auto-synced from a captured alert, we remember
+// which balance, from which provider, and when — so the account can show a
+// "Synced · GCash · 2m ago" status. Display-only metadata (the balance itself
+// lives in the account's opening balance), kept per user in localStorage.
+export type AccountSyncRecord = {
+    balance: number;
+    source: string;
+    at: string;
+};
+
+export function readAccountSyncMap(
+    userId: string,
+): Record<string, AccountSyncRecord> {
+    const map = readJson<Record<string, AccountSyncRecord>>(
+        ACCOUNT_SYNC_KEY(userId),
+        {},
+    );
+
+    return map && typeof map === "object" ? map : {};
+}
+
+export function recordAccountSync(
+    userId: string,
+    accountId: string,
+    record: AccountSyncRecord,
+) {
+    const map = readAccountSyncMap(userId);
+    map[accountId] = record;
+    writeJson(ACCOUNT_SYNC_KEY(userId), map);
+}
+
+const PROVIDER_SYNC_LABEL: Record<AutoImportProviderId, string> = {
+    gcash: "GCash",
+    maya: "Maya",
+    bank: "your bank",
+};
+
+export function providerSyncLabel(providerId: AutoImportProviderId): string {
+    return PROVIDER_SYNC_LABEL[providerId];
 }
 
 // GCash / Maya alerts map to the matching connected account; the generic bank

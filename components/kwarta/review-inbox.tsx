@@ -129,7 +129,7 @@ export function ReviewInboxView({
                                 />
                                 <SettingRow
                                     title="Sync account balance"
-                                    description="When an alert states the balance, nudge the matched account's opening balance to match it."
+                                    description="Automatically update the matched account to the balance an alert reports — no confirm needed."
                                     checked={syncBalanceEnabled}
                                     onChange={onSyncBalanceChange}
                                 />
