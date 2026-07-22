@@ -1104,13 +1104,15 @@ export function KwartaApp() {
     function buildTransactionFromCapture(
         capture: PendingCapture,
         categoryId: string,
+        accountId?: string,
     ): Transaction {
         return {
             id: crypto.randomUUID(),
             type: capture.direction === "in" ? "income" : "expense",
             amount: capture.amount,
             categoryId,
-            accountId: capture.accountId || getFirstAccountId(accounts),
+            accountId:
+                accountId || capture.accountId || getFirstAccountId(accounts),
             subcategory: "",
             note: capture.counterparty ?? "",
             date: toDateInputValue(new Date(capture.createdAt)),
@@ -1161,6 +1163,7 @@ export function KwartaApp() {
     function applyCaptureConfirmation(
         capture: PendingCapture,
         categoryId: string,
+        accountId?: string,
     ) {
         if (userId) {
             rememberMerchantCategory(userId, capture.counterparty, categoryId);
@@ -1168,7 +1171,7 @@ export function KwartaApp() {
         }
 
         const nextTransactions = [
-            buildTransactionFromCapture(capture, categoryId),
+            buildTransactionFromCapture(capture, categoryId, accountId),
             ...transactions,
         ];
         setTransactions(nextTransactions);
@@ -1229,8 +1232,12 @@ export function KwartaApp() {
         );
     }
 
-    function handleConfirmCapture(capture: PendingCapture, categoryId: string) {
-        applyCaptureConfirmation(capture, categoryId);
+    function handleConfirmCapture(
+        capture: PendingCapture,
+        categoryId: string,
+        accountId: string,
+    ) {
+        applyCaptureConfirmation(capture, categoryId, accountId);
         setPendingCaptures((current) =>
             current.filter((item) => item.id !== capture.id),
         );

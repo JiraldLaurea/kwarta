@@ -65,7 +65,11 @@ export function ReviewInboxView({
     onAutoConfirmChange: (value: boolean) => void;
     onSyncBalanceChange: (value: boolean) => void;
     onClose: () => void;
-    onConfirm: (capture: PendingCapture, categoryId: string) => void;
+    onConfirm: (
+        capture: PendingCapture,
+        categoryId: string,
+        accountId: string,
+    ) => void;
     onDismiss: (capture: PendingCapture) => void;
     onConfirmAllSuggested: () => void;
     onIngestText: (text: string) => void;
@@ -197,7 +201,11 @@ function PendingCaptureCard({
     capture: PendingCapture;
     categories: Category[];
     accounts: Account[];
-    onConfirm: (capture: PendingCapture, categoryId: string) => void;
+    onConfirm: (
+        capture: PendingCapture,
+        categoryId: string,
+        accountId: string,
+    ) => void;
     onDismiss: (capture: PendingCapture) => void;
 }) {
     const defaultCategoryId =
@@ -209,8 +217,14 @@ function PendingCaptureCard({
             : categories[0]?.id) ?? "";
     const [selectedCategoryId, setSelectedCategoryId] =
         useState(defaultCategoryId);
+    // Which account this payment came from — pre-picked when the alert maps to
+    // one (GCash/Maya), otherwise the first account, so a bank/paste alert can
+    // still be attributed and deduct from the right balance on confirm.
+    const [selectedAccountId, setSelectedAccountId] = useState(
+        capture.accountId ?? accounts[0]?.id ?? "",
+    );
 
-    const account = accounts.find((item) => item.id === capture.accountId);
+    const account = accounts.find((item) => item.id === selectedAccountId);
     const selectedCategory = categories.find(
         (category) => category.id === selectedCategoryId,
     );
@@ -317,6 +331,36 @@ function PendingCaptureCard({
                 </div>
             </div>
 
+            {accounts.length > 0 && (
+                <div className="mt-3">
+                    <Label className="text-xs text-muted-foreground">
+                        Account
+                    </Label>
+                    <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 pt-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {accounts.map((item) => {
+                            const selected = item.id === selectedAccountId;
+
+                            return (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    aria-pressed={selected}
+                                    onClick={() => setSelectedAccountId(item.id)}
+                                    className={cn(
+                                        "flex h-9 shrink-0 items-center whitespace-nowrap rounded-full border bg-muted px-3.5 text-sm font-semibold text-foreground transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+                                        selected
+                                            ? "border-accent ring-1 ring-accent"
+                                            : "border-border",
+                                    )}
+                                >
+                                    {getAccountLabel(item)}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
             <div className="mt-3 flex items-center gap-2">
                 <Button
                     type="button"
@@ -329,8 +373,14 @@ function PendingCaptureCard({
                 <Button
                     type="button"
                     className="h-11 flex-[1.6] select-none rounded-xl text-sm font-bold"
-                    disabled={!selectedCategoryId}
-                    onClick={() => onConfirm(capture, selectedCategoryId)}
+                    disabled={!selectedCategoryId || !selectedAccountId}
+                    onClick={() =>
+                        onConfirm(
+                            capture,
+                            selectedCategoryId,
+                            selectedAccountId,
+                        )
+                    }
                 >
                     Add{selectedCategory ? ` to ${selectedCategory.name}` : ""}
                 </Button>
