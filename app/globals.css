@@ -211,6 +211,30 @@
   --accent-muted-foreground: 322 90% 82%;
 }
 
+/* The landing page is brand surface, not app chrome: it always renders in green
+   no matter which accent the visitor picked inside the app. The accent tokens
+   live on :root, so re-declaring them on the landing container wins for
+   everything beneath it — custom properties resolve from the nearest ancestor
+   that sets them. Values mirror the "green" blocks above. */
+.landing-accent {
+  --primary: 155 55% 38%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 155 55% 38%;
+  --accent-foreground: 0 0% 100%;
+  --accent-muted: 159 55% 90%;
+  --accent-muted-foreground: 160 55% 26%;
+  --ring: 159 65% 42%;
+}
+
+:root.dark .landing-accent {
+  --primary: 159 72% 68%;
+  --primary-foreground: 0 0% 8%;
+  --accent: 159 72% 68%;
+  --accent-foreground: 0 0% 8%;
+  --accent-muted: 159 35% 16%;
+  --accent-muted-foreground: 159 65% 72%;
+}
+
 .appearance-changing,
 .appearance-changing *,
 .appearance-changing *::before,
